@@ -9,6 +9,9 @@
    SHELL — carga del dashboard tras autenticación exitosa
    ============================================================ */
 function loadDashboard(user) {
+
+    if (typeof sbInitGeo === 'function') sbInitGeo().catch(() => {});
+ 
     sessionStorage.setItem('sr_active_user', user.id);
 
     document.querySelector('.layout-wrapper')?.classList.add('d-none');
