@@ -3,7 +3,7 @@
    Requiere: utils.js, data.js, indicacion.js,
              laboratorio_core.js, home_lab.js, home_usuario.js,
              auth.js  (todos cargados antes)
-   ========================================================= */
+   ======================================================== */
 
 /* ============================================================
    SHELL — carga del dashboard tras autenticación exitosa
