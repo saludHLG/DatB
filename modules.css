@@ -1,0 +1,934 @@
+/* =========================================================
+   modules.css — Estilos de módulos clínicos (DatB)
+   Fusiona indicacion_styles.css + laboratorio_styles.css
+   Requiere: style.css cargado antes (define --accent, --card-bg, etc.)
+   ========================================================= */
+
+/* ══════════════════════════════════════════════════════════
+   SECCIÓN 1 — MÓDULO DE INDICACIONES
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Lista de indicaciones ─────────────────────────────── */
+
+.ind-list {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+}
+
+.ind-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    transition: box-shadow .2s;
+}
+.ind-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+
+.ind-card-readonly {
+    border-color: #c7d9f0;
+    background: #fafcff;
+}
+
+/* ── Fila de contexto: médico responsable / solicitado por ── */
+.ind-ctx {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .38rem .85rem;
+    font-size: .8rem;
+    border-top: 1px solid var(--border, #e2e8f0);
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    margin: .35rem -1.25rem;    /* sangra hasta los bordes de la card */
+    flex-wrap: wrap;
+}
+.ind-ctx i { font-size: .9rem; flex-shrink: 0; }
+
+.ind-ctx-medico   { background: #f0fdf4; color: #14532d; }
+.ind-ctx-medico i { color: #16a34a; }
+
+.ind-ctx-enfermera   { background: #eff6ff; color: #1e3a5f; }
+.ind-ctx-enfermera i { color: #2563eb; }
+
+.ind-ctx-badge {
+    display: inline-block;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-radius: 20px;
+    padding: .1em .6em;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+
+.ind-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: .55rem;
+}
+
+.ind-pac-name {
+    font-weight: 600;
+    font-size: .95rem;
+    display: block;
+}
+.ind-pac-ci {
+    font-size: .78rem;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.ind-card-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem 1.4rem;
+    font-size: .82rem;
+    color: var(--text-muted);
+}
+.ind-card-body i { margin-right: .3rem; }
+
+.ind-card-tags {
+    margin-top: .55rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+}
+
+/* ── Badges de estado ──────────────────────────────────── */
+
+.badge-estado {
+    display: inline-block;
+    padding: .28em .7em;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: .02em;
+}
+.badge-estado.pendiente  { background: #fef3c7; color: #92400e; }
+.badge-estado.recibida   { background: #dbeafe; color: #1e40af; }
+.badge-estado.en-proceso { background: #ede9fe; color: #5b21b6; }
+.badge-estado.completada { background: #d1fae5; color: #065f46; }
+.badge-estado.anulada    { background: #f1f5f9; color: #475569; }
+
+/* ── Etiquetas de examen ───────────────────────────────── */
+
+.exam-tag {
+    display: inline-block;
+    padding: .18em .65em;
+    border-radius: 6px;
+    background: #e0f2fe;
+    color: var(--accent);
+    font-size: .74rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+}
+
+/* ── Wizard card ────────────────────────────────────────── */
+
+.wizard-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem;
+    max-width: 860px;
+}
+
+/* ── Paso inner ─────────────────────────────────────────── */
+
+.paso-inner { padding-top: 1.4rem; }
+
+.paso-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ── Botón volver (módulo) ──────────────────────────────── */
+
+.btn-back-mod {
+    width: 2.2rem;
+    height: 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #1e293b;
+    flex-shrink: 0;
+    transition: background .15s, border-color .15s;
+}
+.btn-back-mod:hover {
+    background: #f8fafc;
+    border-color: var(--accent);
+}
+
+/* ── Note informativa de paso ───────────────────────────── */
+
+.step-note {
+    background: #f0f9ff;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: .65rem 1rem;
+    font-size: .85rem;
+    color: #1e293b;
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+}
+.step-note i { margin-top: .1rem; color: var(--accent); flex-shrink: 0; }
+
+/* ── Botón de búsqueda ──────────────────────────────────── */
+
+.btn-buscar {
+    padding: .45rem 1rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 0 8px 8px 0;
+    font-size: .85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    white-space: nowrap;
+    transition: background .15s;
+}
+.btn-buscar:hover { background: #0284c7; }
+
+.search-bar-block {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+}
+
+/* ── Tarjeta de resultado encontrado ────────────────────── */
+
+.found-card {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: .65rem 1rem;
+    font-size: .85rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+
+/* ── Grupos de vulnerabilidad ───────────────────────────── */
+
+#gv-grid .form-check-label { font-size: .83rem; line-height: 1.4; }
+#gv-edad-hint              { font-size: .84rem; }
+
+/* ── Selección de exámenes ──────────────────────────────── */
+
+.exam-card {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .7rem .9rem;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    user-select: none;
+}
+.exam-card:hover {
+    border-color: var(--accent);
+    background: #f0f9ff;
+}
+.exam-card:has(.exam-chk:checked) {
+    border-color: var(--accent);
+    background: #e0f2fe;
+}
+
+.exam-label  { display: flex; flex-direction: column; cursor: pointer; flex: 1; }
+.exam-nombre { font-size: .87rem; font-weight: 500; line-height: 1.3; }
+.exam-cod    { font-size: .75rem; color: var(--accent); margin-top: .15rem; }
+
+/* ── Resumen de indicación ──────────────────────────────── */
+
+.ind-resumen {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.4rem;
+}
+
+.resumen-titulo {
+    font-size: .9rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.resumen-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .9rem 1.5rem;
+}
+.resumen-full { grid-column: 1 / -1; }
+
+.ri-label {
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    margin-bottom: .2rem;
+}
+.ri-val { font-size: .9rem; font-weight: 500; color: #1e293b; }
+.ri-sub { font-size: .78rem; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; margin-top: .15rem; }
+.ri-gv  { font-size: .78rem; color: #92400e; margin-top: .3rem; line-height: 1.5; }
+
+/* ── Firma digital (módulo indicaciones) ────────────────── */
+
+.firma-block { }
+
+.firma-wrapper {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+    cursor: crosshair;
+    max-width: 540px;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,.04);
+}
+.firma-wrapper canvas { display: block; width: 100%; height: auto; touch-action: none; }
+
+/* ── Botones de acción en tarjetas de indicación ─────────── */
+
+.btn-ind-action {
+    width: 1.9rem;
+    height: 1.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-size: .82rem;
+    transition: background .15s, border-color .15s, color .15s;
+    flex-shrink: 0;
+}
+.btn-ind-action.edit { color: var(--accent); }
+.btn-ind-action.edit:hover { background: #e0f2fe; border-color: var(--accent); }
+.btn-ind-action.del  { color: #dc2626; }
+.btn-ind-action.del:hover  { background: #fee2e2; border-color: #dc2626; }
+
+/* ── Override botones pequeños ──────────────────────────── */
+
+.btn-sm.btn-secondary-custom,
+.btn-sm.btn-primary-custom {
+    padding: .4rem .9rem;
+    font-size: .82rem;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SECCIÓN 2 — MÓDULO DE LABORATORIO
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Tabs del módulo ────────────────────────────────────── */
+
+.lab-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: 1.25rem;
+}
+
+.lab-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .48rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    font-size: .84rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: border-color .15s, background .15s, color .15s;
+    position: relative;
+    white-space: nowrap;
+}
+.lab-tab-btn:hover        { border-color: #1a3a6b; color: #0b1e3d; background: #f0f4fa; }
+.lab-tab-btn.active       { border-color: #0b1e3d; background: #0b1e3d; color: #fff; }
+.lab-tab-btn.active .lab-tab-badge { background: rgba(255,255,255,.25); color: #fff; }
+
+.lab-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 .32rem;
+    border-radius: 6px;
+    background: #e0435a;
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 700;
+}
+.lab-tab-badge-neutral { background: var(--text-muted); }
+
+.lab-badge-prox {
+    font-size: .65rem;
+    font-weight: 600;
+    background: #fef3c7;
+    color: #92400e;
+    padding: .1em .5em;
+    border-radius: 20px;
+}
+
+/* ── Tarjetas de muestra/recepción ─────────────────────── */
+
+.lab-list {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+}
+
+.lab-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    transition: box-shadow .2s;
+}
+.lab-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+
+.lab-card-main    { flex: 1; min-width: 0; }
+
+.lab-pac-name {
+    font-weight: 600;
+    font-size: .88rem;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+.lab-pac-ci {
+    font-size: .78rem;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.lab-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.2rem;
+    font-size: .82rem;
+    color: var(--text-muted);
+    margin-top: .4rem;
+}
+.lab-card-meta i { margin-right: .25rem; }
+
+.lab-card-tags    { display: flex; flex-wrap: wrap; gap: .35rem; }
+
+.lab-card-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: .5rem;
+    flex-shrink: 0;
+}
+
+.lab-motivo-rechazo {
+    font-size: .82rem;
+    color: #92400e;
+    background: #fef3c7;
+    border-radius: 6px;
+    padding: .35rem .65rem;
+    margin-top: .35rem;
+}
+
+/* ── Botón pequeño de lab ───────────────────────────────── */
+
+.btn-sm-lab {
+    padding: .45rem 1rem;
+    font-size: .83rem;
+    white-space: nowrap;
+}
+
+/* ── Formulario de recepción ────────────────────────────── */
+
+.rec-resumen {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.15rem;
+}
+.rec-resumen-row {
+    display: flex;
+    align-items: baseline;
+    gap: .75rem;
+    padding: .35rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: .875rem;
+}
+.rec-resumen-row:last-child { border-bottom: none; }
+
+.rec-label {
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    min-width: 7rem;
+}
+
+.rec-radio-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .55rem 1.1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .9rem;
+    font-weight: 500;
+    transition: border-color .15s, background .15s;
+    user-select: none;
+}
+.rec-radio-opt:has(input:checked) { border-color: var(--accent); background: #e0f2fe; }
+.rec-radio-opt input { display: none; }
+
+/* ── Formulario de resultados ───────────────────────────── */
+
+.res-form-title {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: .5rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.res-resultado-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+.res-resultado-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .45rem .9rem;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .84rem;
+    font-weight: 500;
+    transition: border-color .15s, background .15s;
+    user-select: none;
+}
+.res-resultado-opt.active,
+.res-resultado-opt:has(input:checked) { border-color: var(--accent); background: #e0f2fe; }
+.res-resultado-opt input { display: none; }
+
+/* ── Aviso módulo próximo ───────────────────────────────── */
+
+.lab-prox-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .75rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-size: .9rem;
+    text-align: center;
+}
+.lab-prox-notice i { font-size: 2.2rem; opacity: .4; }
+
+/* ── Resultados solo lectura ────────────────────────────── */
+
+.res-readonly { margin-top: 1rem; }
+
+.res-ro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem 1.25rem;
+    margin-top: .75rem;
+}
+.res-full { grid-column: 1 / -1; }
+
+.res-cod {
+    display: inline-block;
+    padding: .2em .7em;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: .88rem;
+}
+.res-neg    { background: #d1fae5; color: #065f46; }
+.res-pos    { background: #fee2e2; color: #991b1b; }
+.res-estudio{ background: #fef3c7; color: #92400e; }
+.res-contam { background: #f1f5f9; color: #475569; }
+
+/* ── Resultado inline en tarjetas ───────────────────────── */
+
+.res-inline-block {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem .85rem;
+    padding: .55rem .75rem;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: .82rem;
+}
+
+.res-inline-item {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    flex-wrap: wrap;
+}
+
+.res-inline-item strong {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .75rem;
+    color: var(--text-muted);
+    letter-spacing: .03em;
+}
+
+.res-inline-item small {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .72rem;
+}
+
+/* ── Sub-tabs por examen (vista Recibidas) ───────────────── */
+
+.lab-subtabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+
+.lab-subtab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .38rem .85rem;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    font-size: .80rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: border-color .15s, background .15s, color .15s;
+    white-space: nowrap;
+}
+
+.lab-subtab-btn:hover  { border-color: #1a3a6b; color: #0b1e3d; background: #f0f4fa; }
+.lab-subtab-btn.active {
+    border-color: #0b1e3d;
+    background: #0b1e3d;
+    color: #fff;
+}
+.lab-subtab-btn.active .exam-tag {
+    background: rgba(255,255,255,.18);
+    color: #fff;
+}
+
+/* ── Tabla de resultados del laboratorio ─────────────────── */
+
+.lab-result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+    background: var(--card-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    table-layout: auto; /* columnas adaptativas, no fijas */
+}
+
+.lab-result-table thead tr {
+    background: #f8fbff;
+    border-bottom: 1.5px solid var(--border);
+}
+
+.lab-result-table th {
+    padding: .65rem .9rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.lab-result-table td {
+    padding: .6rem .75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--navy);
+    text-align: center;
+}
+
+.lab-result-table tbody tr:last-child td { border-bottom: none; }
+.lab-result-table tbody tr:hover td     { background: #f8fbff; }
+
+/* Action cell — buttons side by side with gap */
+.lab-result-table td:last-child {
+    white-space: nowrap;
+    text-align: right;
+}
+.lab-result-table td:last-child > button,
+.lab-result-table td:last-child > .btn-sm-lab {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    vertical-align: middle;
+    margin-left: .3rem;
+}
+.lab-result-table td:last-child > button:first-child { margin-left: 0; }
+
+/* Left-align text-heavy columns */
+.lab-result-table td:nth-child(3),  /* Paciente */
+.lab-result-table td:nth-child(4),  /* CI */
+.lab-result-table td:nth-child(6) { /* Centro */
+    text-align: left;
+}
+.lab-result-table th:nth-child(3),
+.lab-result-table th:nth-child(4),
+.lab-result-table th:nth-child(6) {
+    text-align: left;
+}
+
+/* Botones dentro de la tabla heredan color del texto del botón */
+.lab-result-table .btn-primary-custom i,
+.lab-result-table .btn-primary-custom .bi,
+.lab-result-table .btn-secondary-custom i,
+.lab-result-table .btn-secondary-custom .bi { color: inherit; }
+
+/* Scroll horizontal en mobile */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; }
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — módulos clínicos
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Tablet (481 – 768 px) ──────────────────────────────── */
+@media (min-width: 481px) and (max-width: 768px) {
+    .wizard-card { padding: 1.25rem; }
+    .lab-tab-btn { padding: .45rem .85rem; font-size: .82rem; }
+    .resumen-grid { grid-template-columns: 1fr 1fr; }
+    .rec-label { min-width: 5.5rem; }
+    .lab-result-table th,
+    .lab-result-table td { padding: .55rem .65rem; font-size: .82rem; }
+    /* Tabla de muestras: scroll horizontal con ancho mínimo cómodo */
+    .table-responsive .lab-result-table { min-width: 720px; }
+}
+
+/* ── Móvil (≤ 576 px) ───────────────────────────────────── */
+@media (max-width: 576px) {
+    /* Indicaciones */
+    .wizard-card { padding: 1rem; border-radius: 10px; }
+    .paso-actions { flex-direction: column-reverse; gap: .75rem; }
+    .paso-actions > * { width: 100%; justify-content: center; }
+    .ind-card-body { flex-direction: column; gap: .35rem; }
+    .resumen-grid { grid-template-columns: 1fr; }
+
+    /* Laboratorio */
+    .lab-card { flex-direction: column; }
+    .lab-card-actions { width: 100%; flex-direction: row; justify-content: flex-end; }
+    .rec-label { min-width: 5.5rem; }
+    .res-ro-grid { grid-template-columns: 1fr; }
+    .res-inline-block { flex-direction: column; gap: .35rem; }
+
+    /* Tabla de muestras: dejar scroll horizontal, mínimo razonable */
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-responsive .lab-result-table { min-width: 640px; }
+    /* Si la tabla se usa sin wrapper, forzar scroll en contenedor padre */
+    .lab-result-table { min-width: 640px; }
+
+    /* Común */
+    .btn-buscar { border-radius: 8px; }
+}
+
+/* ── Muy pequeño (≤ 480 px) ─────────────────────────────── */
+@media (max-width: 480px) {
+    /* Header de la tarjeta de indicación: stack vertical */
+    .ind-card-header { flex-direction: column; align-items: flex-start; gap: .5rem; }
+    .ind-card-header > div:last-child { align-self: flex-end; }
+
+    /* Tabs: compactar */
+    .lab-tabs { gap: .25rem; }
+    .lab-tab-btn { padding: .4rem .65rem; font-size: .78rem; gap: .3rem; }
+    .lab-tab-badge { min-width: 1.1rem; height: 1.1rem; font-size: .65rem; }
+
+    /* Sub-tabs de examen */
+    .lab-subtab-btn { padding: .3rem .6rem; font-size: .78rem; }
+
+    /* Firma en indicaciones */
+    .firma-wrapper canvas { height: 120px !important; }
+}
+
+/* ── Muy estrecho (≤ 380 px) ────────────────────────────── */
+@media (max-width: 380px) {
+    .lab-tab-btn .tab-label { display: none; }
+    .lab-tab-btn { padding: .45rem .65rem; }
+    .lab-subtab-btn span:last-child { display: none; }
+}
+
+/* ── Resultados inline en tarjetas de indicación ──────────── */
+.ind-res-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: .65rem;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: .83rem;
+}
+
+.ind-res-item {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: .3rem .75rem;
+    padding: .5rem .85rem;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.ind-res-item:last-child  { border-bottom: none; }
+.ind-res-item:nth-child(even) { background: #fff; }
+
+.ind-res-label {
+    font-weight: 700;
+    font-size: .7rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted, #64748b);
+    min-width: 11rem;
+    flex-shrink: 0;
+}
+
+.ind-res-cod-wrap {
+    white-space: normal;
+    word-break: break-word;
+    font-size: .78rem;
+    line-height: 1.4;
+}
+
+.ind-res-motivo { font-style: italic; }
+
+/* ── Autocomplete de paciente ──────────────────────────────── */
+.pac-autocomplete-dropdown {
+    position: absolute;
+    z-index: 1050;
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 2px;
+}
+.pac-ac-item {
+    padding: .55rem .9rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    outline: none;
+}
+.pac-ac-item:last-child { border-bottom: none; }
+.pac-ac-item:hover,
+.pac-ac-item:focus { background: var(--primary-light, #eff6ff); }
+.pac-ac-name {
+    font-weight: 600;
+    font-size: .88rem;
+    color: var(--text-primary, #1e293b);
+}
+.pac-ac-name mark { background: #fef08a; border-radius: 2px; padding: 0 1px; }
+.pac-ac-meta {
+    font-size: .75rem;
+    color: var(--text-muted, #64748b);
+}
+.pac-ac-meta mark { background: #fef08a; border-radius: 2px; padding: 0 1px; }
+.pac-ac-empty {
+    font-size: .82rem;
+    color: var(--text-muted, #64748b);
+    cursor: default;
+    padding: .7rem .9rem;
+}
+.pac-ac-empty:hover { background: none; }
+
+/* ── Firma previa del perfil en paso 4 del wizard ─────────── */
+.firma-perfil-preview {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    align-items: flex-start;
+}
+.firma-preview-img {
+    max-width: 320px;
+    width: 100%;
+    border: 1.5px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    background: #fff;
+    padding: .35rem;
+}
+.btn-link-sm {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: .8rem;
+    color: var(--primary, #2563eb);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.btn-link-sm:hover { color: var(--primary-dark, #1d4ed8); }
+
+/* ── Botón de eliminar resultado en tabla de muestras ─────── */
+.btn-danger-custom {
+    background: transparent;
+    border: 1.5px solid #ef4444;
+    color: #ef4444;
+    border-radius: 6px;
+    padding: .25rem .55rem;
+    font-size: .78rem;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    line-height: 1.4;
+}
+.btn-danger-custom:hover {
+    background: #ef4444;
+    color: #fff;
+}

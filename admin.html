@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DatB — Administración</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body">
+
+<div id="access-denied" class="d-none fullscreen-msg">
+    <i class="bi bi-shield-lock-fill msg-icon"></i>
+    <h2>Acceso restringido</h2>
+    <p>Esta sección requiere rol de <strong>Administrador</strong>.</p>
+    <a href="index.html" class="btn-primary-custom mt-3"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div id="admin-app" class="d-none">
+
+    <nav class="admin-sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-icon"><i class="bi bi-lungs"></i></span>
+            <span class="brand-name">DatB</span>
+        </div>
+        <div class="sidebar-section-label">Panel de admin</div>
+        <ul class="sidebar-nav">
+            <li><button class="snav-btn active" data-tab="tab-pending">
+                <i class="bi bi-hourglass-split"></i><span>Pendientes</span>
+                <span class="snav-badge" id="badge-pending">0</span>
+            </button></li>
+            <li><button class="snav-btn" data-tab="tab-users">
+                <i class="bi bi-people"></i><span>Usuarios</span>
+            </button></li>
+            <li><button class="snav-btn" data-tab="tab-access">
+                <i class="bi bi-key"></i><span>Accesos temporales</span>
+                <span class="snav-badge snav-badge-warn" id="badge-access">0</span>
+            </button></li>
+            <li><button class="snav-btn" data-tab="tab-locations">
+                <i class="bi bi-geo-alt"></i><span>Localización</span>
+            </button></li>
+            <li><button class="snav-btn" data-tab="tab-catalogos">
+                <i class="bi bi-tags"></i><span>Variables</span>
+            </button></li>
+
+        </ul>
+        <div class="sidebar-footer">
+            <div class="sidebar-divider-admin"></div>
+            <div class="sidebar-admin-name" id="sidebar-admin-name"></div>
+            <a href="index.html" class="snav-btn snav-danger">
+                <i class="bi bi-box-arrow-left"></i><span>Salir</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="admin-main">
+        <header class="admin-header">
+            <div>
+                <h1 class="admin-page-title" id="admin-page-title">Cuentas pendientes</h1>
+                <p class="admin-page-sub" id="admin-page-sub">Nuevas cuentas esperando aprobación</p>
+            </div>
+            <div class="header-stats" id="header-stats"></div>
+        </header>
+
+        <section id="tab-pending" class="admin-tab active">
+            <div id="pending-empty" class="empty-state d-none">
+                <i class="bi bi-check-circle-fill empty-icon" style="color:var(--a-success)"></i>
+                <p>No hay cuentas pendientes.</p>
+            </div>
+            <div class="table-card" id="pending-table-wrap">
+                <table class="admin-table">
+                    <thead><tr>
+                        <th>Usuario</th><th>CI</th><th>Rol profesional</th>
+                        <th>Provincia / Centro</th><th>Registrado</th><th>Acciones</th>
+                    </tr></thead>
+                    <tbody id="pending-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="tab-users" class="admin-tab d-none">
+            <div class="filters-bar">
+                <div class="filter-search-wrap">
+                    <i class="bi bi-search filter-icon"></i>
+                    <input type="text" id="filter-search" class="filter-input" placeholder="Buscar nombre, CI…">
+                </div>
+                <select id="filter-rol-prof" class="filter-select">
+                    <option value="">Todos los roles prof.</option>
+                    <option value="1">Médico/a</option>
+                    <option value="2">Enfermero/a</option>
+                    <option value="3">Licenciado/a Lab.</option>
+                    <option value="4">Técnico/a Lab.</option>
+                </select>
+                <select id="filter-rol-sis" class="filter-select">
+                    <option value="">Todos los sistemas</option>
+                    <option value="1">Usuario común</option>
+                    <option value="2">Mod. institucional</option>
+                    <option value="3">Mod. municipal</option>
+                    <option value="4">Mod. provincial</option>
+                    <option value="5">Mod. nacional</option>
+                    <option value="6">Administrador</option>
+                </select>
+                <select id="filter-estado" class="filter-select">
+                    <option value="">Todos</option>
+                    <option value="aprobado">Aprobados</option>
+                    <option value="pendiente">Pendientes aprobación</option>
+                    <option value="inactivo">Inactivos</option>
+                </select>
+            </div>
+            <div class="table-card">
+                <table class="admin-table">
+                    <thead><tr>
+                        <th>Usuario</th><th>CI</th><th>Rol prof.</th>
+                        <th>Rol sistema</th><th>Estado</th><th>Lab.</th><th>Acciones</th>
+                    </tr></thead>
+                    <tbody id="users-tbody"></tbody>
+                </table>
+                <div id="users-empty" class="empty-state d-none">
+                    <i class="bi bi-funnel empty-icon"></i>
+                    <p>Sin resultados con esos filtros.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-access" class="admin-tab d-none">
+            <div id="access-empty" class="empty-state d-none">
+                <i class="bi bi-key empty-icon"></i>
+                <p>No hay solicitudes de acceso temporal pendientes.</p>
+            </div>
+            <div class="table-card" id="access-table-wrap">
+                <table class="admin-table">
+                    <thead><tr>
+                        <th>Solicitante</th><th>Justificación</th><th>Alcance solicitado</th>
+                        <th>Estado</th><th>Fecha</th><th>Acciones</th>
+                    </tr></thead>
+                    <tbody id="access-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+<div class="modal fade" id="modal-edit-user" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <div class="modal-user-info">
+                    <div class="modal-avatar" id="modal-avatar"></div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="modal-edit-name"></h5>
+                        <span class="modal-ci" id="modal-ci"></span>
+                        <span class="modal-prof-badge" id="modal-prof-badge"></span>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="modal-section">
+                    <div class="modal-section-title"><i class="bi bi-person"></i> Datos personales
+                        <span class="modal-section-sub">El CI no puede modificarse</span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="admin-label">Nombres <span class="required">*</span></label>
+                            <input type="text" id="modal-nombres" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Apellidos <span class="required">*</span></label>
+                            <input type="text" id="modal-apellidos" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Rol profesional</label>
+                            <select id="modal-rol-prof-edit" class="form-select admin-select">
+                                <option value="1">Médico/a</option>
+                                <option value="2">Enfermero/a</option>
+                                <option value="3">Licenciado/a de Lab.</option>
+                                <option value="4">Técnico/a de Lab.</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Registro profesional</label>
+                            <input type="text" id="modal-registro" class="form-control ctrl-mono" placeholder="RM-00000">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Provincia</label>
+                            <select id="modal-prov-edit" class="form-select admin-select">
+                                <option value="">— Seleccione —</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Municipio</label>
+                            <select id="modal-mun-edit" class="form-select admin-select" disabled>
+                                <option value="">— Seleccione —</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="admin-label">Centro de salud</label>
+                            <select id="modal-centro-edit" class="form-select admin-select" disabled>
+                                <option value="">— Seleccione municipio primero —</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title"><i class="bi bi-shield-half"></i> Rol de sistema
+                        <span class="modal-section-sub">Solo el administrador puede modificarlo</span>
+                    </div>
+                    <select id="modal-rol-sistema" class="form-select admin-select">
+                        <option value="1">Usuario común</option>
+                        <option value="2">Moderador institucional</option>
+                        <option value="3">Moderador municipal</option>
+                        <option value="4">Moderador provincial</option>
+                        <option value="5">Moderador nacional</option>
+                        <option value="6">Administrador</option>
+                    </select>
+                    <p class="modal-hint" id="modal-rol-hint"></p>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">
+                        <i class="bi bi-flask"></i> Permisos de laboratorio
+                        <span class="modal-section-sub">Independiente del rol de sistema</span>
+                    </div>
+                    <div class="lab-add-row">
+                        <select id="modal-lab-select" class="form-select admin-select" style="flex:1">
+                            <option value="">— Seleccione laboratorio —</option>
+                        </select>
+                        <button class="btn-add-lab" id="btn-add-lab"><i class="bi bi-plus-lg"></i> Agregar</button>
+                    </div>
+                    <div id="lab-perms-list"></div>
+                    <p class="empty-lab-msg d-none" id="empty-lab-msg">Sin permisos de laboratorio asignados.</p>
+                </div>
+
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <div>
+                    <button type="button" class="btn-toggle-active" id="btn-toggle-active"></button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn-primary-custom" id="btn-save-user">
+                        <i class="bi bi-check-lg"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-approve" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title">Revisar solicitud de registro</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="approve-user-card" class="approve-user-card"></div>
+                <div class="mt-3">
+                    <label class="admin-label">Rol de sistema inicial</label>
+                    <select id="approve-rol-sistema" class="form-select admin-select">
+                        <option value="1">Usuario común</option>
+                        <option value="2">Moderador institucional</option>
+                        <option value="3">Moderador municipal</option>
+                        <option value="4">Moderador provincial</option>
+                        <option value="5">Moderador nacional</option>
+                        <option value="6">Administrador</option>
+                    </select>
+                </div>
+                <div class="mt-3 d-none" id="reject-reason-wrap">
+                    <label class="admin-label">Motivo del rechazo (opcional)</label>
+                    <textarea id="approve-reject-reason" class="form-control" rows="2"
+                              placeholder="Ej: Registro profesional no verificado…"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-danger-custom" id="btn-reject-user">
+                    <i class="bi bi-x-circle"></i> Rechazar
+                </button>
+                <button type="button" class="btn-success-custom" id="btn-approve-user">
+                    <i class="bi bi-check-circle"></i> Aprobar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-access" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title">Solicitud de acceso temporal</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="access-request-card" class="approve-user-card"></div>
+                <div class="row g-3 mt-1">
+                    <div class="col-6">
+                        <label class="admin-label">Fecha inicio</label>
+                        <input type="date" id="access-fecha-inicio" class="form-control">
+                    </div>
+                    <div class="col-6">
+                        <label class="admin-label">Fecha fin</label>
+                        <input type="date" id="access-fecha-fin" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Nivel aprobado</label>
+                        <select id="access-nivel" class="form-select admin-select">
+                            <option value="institucional">Institucional</option>
+                            <option value="municipal">Municipal</option>
+                            <option value="provincial">Provincial</option>
+                            <option value="nacional">Nacional</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Alcance aprobado</label>
+                        <textarea id="access-alcance" class="form-control" rows="2"
+                                  placeholder="Especifique el alcance exacto…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-danger-custom" id="btn-reject-access">
+                    <i class="bi bi-x-circle"></i> Rechazar
+                </button>
+                <button type="button" class="btn-success-custom" id="btn-approve-access">
+                    <i class="bi bi-calendar-check"></i> Aprobar acceso
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <section id="tab-locations" class="admin-tab d-none">
+            <div class="loc-subtabs">
+                <button class="loc-subtab active" data-loc="provincias"><i class="bi bi-map"></i> Provincias</button>
+                <button class="loc-subtab" data-loc="municipios"><i class="bi bi-signpost-split"></i> Municipios</button>
+                <button class="loc-subtab" data-loc="centros"><i class="bi bi-hospital"></i> Centros de salud</button>
+                <button class="loc-subtab" data-loc="laboratorios"><i class="bi bi-flask"></i> Laboratorios</button>
+            </div>
+            <div id="loc-provincias" class="loc-panel">
+                <div class="loc-panel-header">
+                    <span class="loc-count" id="count-provincias"></span>
+                    <button class="btn-add-loc" id="btn-new-provincia"><i class="bi bi-plus-lg"></i> Nueva provincia</button>
+                </div>
+                <div class="table-card">
+                    <table class="admin-table">
+                        <thead><tr><th>#</th><th>Nombre</th><th>Código</th><th>Municipios</th><th>Centros</th><th>Labs</th><th class="text-end">Acciones</th></tr></thead>
+                        <tbody id="tbody-provincias"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="loc-municipios" class="loc-panel d-none">
+                <div class="loc-panel-header">
+                    <div class="filter-search-wrap" style="max-width:260px">
+                        <i class="bi bi-search filter-icon"></i>
+                        <input type="text" id="filter-mun" class="filter-input" placeholder="Buscar municipio…">
+                    </div>
+                    <select id="filter-mun-prov" class="filter-select">
+                        <option value="">Todas las provincias</option>
+                    </select>
+                    <span class="loc-count" id="count-municipios"></span>
+                    <button class="btn-add-loc" id="btn-new-municipio"><i class="bi bi-plus-lg"></i> Nuevo municipio</button>
+                </div>
+                <div class="table-card">
+                    <table class="admin-table">
+                        <thead><tr><th>#</th><th>Nombre</th><th>Provincia</th><th>Centros</th><th>Labs</th><th class="text-end">Acciones</th></tr></thead>
+                        <tbody id="tbody-municipios"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="loc-centros" class="loc-panel d-none">
+                <div class="loc-panel-header">
+                    <div class="filter-search-wrap" style="max-width:260px">
+                        <i class="bi bi-search filter-icon"></i>
+                        <input type="text" id="filter-centro" class="filter-input" placeholder="Buscar centro…">
+                    </div>
+                    <select id="filter-centro-prov" class="filter-select">
+                        <option value="">Todas las provincias</option>
+                    </select>
+                    <select id="filter-centro-mun" class="filter-select">
+                        <option value="">Todos los municipios</option>
+                    </select>
+                    <span class="loc-count" id="count-centros"></span>
+                    <button class="btn-add-loc" id="btn-new-centro"><i class="bi bi-plus-lg"></i> Nuevo centro</button>
+                </div>
+                <div class="table-card">
+                    <table class="admin-table">
+                        <thead><tr><th>#</th><th>Nombre</th><th>Tipo</th><th>Municipio</th><th>Provincia</th><th class="text-end">Acciones</th></tr></thead>
+                        <tbody id="tbody-centros"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="loc-laboratorios" class="loc-panel d-none">
+                <div class="loc-panel-header">
+                    <div class="filter-search-wrap" style="max-width:260px">
+                        <i class="bi bi-search filter-icon"></i>
+                        <input type="text" id="filter-lab" class="filter-input" placeholder="Buscar laboratorio…">
+                    </div>
+                    <select id="filter-lab-prov" class="filter-select">
+                        <option value="">Todas las provincias</option>
+                    </select>
+                    <select id="filter-lab-nivel" class="filter-select">
+                        <option value="">Todo nivel</option>
+                        <option value="local">Local</option>
+                        <option value="municipal">Municipal</option>
+                        <option value="provincial">Provincial</option>
+                        <option value="nacional">Nacional</option>
+                    </select>
+                    <span class="loc-count" id="count-laboratorios"></span>
+                    <button class="btn-add-loc" id="btn-new-lab"><i class="bi bi-plus-lg"></i> Nuevo laboratorio</button>
+                </div>
+                <div class="table-card">
+                    <table class="admin-table">
+                        <thead><tr><th>#</th><th>Nombre</th><th>Nivel</th><th>Municipio</th><th>Provincia</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+                        <tbody id="tbody-laboratorios"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+
+        <section id="tab-catalogos" class="admin-tab d-none">
+
+            <div class="table-card mb-4">
+                <div class="table-card-header">
+                    <div>
+                        <h3 class="table-card-title"><i class="bi bi-exclamation-triangle me-2"></i>Grupos de vulnerabilidad</h3>
+                        <p class="table-card-sub">Factores de riesgo que pueden asignarse a un paciente en la indicación.</p>
+                    </div>
+                    <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-gv">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+                <div id="gv-admin-list" class="cat-list"></div>
+            </div>
+
+            <div class="table-card mb-4">
+                <div class="table-card-header">
+                    <div>
+                        <h3 class="table-card-title"><i class="bi bi-droplet-half me-2"></i>Tipos de muestra</h3>
+                        <p class="table-card-sub">Muestras biológicas disponibles para las indicaciones de laboratorio.</p>
+                    </div>
+                    <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-tm">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+                <div id="tm-admin-list" class="cat-list"></div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-card-header">
+                    <div>
+                        <h3 class="table-card-title"><i class="bi bi-bug me-2"></i>Microorganismos</h3>
+                        <p class="table-card-sub">Identificaciones disponibles en resultados de cultivo. Las entradas marcadas como <em>Sistema</em> no pueden eliminarse.</p>
+                    </div>
+                    <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-micro">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+                <div id="micro-admin-list" class="cat-list"></div>
+            </div>
+
+        </section>
+
+    </main>
+</div>
+
+<div class="modal fade" id="modal-provincia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title" id="modal-provincia-title"><i class="bi bi-map"></i> Provincia</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="prov-edit-id">
+                <div class="row g-3">
+                    <div class="col-8">
+                        <label class="admin-label">Nombre <span class="required">*</span></label>
+                        <input type="text" id="prov-nombre" class="form-control" placeholder="Ej: Camagüey">
+                    </div>
+                    <div class="col-4">
+                        <label class="admin-label">Código <span class="required">*</span></label>
+                        <input type="text" id="prov-codigo" class="form-control ctrl-mono" placeholder="CMG" maxlength="3" style="text-transform:uppercase">
+                    </div>
+                </div>
+                <div id="prov-err" class="alert-custom alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-primary-custom" id="btn-save-provincia"><i class="bi bi-floppy"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-municipio" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title" id="modal-municipio-title"><i class="bi bi-signpost-split"></i> Municipio</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mun-edit-id">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="admin-label">Nombre <span class="required">*</span></label>
+                        <input type="text" id="mun-nombre" class="form-control" placeholder="Ej: Manzanillo">
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Provincia <span class="required">*</span></label>
+                        <select id="mun-provincia" class="form-select admin-select">
+                            <option value="">— Seleccione —</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="mun-err" class="alert-custom alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-primary-custom" id="btn-save-municipio"><i class="bi bi-floppy"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-centro" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title" id="modal-centro-title"><i class="bi bi-hospital"></i> Centro de salud</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="centro-edit-id">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="admin-label">Nombre <span class="required">*</span></label>
+                        <input type="text" id="centro-nombre" class="form-control" placeholder="Ej: Policlínico Norte">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="admin-label">Tipo <span class="required">*</span></label>
+                        <select id="centro-tipo" class="form-select admin-select">
+                            <option value="">— Seleccione —</option>
+                            <option value="hospital">Hospital</option>
+                            <option value="área de salud">Área de salud</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="admin-label">Provincia <span class="required">*</span></label>
+                        <select id="centro-provincia" class="form-select admin-select">
+                            <option value="">— Seleccione —</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Municipio <span class="required">*</span></label>
+                        <select id="centro-municipio" class="form-select admin-select" disabled>
+                            <option value="">— Seleccione provincia —</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="centro-err" class="alert-custom alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-primary-custom" id="btn-save-centro"><i class="bi bi-floppy"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-laboratorio" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title" id="modal-lab-title"><i class="bi bi-flask"></i> Laboratorio</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="lab-edit-id">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="admin-label">Nombre <span class="required">*</span></label>
+                        <input type="text" id="lab-nombre" class="form-control" placeholder="Ej: Laboratorio Clínico Hospital Lenin">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="admin-label">Nivel de referencia <span class="required">*</span></label>
+                        <select id="lab-nivel" class="form-select admin-select">
+                            <option value="local">Local</option>
+                            <option value="municipal">Municipal</option>
+                            <option value="provincial">Provincial</option>
+                            <option value="nacional">Nacional</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="admin-label">Provincia <span class="required">*</span></label>
+                        <select id="lab-provincia" class="form-select admin-select">
+                            <option value="">— Seleccione —</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Municipio <span class="required">*</span></label>
+                        <select id="lab-municipio" class="form-select admin-select" disabled>
+                            <option value="">— Seleccione provincia —</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Estado</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:.88rem">
+                                <input type="radio" name="lab-activo" value="true" checked> Activo
+                            </label>
+                            <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:.88rem">
+                                <input type="radio" name="lab-activo" value="false"> Inactivo
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="lab-err" class="alert-custom alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-primary-custom" id="btn-save-lab"><i class="bi bi-floppy"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-delete" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirmar eliminación</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="delete-confirm-msg" style="font-size:.88rem;color:#444;margin:0"></p>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-danger-custom" id="btn-confirm-delete"><i class="bi bi-trash"></i> Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-cat-item" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title" id="modal-cat-title"><i class="bi bi-tag"></i> Ítem</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cat-edit-id">
+                <input type="hidden" id="cat-edit-type">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="admin-label">Nombre <span class="required">*</span></label>
+                        <input type="text" id="cat-nombre" class="form-control" placeholder="Nombre del ítem">
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Estado</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:.88rem">
+                                <input type="radio" name="cat-activo" value="true" checked> Activo
+                            </label>
+                            <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:.88rem">
+                                <input type="radio" name="cat-activo" value="false"> Inactivo
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="cat-err" class="alert-custom alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-primary-custom" id="btn-save-cat"><i class="bi bi-floppy"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="admin-toast" class="admin-toast d-none">
+    <i class="bi" id="toast-icon"></i>
+    <span id="toast-msg"></span>
+</div>
+
+<div id="bootstrap-bar" class="bootstrap-bar d-none">
+    <i class="bi bi-tools"></i>
+    <span>Modo prototipo: no hay admin registrado.</span>
+    <button id="btn-make-admin">Convertir usuario activo en admin</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
+<script src="data.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

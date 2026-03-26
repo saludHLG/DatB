@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DatB — Acceso</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+          crossorigin="anonymous">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+          rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+
+    <!-- Estilos propios: base → módulos clínicos -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="modules.css">
+</head>
+<body>
+
+<!-- ===================== LAYOUT AUTH ===================== -->
+<div class="layout-wrapper">
+
+    <!-- Panel lateral decorativo (solo escritorio) -->
+    <aside class="side-panel">
+        <div class="side-inner">
+            <div class="brand">
+                <span class="brand-icon"><i class="bi bi-lungs-fill"></i></span>
+                <span class="brand-name">DatB</span>
+            </div>
+            <div class="side-tagline">
+                <p>Sistema de Gestión</p>
+                <p>de Muestras y Resultados</p>
+                <p class="side-pilot">— Estudio Piloto —</p>
+            </div>
+            <div class="side-deco" aria-hidden="true">
+                <div class="deco-ring r1"></div>
+                <div class="deco-ring r2"></div>
+                <div class="deco-ring r3"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===================== ÁREA PRINCIPAL ===================== -->
+    <main class="main-area">
+
+        <!-- ======= VISTA: LOGIN ======= -->
+        <section id="view-login" class="form-view active">
+            <div class="form-card">
+                <div class="form-card-header">
+                    <h1 class="form-title">Iniciar sesión</h1>
+                    <p class="form-subtitle">Ingrese sus credenciales de acceso</p>
+                </div>
+
+                <form id="form-login" novalidate>
+                    <div class="mb-4">
+                        <label for="login-ci" class="form-label">Carnet de Identidad</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-person-badge input-icon"></i>
+                            <input type="text" id="login-ci" class="form-control ctrl-mono"
+                                   placeholder="Ej: 90012345678" autocomplete="off" maxlength="20">
+                        </div>
+                        <div class="invalid-feedback" id="err-login-ci"></div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">PIN de acceso</label>
+                        <div class="pin-grid" id="login-pin-grid">
+                            <!-- Inputs generados dinámicamente por utils.js → auth.js -->
+                            <input type="password" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Dígito 1">
+                            <input type="password" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Dígito 2">
+                            <input type="password" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Dígito 3">
+                            <input type="password" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Dígito 4">
+                        </div>
+                        <div class="invalid-feedback" id="err-login-pin"></div>
+                    </div>
+
+                    <div id="login-alert" class="alert-custom d-none"></div>
+
+                    <button type="submit" class="btn-primary-custom w-100">
+                        <span class="btn-text">Entrar</span>
+                        <i class="bi bi-arrow-right-circle btn-icon"></i>
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    <span>¿No tiene cuenta?</span>
+                    <button class="link-btn" id="goto-register">Registrarse</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======= VISTA: REGISTRO ======= -->
+        <section id="view-register" class="form-view">
+            <div class="form-card form-card-wide">
+                <div class="form-card-header">
+                    <h1 class="form-title">Crear cuenta</h1>
+                    <p class="form-subtitle">Complete los datos. La cuenta quedará pendiente de aprobación.</p>
+                </div>
+
+                <!-- Indicador de pasos -->
+                <div class="steps-bar">
+                    <div class="step active" data-step="1">
+                        <span class="step-num">1</span>
+                        <span class="step-label">Datos personales</span>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-step="2">
+                        <span class="step-num">2</span>
+                        <span class="step-label">Rol e institución</span>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-step="3">
+                        <span class="step-num">3</span>
+                        <span class="step-label">Seguridad</span>
+                    </div>
+                </div>
+
+                <form id="form-register" novalidate>
+
+                    <!-- PASO 1: Datos personales -->
+                    <div class="form-step" id="step-1">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="reg-ci" class="form-label">Carnet de Identidad <span class="required">*</span></label>
+                                <div class="input-group-custom">
+                                    <i class="bi bi-person-badge input-icon"></i>
+                                    <input type="text" id="reg-ci" class="form-control ctrl-mono"
+                                           placeholder="Ej: 90012345678" maxlength="20">
+                                </div>
+                                <div class="invalid-feedback" id="err-reg-ci"></div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="reg-nombres" class="form-label">Nombres <span class="required">*</span></label>
+                                <input type="text" id="reg-nombres" class="form-control"
+                                       placeholder="Ej: María Elena">
+                                <div class="invalid-feedback" id="err-reg-nombres"></div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="reg-apellidos" class="form-label">Apellidos <span class="required">*</span></label>
+                                <input type="text" id="reg-apellidos" class="form-control"
+                                       placeholder="Ej: González Pérez">
+                                <div class="invalid-feedback" id="err-reg-apellidos"></div>
+                            </div>
+                        </div>
+
+                        <div class="step-actions">
+                            <button type="button" class="btn-secondary-custom" id="goto-login-back">
+                                <i class="bi bi-arrow-left"></i> Volver al login
+                            </button>
+                            <button type="button" class="btn-primary-custom" id="step1-next">
+                                Siguiente <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASO 2: Rol e institución -->
+                    <div class="form-step d-none" id="step-2">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="reg-rol-prof" class="form-label">Rol profesional <span class="required">*</span></label>
+                                <select id="reg-rol-prof" class="form-select">
+                                    <option value="">— Seleccione —</option>
+                                    <option value="1">Médico/a</option>
+                                    <option value="2">Enfermero/a</option>
+                                    <option value="3">Licenciado/a de Laboratorio</option>
+                                    <option value="4">Técnico/a de Laboratorio</option>
+                                </select>
+                                <div class="invalid-feedback" id="err-reg-rol-prof"></div>
+                            </div>
+
+                            <!-- Solo visible para médico (1) -->
+                            <div class="col-12 col-md-6" id="campo-registro-prof" style="display:none">
+                                <label for="reg-registro-prof" class="form-label">
+                                    Nº Registro Profesional <span class="required">*</span>
+                                </label>
+                                <div class="input-group-custom">
+                                    <i class="bi bi-award input-icon"></i>
+                                    <input type="text" id="reg-registro-prof" class="form-control ctrl-mono"
+                                           placeholder="Ej: 12345-A">
+                                </div>
+                                <div class="invalid-feedback" id="err-reg-registro-prof"></div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="reg-provincia" class="form-label">Provincia <span class="required">*</span></label>
+                                <select id="reg-provincia" class="form-select">
+                                    <option value="">— Seleccione —</option>
+                                </select>
+                                <div class="invalid-feedback" id="err-reg-provincia"></div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="reg-municipio" class="form-label">Municipio <span class="required">*</span></label>
+                                <select id="reg-municipio" class="form-select" disabled>
+                                    <option value="">— Seleccione provincia —</option>
+                                </select>
+                                <div class="invalid-feedback" id="err-reg-municipio"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="reg-centro" class="form-label">Centro de salud donde trabaja <span class="required">*</span></label>
+                                <select id="reg-centro" class="form-select" disabled>
+                                    <option value="">— Seleccione municipio —</option>
+                                </select>
+                                <div class="invalid-feedback" id="err-reg-centro"></div>
+                            </div>
+                        </div>
+
+                        <div class="step-actions">
+                            <button type="button" class="btn-secondary-custom" id="step2-back">
+                                <i class="bi bi-arrow-left"></i> Anterior
+                            </button>
+                            <button type="button" class="btn-primary-custom" id="step2-next">
+                                Siguiente <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASO 3: PIN -->
+                    <div class="form-step d-none" id="step-3">
+                        <p class="pin-instructions">
+                            <i class="bi bi-shield-lock"></i>
+                            Defina un PIN de <strong>4 dígitos</strong> numéricos para acceder al sistema.
+                        </p>
+
+                        <div class="row g-4">
+                            <div class="col-12">
+                                <label class="form-label">PIN de acceso <span class="required">*</span></label>
+                                <div class="pin-grid" id="reg-pin-grid"></div>
+                                <div class="invalid-feedback" id="err-reg-pin"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Confirmar PIN <span class="required">*</span></label>
+                                <div class="pin-grid" id="reg-pin-confirm-grid"></div>
+                                <div class="invalid-feedback" id="err-reg-pin-confirm"></div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen de datos del registro -->
+                        <div class="summary-box" id="reg-summary"></div>
+
+                        <div id="register-alert" class="alert-custom d-none"></div>
+
+                        <div class="step-actions">
+                            <button type="button" class="btn-secondary-custom" id="step3-back">
+                                <i class="bi bi-arrow-left"></i> Anterior
+                            </button>
+                            <button type="submit" class="btn-primary-custom" id="btn-register-submit">
+                                <span class="btn-text">Crear cuenta</span>
+                                <i class="bi bi-check-circle btn-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </section>
+
+        <!-- ======= VISTA: ÉXITO ======= -->
+        <section id="view-success" class="form-view">
+            <div class="form-card text-center">
+                <div class="success-icon">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h2 class="form-title mt-3">Cuenta creada</h2>
+                <p class="form-subtitle">
+                    Su solicitud de registro ha sido enviada.<br>
+                    Un administrador revisará y aprobará su cuenta.<br>
+                    Recibirá confirmación antes de poder acceder.
+                </p>
+                <button class="btn-primary-custom mt-4" id="success-goto-login">
+                    Ir al login <i class="bi bi-arrow-right-circle"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- ======= VISTA: DASHBOARD (placeholder, activa cuando carga app-shell) ======= -->
+        <section id="view-dashboard" class="form-view"></section>
+
+    </main>
+</div>
+<!-- fin .layout-wrapper -->
+
+<!-- ======= APP SHELL (post-login — todos los usuarios) ======= -->
+<div id="app-shell" class="d-none">
+
+    <!-- Topbar -->
+    <header class="app-topbar">
+        <div class="app-topbar-brand">
+            <span class="brand-icon" style="font-size:1.2rem"><i class="bi bi-lungs-fill"></i></span>
+            <span class="brand-name" style="font-size:1.05rem">DatB</span>
+        </div>
+        <div class="app-topbar-center" id="topbar-title">Inicio</div>
+        <div class="app-topbar-right">
+            <div class="topbar-user-pill">
+                <div class="topbar-avatar" id="topbar-avatar"></div>
+                <span id="topbar-name"></span>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-body">
+
+        <!-- Sidebar de navegación -->
+        <nav class="app-sidebar">
+            <div class="sidebar-profile">
+                <div class="sp-avatar" id="sp-avatar"></div>
+                <div class="sp-info">
+                    <div class="sp-name"     id="sp-name"></div>
+                    <div class="sp-rol-prof" id="sp-rol-prof"></div>
+                    <span class="sp-estado"  id="sp-estado"></span>
+                </div>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-meta" id="sidebar-meta"></div>
+            <div class="sidebar-divider"></div>
+            <ul class="app-nav" id="app-nav"></ul>
+            <div class="sidebar-footer-actions">
+                <button class="app-nav-btn danger" id="btn-logout">
+                    <i class="bi bi-box-arrow-left"></i><span>Cerrar sesión</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Área de contenido del módulo activo -->
+        <main class="app-content">
+            <div class="app-content-inner" id="app-content-inner"></div>
+        </main>
+
+    </div>
+</div>
+<!-- fin #app-shell -->
+
+<!-- MODAL: CONFIRMACIÓN GLOBAL (_appConfirm) -->
+<div class="modal fade" id="app-confirm-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 8px 40px rgba(11,30,61,.2)">
+            <div class="modal-header" style="border-bottom:1px solid #e2e8f0;padding:.9rem 1.25rem">
+                <h6 class="modal-title mb-0"
+                    style="font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:#0b1e3d;display:flex;align-items:center;gap:.45rem">
+                    <i class="bi bi-exclamation-triangle-fill" style="color:#f0a500"></i>
+                    Confirmar acción
+                </h6>
+            </div>
+            <div class="modal-body" style="padding:1rem 1.25rem">
+                <p id="app-confirm-msg" style="font-size:.875rem;color:#334155;margin:0;line-height:1.55"></p>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid #e2e8f0;padding:.75rem 1.25rem;gap:.5rem;justify-content:flex-end">
+                <button type="button" id="app-confirm-cancel"
+                        style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.1rem;background:transparent;color:#64748b;border:1.5px solid #dce8f5;border-radius:8px;font-size:.85rem;cursor:pointer;font-family:'DM Sans',sans-serif">
+                    <i class="bi bi-x-lg"></i> Cancelar
+                </button>
+                <button type="button" id="app-confirm-ok"
+                        style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.1rem;background:#e0435a;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+                    <i class="bi bi-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== SCRIPTS =====================
+     Orden de carga obligatorio:
+     1. Bootstrap JS (dependencia base)
+     2. utils.js    — helpers globales, geo accessors
+     3. data.js     — catálogos estáticos (DATOS_GEO, ROLES_*)
+     4. indicacion.js — módulo clínico (usa $ de utils.js)
+     5. laboratorio.js — módulo clínico (usa indicacion.js)
+     6. auth.js     — login/registro (usa utils + data)
+     7. app.js      — shell post-login (usa todos los anteriores)
+===================================================== -->
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"
+        integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js"
+        integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF"
+        crossorigin="anonymous"></script>
+
+<!-- Lógica propia -->
+<script src="utils.js"></script>
+<script src="data.js"></script>
+<script src="indicacion.js"></script>
+<script src="laboratorio_core.js"></script>
+<script src="lab_resultados.js"></script>
+<script src="lab_pendientes.js"></script>
+<script src="lab_recibidas.js"></script>
+<script src="laboratorio.js"></script>
+<script src="auth.js"></script>
+<script src="app.js"></script>
+<script src="home_lab.js"></script>       <!-- ← nuevo -->
+<script src="home_usuario.js"></script>
+<script src="lab_resumen.js"></script>
+</body>
+</html>
