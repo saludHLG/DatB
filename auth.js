@@ -1,6 +1,6 @@
 /* =========================================================
    auth.js — Flujo de autenticación: login y registro
-   Requiere: utils.js, data.js (cargados antes en el HTML)
+   Requiere: utils.js, data.js, supabase_client.js (cargados antes)
    ========================================================= */
 
 /* ── Selects geográficos para el formulario de registro ─── */
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     buildPinGrid('reg-pin-confirm-grid');
 
     /* ======= LOGIN ======= */
-    $('form-login')?.addEventListener('submit', function (e) {
+    $('form-login')?.addEventListener('submit', async function (e) {
         e.preventDefault();
         const ci  = $('login-ci').value.trim();
         const pin = readPin('login-pin-grid');
@@ -178,11 +178,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const user = getUsers().find(u => u.ci === ci && u.pin_hash === hashPin(pin));
-        if (!user)        { showAlert('login-alert','CI o PIN incorrecto.','danger');       return; }
-        if (!user.activo) { showAlert('login-alert','Su cuenta está desactivada.','danger'); return; }
+        /* Deshabilitar botón mientras espera */
+        const btnLogin = this.querySelector('[type="submit"]');
+        if (btnLogin) { btnLogin.disabled = true; btnLogin.textContent = 'Verificando…'; }
 
-        /* loadDashboard definido en app.js, cargado después de auth.js */
+        const { user, error } = await sbLogin(ci, pin);
+
+        if (btnLogin) { btnLogin.disabled = false; btnLogin.innerHTML = '<span class="btn-text">Entrar</span><i class="bi bi-arrow-right-circle btn-icon"></i>'; }
+
+        if (error) { showAlert('login-alert', error, 'danger'); return; }
+        if (!user) { showAlert('login-alert', 'CI o PIN incorrecto.', 'danger'); return; }
+
+        sessionStorage.setItem('sr_active_user', user.id);
         loadDashboard(user);
         showView('view-dashboard');
     });
@@ -209,16 +216,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* ======= REGISTRO — submit ======= */
-    $('form-register')?.addEventListener('submit', function (e) {
+    $('form-register')?.addEventListener('submit', async function (e) {
         e.preventDefault();
         if (!validateStep3()) return;
         hide('register-alert');
 
         const rolId  = Number($('reg-rol-prof').value);
         const centId = $('reg-centro').value;
+        const pin    = readPin('reg-pin-grid');
 
         const nuevoUsuario = {
-            id:                   Date.now().toString(36),
+            id:                   crypto.randomUUID(),   /* UUID v4 real para Supabase */
             ci:                   $('reg-ci').value.trim(),
             nombres:              $('reg-nombres').value.trim(),
             apellidos:            $('reg-apellidos').value.trim(),
@@ -231,16 +239,20 @@ document.addEventListener('DOMContentLoaded', () => {
             centro_texto:         centId === '__otro__'
                 ? 'Otro'
                 : getGeoCentros().find(c => c.id === Number(centId))?.nombre,
-            pin_hash:             hashPin(readPin('reg-pin-grid')),
-            rol_sistema_id:       1,   // usuario común por defecto
+            rol_sistema_id:       1,
             activo:               true,
-            aprobado:             false, // pendiente de aprobación
+            aprobado:             false,
             creado_en:            new Date().toISOString()
         };
 
-        const users = getUsers();
-        users.push(nuevoUsuario);
-        saveUsers(users);
+        const btnReg = this.querySelector('[type="submit"]');
+        if (btnReg) { btnReg.disabled = true; btnReg.textContent = 'Registrando…'; }
+
+        const { error } = await sbRegister(nuevoUsuario, pin);
+
+        if (btnReg) { btnReg.disabled = false; btnReg.innerHTML = '<span class="btn-text">Crear cuenta</span><i class="bi bi-check-circle btn-icon"></i>'; }
+
+        if (error) { showAlert('register-alert', error, 'danger'); return; }
         showView('view-success');
     });
 
@@ -300,26 +312,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* ======= LOGOUT ======= */
-    $('btn-logout')?.addEventListener('click', () => {
+    $('btn-logout')?.addEventListener('click', async () => {
+        await sbLogout();
         $('app-shell').classList.add('d-none');
         document.querySelector('.layout-wrapper')?.classList.remove('d-none');
         if ($('login-ci')) $('login-ci').value = '';
         document.querySelectorAll('#login-pin-grid .pin-input').forEach(i => i.value = '');
         showView('view-login');
-        sessionStorage.removeItem('sr_active_user');
     });
 
     /* ======= RESTAURAR SESIÓN ======= */
-    const savedUid = sessionStorage.getItem('sr_active_user');
-    if (savedUid) {
-        const user = getUsers().find(u => u.id === savedUid);
+    sbGetSession().then(user => {
         if (user && user.activo) {
-            loadDashboard(user);   // definido en app.js, ejecutado antes del evento
+            sessionStorage.setItem('sr_active_user', user.id);
+            loadDashboard(user);
             showView('view-dashboard');
-            return;
+        } else {
+            showView('view-login');
         }
-        sessionStorage.removeItem('sr_active_user');
-    }
-
-    showView('view-login');
+    });
 });
