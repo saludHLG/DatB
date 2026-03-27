@@ -15,6 +15,10 @@
 
 (function (global) {
     'use strict';
+   function _buildPassword(pin) {
+    const cleanPin = String(pin).padStart(4, '0').slice(0, 4);
+    return `datb_${cleanPin}_2025`; // 14 caracteres, cumple requisito
+}
 
     /* ── Cliente singleton ──────────────────────────────────── */
     let _sb = null;
@@ -61,9 +65,9 @@
 
         /* ── Modo Supabase ───────────────────────────────────── */
         const { data, error } = await sb.auth.signInWithPassword({
-            email   : `${ci.toLowerCase()}@datb.local`,
-            password: String(pin),
-        });
+    email   : `${ci.toLowerCase()}@datb.local`,
+    password: _buildPassword(pin),   // <-- Cambio
+});
         if (error) return { user: null, error: error.message };
 
         const { data: profile, error: pErr } = await sb
@@ -83,25 +87,39 @@
      * @param {object} perfil — objeto usuario (sin pin_hash)
      * @param {string} pin    — PIN en claro (4 dígitos)
      */
-    global.sbRegister = async function (perfil, pin) {
-        const sb = _client();
-        const pinHash = hashPin(String(pin));
+   global.sbRegister = async function (perfil, pin) {
+    const sb = _client();
+    const pinHash = hashPin(String(pin));
 
-        if (!sb) {
-            const users = typeof getUsers === 'function' ? getUsers() : [];
-            if (users.find(u => u.ci === perfil.ci))
-                return { error: 'Este CI ya está registrado.' };
-            if (typeof saveUsers === 'function')
-                saveUsers([...users, { ...perfil, pin_hash: pinHash }]);
-            return { error: null };
-        }
+    if (!sb) {
+        const users = typeof getUsers === 'function' ? getUsers() : [];
+        if (users.find(u => u.ci === perfil.ci))
+            return { error: 'Este CI ya está registrado.' };
+        if (typeof saveUsers === 'function')
+            saveUsers([...users, { ...perfil, pin_hash: pinHash }]);
+        return { error: null };
+    }
 
-        /* 1 — Crear usuario en Supabase Auth */
-        const { data: authData, error: authErr } = await sb.auth.signUp({
-  email: `${perfil.ci.toLowerCase()}@datb.local`,
-  password: String(pin),
-});
-console.log('Auth signUp error:', authErr);
+    // 1 — Crear usuario en Supabase Auth
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+        email   : `${perfil.ci.toLowerCase()}@datb.local`,
+        password: _buildPassword(pin),   // <-- Cambio
+    });
+    console.log('Auth signUp error:', authErr);
+    if (authErr) return { error: authErr.message };
+
+    // 2 — Insertar perfil en tabla usuarios
+    const { error: insErr } = await sb.from('usuarios').insert({
+        ...perfil,
+        id       : authData.user.id,
+        pin_hash : pinHash,
+        creado_en: new Date().toISOString(),
+    });
+    console.log('Insert usuarios error:', insErr);
+    if (insErr) return { error: insErr.message };
+
+    return { error: null };
+};
 if (authErr) return { error: authErr.message };
 
 const { error: insErr } = await sb.from('usuarios').insert({
@@ -161,8 +179,9 @@ if (insErr) return { error: insErr.message };
      * @param {string} newPin — 4 dígitos en claro
      */
     global.sbChangePin = async function (userId, newPin) {
-        const sb = _client();
-        const newHash = hashPin(String(newPin));
+        const { error } = await sb.auth.updateUser({ 
+    password: _buildPassword(newPin)   // <-- Cambio
+});
 
         /* Actualizar caché local */
         if (typeof getUsers === 'function' && typeof saveUsers === 'function') {
