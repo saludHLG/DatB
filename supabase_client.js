@@ -98,10 +98,20 @@
 
         /* 1 — Crear usuario en Supabase Auth */
         const { data: authData, error: authErr } = await sb.auth.signUp({
-            email   : `${perfil.ci.toLowerCase()}@datb.local`,
-            password: String(pin),
-        });
-        if (authErr) return { error: authErr.message };
+  email: `${perfil.ci.toLowerCase()}@datb.local`,
+  password: String(pin),
+});
+console.log('Auth signUp error:', authErr);
+if (authErr) return { error: authErr.message };
+
+const { error: insErr } = await sb.from('usuarios').insert({
+  ...perfil,
+  id: authData.user.id,
+  pin_hash: pinHash,
+  creado_en: new Date().toISOString(),
+});
+console.log('Insert usuarios error:', insErr);
+if (insErr) return { error: insErr.message };
 
         /* 2 — Insertar perfil en tabla usuarios */
         const { error: insErr } = await sb.from('usuarios').insert({
