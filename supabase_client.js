@@ -1,24 +1,15 @@
 /* ================================================================
-   supabase_client.js — Capa de datos DatB
-   ================================================================
-   Modo ONLINE  : Supabase (auth + PostgreSQL con RLS)
-   Modo OFFLINE : localStorage puro (prototipo sin conexión)
-
-   Detección automática: si SUPABASE_URL contiene 'TU_PROYECTO'
-   o la biblioteca supabase-js no está cargada, opera en modo offline.
-
-   Cargar en HTML DESPUÉS de config.js y ANTES de utils.js:
-     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-     <script src="config.js"></script>
-     <script src="supabase_client.js"></script>
+   supabase_client.js — Capa de datos DatB (corregido)
    ================================================================ */
 
 (function (global) {
     'use strict';
-   function _buildPassword(pin) {
-    const cleanPin = String(pin).padStart(4, '0').slice(0, 4);
-    return `datb_${cleanPin}_2025`; // 14 caracteres, cumple requisito
-}
+
+    // Función auxiliar para construir una contraseña válida para Supabase Auth
+    function _buildPassword(pin) {
+        const cleanPin = String(pin).padStart(4, '0').slice(0, 4);
+        return `datb_${cleanPin}_2025`; // 14 caracteres, cumple requisito
+    }
 
     /* ── Cliente singleton ──────────────────────────────────── */
     let _sb = null;
@@ -41,21 +32,15 @@
     /** true cuando Supabase está configurado y disponible */
     global.IS_ONLINE = () => !!_client();
 
-
     /* ================================================================
        AUTH
        ================================================================ */
 
-    /**
-     * Inicio de sesión con CI + PIN de 4 dígitos.
-     * Supabase Auth usa el email interno `{ci}@datb.local`.
-     * @returns {{ user: object|null, error: string|null }}
-     */
     global.sbLogin = async function (ci, pin) {
         const sb = _client();
 
-        /* ── Modo prototipo ──────────────────────────────────── */
         if (!sb) {
+            // Modo offline (localStorage)
             const user = (typeof getUsers === 'function' ? getUsers() : [])
                 .find(u => u.ci === ci && u.pin_hash === hashPin(String(pin)));
             if (!user)        return { user: null, error: 'CI o PIN incorrecto.' };
@@ -63,11 +48,11 @@
             return { user, error: null };
         }
 
-        /* ── Modo Supabase ───────────────────────────────────── */
+        // Modo online (Supabase)
         const { data, error } = await sb.auth.signInWithPassword({
-    email   : `${ci.toLowerCase()}@datb.local`,
-    password: _buildPassword(pin),   // <-- Cambio
-});
+            email   : `${ci.toLowerCase()}@datb.local`,
+            password: _buildPassword(pin),
+        });
         if (error) return { user: null, error: error.message };
 
         const { data: profile, error: pErr } = await sb
@@ -82,78 +67,46 @@
         return { user: profile, error: null };
     };
 
-    /**
-     * Registro de nuevo usuario.
-     * @param {object} perfil — objeto usuario (sin pin_hash)
-     * @param {string} pin    — PIN en claro (4 dígitos)
-     */
-   global.sbRegister = async function (perfil, pin) {
-    const sb = _client();
-    const pinHash = hashPin(String(pin));
+    global.sbRegister = async function (perfil, pin) {
+        const sb = _client();
+        const pinHash = hashPin(String(pin));
 
-    if (!sb) {
-        const users = typeof getUsers === 'function' ? getUsers() : [];
-        if (users.find(u => u.ci === perfil.ci))
-            return { error: 'Este CI ya está registrado.' };
-        if (typeof saveUsers === 'function')
-            saveUsers([...users, { ...perfil, pin_hash: pinHash }]);
-        return { error: null };
-    }
+        if (!sb) {
+            const users = typeof getUsers === 'function' ? getUsers() : [];
+            if (users.find(u => u.ci === perfil.ci))
+                return { error: 'Este CI ya está registrado.' };
+            if (typeof saveUsers === 'function')
+                saveUsers([...users, { ...perfil, pin_hash: pinHash }]);
+            return { error: null };
+        }
 
-    // 1 — Crear usuario en Supabase Auth
-    const { data: authData, error: authErr } = await sb.auth.signUp({
-        email   : `${perfil.ci.toLowerCase()}@datb.local`,
-        password: _buildPassword(pin),   // <-- Cambio
-    });
-    console.log('Auth signUp error:', authErr);
-    if (authErr) return { error: authErr.message };
+        // 1 — Crear usuario en Supabase Auth
+        const { data: authData, error: authErr } = await sb.auth.signUp({
+            email   : `${perfil.ci.toLowerCase()}@datb.local`,
+            password: _buildPassword(pin),
+        });
+        console.log('Auth signUp error:', authErr);
+        if (authErr) return { error: authErr.message };
 
-    // 2 — Insertar perfil en tabla usuarios
-    const { error: insErr } = await sb.from('usuarios').insert({
-        ...perfil,
-        id       : authData.user.id,
-        pin_hash : pinHash,
-        creado_en: new Date().toISOString(),
-    });
-    console.log('Insert usuarios error:', insErr);
-    if (insErr) return { error: insErr.message };
-
-    return { error: null };
-};
-if (authErr) return { error: authErr.message };
-
-const { error: insErr } = await sb.from('usuarios').insert({
-  ...perfil,
-  id: authData.user.id,
-  pin_hash: pinHash,
-  creado_en: new Date().toISOString(),
-});
-console.log('Insert usuarios error:', insErr);
-if (insErr) return { error: insErr.message };
-
-        /* 2 — Insertar perfil en tabla usuarios */
+        // 2 — Insertar perfil en tabla usuarios
         const { error: insErr } = await sb.from('usuarios').insert({
             ...perfil,
             id       : authData.user.id,
             pin_hash : pinHash,
             creado_en: new Date().toISOString(),
         });
+        console.log('Insert usuarios error:', insErr);
         if (insErr) return { error: insErr.message };
 
         return { error: null };
     };
 
-    /** Cierra la sesión activa. */
     global.sbLogout = async function () {
         const sb = _client();
         if (sb) await sb.auth.signOut();
         sessionStorage.removeItem('sr_active_user');
     };
 
-    /**
-     * Restaura la sesión al recargar la página.
-     * @returns {object|null} Usuario activo o null.
-     */
     global.sbGetSession = async function () {
         const sb = _client();
 
@@ -173,17 +126,11 @@ if (insErr) return { error: insErr.message };
         return data || null;
     };
 
-    /**
-     * Cambiar PIN del usuario autenticado.
-     * @param {string} userId
-     * @param {string} newPin — 4 dígitos en claro
-     */
     global.sbChangePin = async function (userId, newPin) {
-        const { error } = await sb.auth.updateUser({ 
-    password: _buildPassword(newPin)   // <-- Cambio
-});
+        const sb = _client();
+        const newHash = hashPin(String(newPin));
 
-        /* Actualizar caché local */
+        // Actualizar caché local
         if (typeof getUsers === 'function' && typeof saveUsers === 'function') {
             const users = getUsers();
             const idx = users.findIndex(u => u.id === userId);
@@ -192,18 +139,17 @@ if (insErr) return { error: insErr.message };
 
         if (!sb) return { error: null };
 
-        /* Supabase Auth — actualizar contraseña */
-        const { error } = await sb.auth.updateUser({ password: String(newPin) });
+        // Actualizar contraseña en Supabase Auth
+        const { error } = await sb.auth.updateUser({ password: _buildPassword(newPin) });
         if (error) return { error: error.message };
 
-        /* Actualizar hash en tabla usuarios */
+        // Actualizar hash en tabla usuarios
         await sb.from('usuarios').update({ pin_hash: newHash }).eq('id', userId);
         return { error: null };
     };
 
-
     /* ================================================================
-       USUARIOS
+       USUARIOS (lectura/escritura)
        ================================================================ */
 
     global.sbGetUsers = async function () {
@@ -211,13 +157,11 @@ if (insErr) return { error: insErr.message };
         if (!sb) return typeof getUsers === 'function' ? getUsers() : [];
         const { data, error } = await sb.from('usuarios').select('*');
         if (error) { console.error('sbGetUsers:', error); return []; }
-        /* Sincronizar caché */
         if (typeof saveUsers === 'function') saveUsers(data);
         return data;
     };
 
     global.sbUpsertUser = async function (user) {
-        /* Siempre actualizar localStorage */
         if (typeof getUsers === 'function' && typeof saveUsers === 'function') {
             const users = getUsers();
             const idx = users.findIndex(u => u.id === user.id);
@@ -237,7 +181,6 @@ if (insErr) return { error: insErr.message };
         if (!sb) return;
         await sb.from('usuarios').delete().eq('id', userId);
     };
-
 
     /* ================================================================
        PERMISOS DE LABORATORIO
@@ -262,16 +205,10 @@ if (insErr) return { error: insErr.message };
         }
     };
 
-
     /* ================================================================
        DATOS GEOGRÁFICOS
        ================================================================ */
 
-    /**
-     * Carga provincias, municipios, centros y laboratorios desde
-     * Supabase y los almacena en localStorage como caché de lectura.
-     * En modo prototipo es un no-op (data.js ya provee los datos).
-     */
     global.sbInitGeo = async function () {
         const sb = _client();
         if (!sb) return;
@@ -289,7 +226,6 @@ if (insErr) return { error: insErr.message };
         if (l.data?.length) localStorage.setItem('sr_geo_labs',        JSON.stringify(l.data));
     };
 
-    /** Persiste un ítem geográfico en Supabase (complementa admin.js). */
     global.sbUpsertGeo = async function (tabla, item) {
         const sb = _client();
         if (!sb) return;
@@ -303,9 +239,8 @@ if (insErr) return { error: insErr.message };
         await sb.from(tabla).delete().eq('id', id);
     };
 
-
     /* ================================================================
-       CATÁLOGOS (grupos_vulnerables, tipos_muestra, microorganismos)
+       CATÁLOGOS
        ================================================================ */
 
     const _CAT_TABLA = {
@@ -314,7 +249,6 @@ if (insErr) return { error: insErr.message };
         sr_microorganismos    : 'microorganismos',
     };
 
-    /** Persiste un catálogo completo (reemplaza todos los registros). */
     global.sbSyncCatalogo = async function (lsKey, data) {
         localStorage.setItem(lsKey, JSON.stringify(data));
         const sb    = _client();
@@ -323,7 +257,6 @@ if (insErr) return { error: insErr.message };
         const { error } = await sb.from(tabla).upsert(data);
         if (error) console.error('sbSyncCatalogo:', tabla, error);
     };
-
 
     /* ================================================================
        PACIENTES
@@ -350,7 +283,6 @@ if (insErr) return { error: insErr.message };
         if (error) console.error('sbSavePaciente:', error);
     };
 
-
     /* ================================================================
        INDICACIONES
        ================================================================ */
@@ -361,7 +293,6 @@ if (insErr) return { error: insErr.message };
         if (!sb) return JSON.parse(localStorage.getItem(LS) || '[]');
         const { data } = await sb.from('indicaciones_examen').select('*, indicacion_examenes(examen_id)');
         if (data) {
-            /* Adaptar formato: examenes_ids como array plano */
             const adapted = data.map(ind => ({
                 ...ind,
                 examenes_ids: (ind.indicacion_examenes || []).map(r => r.examen_id),
@@ -400,7 +331,6 @@ if (insErr) return { error: insErr.message };
         if (sb) await sb.from('indicaciones_examen').delete().eq('id', indId);
     };
 
-
     /* ================================================================
        RECEPCIONES DE MUESTRA
        ================================================================ */
@@ -435,16 +365,15 @@ if (insErr) return { error: insErr.message };
         if (sb) await sb.from('recepciones_muestra').delete().eq('id', recId);
     };
 
-
     /* ================================================================
        RESULTADOS DE LABORATORIO
        ================================================================ */
 
     const _RES_MAP = {
-        baci     : { ls: 'sr_res_baci',         tabla: 'resultados_baciloscopia' },
-        cultivo  : { ls: 'sr_res_cultivo',       tabla: 'resultados_cultivo'     },
-        xpert_ultra: { ls: 'sr_res_xpert_ultra', tabla: 'resultados_xpert_ultra' },
-        xpert_xdr:   { ls: 'sr_res_xpert_xdr',  tabla: 'resultados_xpert_xdr'   },
+        baci        : { ls: 'sr_res_baci',         tabla: 'resultados_baciloscopia' },
+        cultivo     : { ls: 'sr_res_cultivo',       tabla: 'resultados_cultivo'     },
+        xpert_ultra : { ls: 'sr_res_xpert_ultra', tabla: 'resultados_xpert_ultra' },
+        xpert_xdr   : { ls: 'sr_res_xpert_xdr',   tabla: 'resultados_xpert_xdr'   },
     };
 
     global.sbSaveResultado = async function (tipo, item) {
@@ -467,7 +396,6 @@ if (insErr) return { error: insErr.message };
         const sb = _client();
         if (sb) await sb.from(m.tabla).delete().eq('id', id);
     };
-
 
     /* ================================================================
        ACCESOS TEMPORALES
@@ -492,7 +420,6 @@ if (insErr) return { error: insErr.message };
         if (!sb) return;
         await sb.from('accesos_temporales').upsert(acc);
     };
-
 
     /* ================================================================
        HELPER INTERNO
