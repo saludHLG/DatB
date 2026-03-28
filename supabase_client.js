@@ -440,6 +440,28 @@
     };
 
     /**
+     * Actualiza campos concretos de una sola fila.
+     * Uso: sbUpdateRow('usuarios', uid, { aprobado: true, rol_sistema_id: 2 })
+     */
+    global.sbUpdateRow = async function (tabla, id, changes, campo = 'id') {
+        const sb = _client();
+        if (!sb) return;
+        const { error } = await sb.from(tabla).update(changes).eq(campo, id);
+        if (error) console.error('sbUpdateRow:', tabla, error.message);
+    };
+
+    /**
+     * Insertar o actualizar (upsert) una sola fila.
+     * Uso: sbUpsertRow('accesos_temporales', objeto)
+     */
+    global.sbUpsertRow = async function (tabla, row) {
+        const sb = _client();
+        if (!sb || !row) return;
+        const { error } = await sb.from(tabla).upsert(row);
+        if (error) console.error('sbUpsertRow:', tabla, error.message);
+    };
+
+    /**
      * Eliminar una fila por clave primaria.
      * Uso: sbDeleteRow('laboratorios', 4001)
      *      sbDeleteRow('usuarios', uid)
