@@ -343,11 +343,14 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
         btn.addEventListener('click', () => {
             const recId = btn.dataset.recId;
             _appConfirm('Se eliminará la recepción y sus resultados asociados. Esta acción no se puede deshacer.', () => {
+                const recId = btn.dataset.recId;
                 _saveResBaci(_getResBaci().filter(r => r.recepcion_id !== recId));
                 _saveResCultivo(_getResCultivo().filter(r => r.recepcion_id !== recId));
                 _saveResXpertUltra(_getResXpertUltra().filter(r => r.recepcion_id !== recId));
                 _saveResXpertXDR(_getResXpertXDR().filter(r => r.recepcion_id !== recId));
                 _saveRecepciones(_getRecepciones().filter(r => r.id !== recId));
+                // Supabase: borrar recepción (resultados se eliminan en cascada por FK)
+                if (typeof sbDeleteRow === 'function') sbDeleteRow('recepciones_muestra', recId).catch(console.error);
                 renderLaboratorio(user, rootEl);
             });
         })
