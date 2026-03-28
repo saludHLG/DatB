@@ -1,7 +1,4 @@
 const $a = id => document.getElementById(id);
-const getUsers  = () => JSON.parse(localStorage.getItem('sr_usuarios')     || '[]');
-const getPerms  = () => JSON.parse(localStorage.getItem('sr_permisos_lab') || '[]');
-const getAccesos  = () => JSON.parse(localStorage.getItem('sr_accesos_temp') || '[]');
 
 /* ── Saves con sync a Supabase (best-effort, async) ──────── */
 const saveUsers = u => {
