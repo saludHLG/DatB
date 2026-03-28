@@ -7,14 +7,7 @@ const $a = id => document.getElementById(id);
 // Lee desde _store (cargado por sbInitAll en supabase_client.js)
 const getUsers   = () => window._store?.usuarios     || [];
 const getPerms   = () => window._store?.permisos_lab || [];
-const getAccesos = () => window._store?.accesos_temp || [];
-
-const saveUsers = u => { window._store.usuarios     = u; };
-const savePerms = p => { window._store.permisos_lab = p; };
-const saveAccesos = a => {
-    window._store.accesos_temp = a;
-    if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('accesos_temporales', a).catch(e => console.error('saveAccesos:', e.message));
+const getAccesos = () => window._store?.accesos_temp || [];emporales', a).catch(e => console.error('saveAccesos:', e.message));
 };
 
 /* ── Saves con sync a Supabase (best-effort, async) ──────── */
