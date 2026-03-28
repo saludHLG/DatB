@@ -139,7 +139,7 @@ function _showModalSuccess(alertId) {
    ══════════════════════════════════════════════════════════════ */
 
 function _abrirModalResultados(rec, ind, user, rootEl, emitirIds, editarIds) {
-    const pac     = (JSON.parse(localStorage.getItem('sr_pacientes') || '[]')).find(p => p.id === ind.paciente_id);
+    const pac     = (JSON.parse(localStorage.getItem(_store.pacientes.find(p => p.id === ind.paciente_id));
     const snap    = rec.snap || {};
     const pacSnap = snap.paciente || null;
     const pacNom  = pac ? `${pac.apellidos}, ${pac.nombres}` : pacSnap ? `${pacSnap.apellidos}, ${pacSnap.nombres}` : '—';
