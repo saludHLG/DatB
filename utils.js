@@ -105,7 +105,13 @@ function showView(viewId) {
 
 /* ── Usuarios — usa _store ──────────────────────────────── */
 function getUsers()       { return _store.usuarios; }
-function saveUsers(users) { _store.usuarios = users; }
+const saveUsers   = u => { window._store.usuarios     = u; };
+const savePerms   = p => { window._store.permisos_lab = p; };
+const saveAccesos = a => {
+    window._store.accesos_temp = a;
+    if (typeof sbUpsertRows === 'function')
+        sbUpsertRows('accesos_temporales', a).catch(e => console.error(e));
+};
 
 /* ── Accesores geográficos — usa _store con fallback estático */
 const getGeoProvs   = () => _store.geo_provincias.length   ? _store.geo_provincias   : (typeof DATOS_GEO !== 'undefined' ? DATOS_GEO.provincias   : []);
