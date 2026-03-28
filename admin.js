@@ -1,8 +1,7 @@
-const $a = id => document.getElementById(id);
-
-const getUsers   = () => window._store.usuarios     || [];
-const getPerms   = () => window._store.permisos_lab || [];
-const getAccesos = () => window._store.accesos_temp || [];
+window._store = window._store || {
+    usuarios: [], permisos_lab: [], accesos_temp: [],
+    geo_provincias: [], geo_municipios: [], geo_centros: [], geo_labs: []
+};
 
 /* ── Saves con sync a Supabase (best-effort, async) ──────── */
 const saveUsers = u => {
