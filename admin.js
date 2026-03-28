@@ -6,12 +6,10 @@ const getAccesos  = () => JSON.parse(localStorage.getItem('sr_accesos_temp') || 
 /* ── Saves con sync a Supabase (best-effort, async) ──────── */
 const saveUsers = u => {
     localStorage.setItem('sr_usuarios', JSON.stringify(u));
-    if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('usuarios', u).catch(e => console.error('saveUsers:', e.message));
+    // Evitar upsert masivo — usar sbUpdateRow / sbDeleteRow por operación individual
 };
 const savePerms = p => {
     // Permisos: se maneja con sbReplaceUserPerms por usuario en btn-save-user.
-    // Aquí solo actualizamos localStorage para consistencia local.
     localStorage.setItem('sr_permisos_lab', JSON.stringify(p));
 };
 const saveAccesos = a => {
@@ -270,6 +268,8 @@ $a('btn-approve-user')?.addEventListener('click', () => {
     users[idx].aprobado       = true;
     users[idx].rol_sistema_id = Number($a('approve-rol-sistema').value);
     saveUsers(users);
+    if (typeof sbUpdateRow === 'function')
+        sbUpdateRow('usuarios', _approveUid, { aprobado: true, rol_sistema_id: users[idx].rol_sistema_id });
     bootstrap.Modal.getInstance($a('modal-approve'))?.hide();
     toast(`Cuenta de ${users[idx].nombres} aprobada.`, 'success');
     renderAll();
@@ -281,6 +281,8 @@ $a('btn-reject-user')?.addEventListener('click', () => {
     users[idx].activo = false; users[idx].rechazado = true;
     users[idx].motivo_rechazo = $a('approve-reject-reason').value.trim() || null;
     saveUsers(users);
+    if (typeof sbUpdateRow === 'function')
+        sbUpdateRow('usuarios', _approveUid, { activo: false, rechazado: true, motivo_rechazo: users[idx].motivo_rechazo });
     bootstrap.Modal.getInstance($a('modal-approve'))?.hide();
     toast(`Cuenta de ${users[idx].nombres} rechazada.`, 'error');
     renderAll();
@@ -385,6 +387,8 @@ $a('btn-toggle-active')?.addEventListener('click', () => {
     if (idx === -1) return;
     users[idx].activo = !users[idx].activo;
     saveUsers(users);
+    if (typeof sbUpdateRow === 'function')
+        sbUpdateRow('usuarios', _editUid, { activo: users[idx].activo });
     toast(`Cuenta ${users[idx].activo?'reactivada':'desactivada'}.`, users[idx].activo?'success':'info');
     bootstrap.Modal.getInstance($a('modal-edit-user'))?.hide();
     renderAll();
@@ -417,6 +421,21 @@ $a('btn-save-user')?.addEventListener('click', () => {
     users[idx].rol_sistema_id = Number($a('modal-rol-sistema').value);
 
     saveUsers(users);
+
+    // Actualizar fila del usuario en Supabase de forma dirigida
+    if (typeof sbUpdateRow === 'function')
+        sbUpdateRow('usuarios', _editUid, {
+            nombres:              users[idx].nombres,
+            apellidos:            users[idx].apellidos,
+            rol_profesional_id:   users[idx].rol_profesional_id,
+            rol_profesional_nom:  users[idx].rol_profesional_nom,
+            registro_profesional: users[idx].registro_profesional,
+            provincia_id:         users[idx].provincia_id,
+            municipio_id:         users[idx].municipio_id,
+            centro_salud_id:      users[idx].centro_salud_id,
+            centro_texto:         users[idx].centro_texto,
+            rol_sistema_id:       users[idx].rol_sistema_id,
+        });
 
     // Actualizar permisos de lab: reemplazar en localStorage y en Supabase
     const allPerms = getPerms().filter(p => p.usuario_id !== _editUid).concat(_editPerms);
@@ -458,6 +477,7 @@ $a('btn-approve-access')?.addEventListener('click', () => {
         alcance_aprobado:$a('access-alcance').value, revisado_en:new Date().toISOString()
     });
     saveAccesos(accesos);
+    if (typeof sbUpsertRow === 'function') sbUpsertRow('accesos_temporales', accesos[idx]);
     bootstrap.Modal.getInstance($a('modal-access'))?.hide();
     toast('Acceso temporal aprobado.','success');
     renderAll();
@@ -468,6 +488,8 @@ $a('btn-reject-access')?.addEventListener('click', () => {
     if (idx === -1) return;
     accesos[idx].estado = 'rechazada'; accesos[idx].revisado_en = new Date().toISOString();
     saveAccesos(accesos);
+    if (typeof sbUpdateRow === 'function')
+        sbUpdateRow('accesos_temporales', _accessId, { estado: 'rechazada', revisado_en: accesos[idx].revisado_en });
     bootstrap.Modal.getInstance($a('modal-access'))?.hide();
     toast('Solicitud rechazada.','error');
     renderAll();
