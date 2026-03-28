@@ -5,25 +5,9 @@ window._store = window._store || {
 };
 const $a = id => document.getElementById(id);
 
-// Lee desde _store (cargado por sbInitAll en supabase_client.js)
-const getUsers   = () => window._store.usuarios     || [];
+// Las funciones getUsers, saveUsers, savePerms y saveAccesos son provistas por utils.js.
 const getPerms   = () => window._store.permisos_lab || [];
 const getAccesos = () => window._store.accesos_temp || [];
-
-/* ── Saves con sync a Supabase (best-effort, async) ──────── */
-const saveUsers = u => {
-    window._store.usuarios = u;
-    // Evitar upsert masivo — usar sbUpdateRow / sbDeleteRow por operación individual
-};
-const savePerms = p => {
-    // Permisos: se maneja con sbReplaceUserPerms por usuario en btn-save-user.
-    window._store.permisos_lab = p;
-};
-const saveAccesos = a => {
-    window._store.accesos_temp = a;
-    if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('accesos_temporales', a).catch(e => console.error('saveAccesos:', e.message));
-};
 
 const ROL_SIS_NAMES = { 1:'Usuario común', 2:'Mod. institucional', 3:'Mod. municipal', 4:'Mod. provincial', 5:'Mod. nacional', 6:'Administrador' };
 const ROL_SIS_HINTS = {
@@ -77,7 +61,7 @@ let _adminUser = null;
 
 function checkAccess() {
     const uid   = sessionStorage.getItem('sr_active_user');
-    const users = getUsers();
+    const users = getUsers() || [];
     const hasAdmin = users.some(u => u.rol_sistema_id === 6 && u.activo);
 
     if (!hasAdmin) {
@@ -99,7 +83,7 @@ function checkAccess() {
 $a('btn-make-admin')?.addEventListener('click', () => {
     const uid = sessionStorage.getItem('sr_active_user');
     if (!uid) { alert('Primero inicie sesión en index.html y vuelva aquí.'); return; }
-    const users = getUsers(), idx = users.findIndex(u => u.id === uid);
+    const users = getUsers() || [], idx = users.findIndex(u => u.id === uid);
     if (idx === -1) { alert('Usuario no encontrado.'); return; }
     users[idx].rol_sistema_id = 6;
     users[idx].aprobado = users[idx].activo = true;
@@ -145,7 +129,7 @@ document.querySelectorAll('.snav-btn[data-tab]').forEach(btn => {
 });
 
 function renderStats() {
-    const u = getUsers();
+    const u = getUsers() || [];
     const total = u.length, pending = u.filter(x => x.activo && !x.aprobado).length, active = u.filter(x => x.aprobado && x.activo).length;
     $a('header-stats').innerHTML = `
         <div class="stat-pill"><span class="stat-pill-num">${total}</span><span class="stat-pill-label">Total</span></div>
@@ -158,7 +142,7 @@ function renderStats() {
 }
 
 function renderPending() {
-    const users = getUsers().filter(u => u.activo && !u.aprobado);
+    const users = (getUsers() || []).filter(u => u.activo && !u.aprobado);
     const tbody = $a('pending-tbody'), wrap = $a('pending-table-wrap'), empty = $a('pending-empty');
     if (!users.length) { wrap.classList.add('d-none'); empty.classList.remove('d-none'); return; }
     wrap.classList.remove('d-none'); empty.classList.add('d-none');
@@ -182,7 +166,7 @@ function renderPending() {
 }
 
 function renderUsers() {
-    let users = getUsers();
+    let users = getUsers() || [];
     const perms  = getPerms();
     const search = ($a('filter-search')?.value||'').toLowerCase();
     const rp = $a('filter-rol-prof')?.value, rs = $a('filter-rol-sis')?.value, est = $a('filter-estado')?.value;
@@ -228,7 +212,7 @@ function renderUsers() {
 }
 
 function renderAccesos() {
-    const accesos = getAccesos(), users = getUsers();
+    const accesos = getAccesos(), users = getUsers() || [];
     const tbody = $a('access-tbody'), wrap = $a('access-table-wrap'), empty = $a('access-empty');
     if (!accesos.length) { wrap.classList.add('d-none'); empty.classList.remove('d-none'); return; }
     wrap.classList.remove('d-none'); empty.classList.add('d-none');
@@ -270,7 +254,7 @@ function buildUserCard(u) {
 
 function openApproveModal(uid, reject = false) {
     _approveUid = uid;
-    const u = getUsers().find(x => x.id === uid);
+    const u = (getUsers() || []).find(x => x.id === uid);
     if (!u) return;
     $a('approve-user-card').innerHTML = buildUserCard(u);
     $a('approve-rol-sistema').value = String(u.rol_sistema_id || 1);
@@ -280,7 +264,7 @@ function openApproveModal(uid, reject = false) {
 }
 
 $a('btn-approve-user')?.addEventListener('click', () => {
-    const users = getUsers(), idx = users.findIndex(u => u.id === _approveUid);
+    const users = getUsers() || [], idx = users.findIndex(u => u.id === _approveUid);
     if (idx === -1) return;
     users[idx].aprobado       = true;
     users[idx].rol_sistema_id = Number($a('approve-rol-sistema').value);
@@ -293,7 +277,7 @@ $a('btn-approve-user')?.addEventListener('click', () => {
 });
 
 $a('btn-reject-user')?.addEventListener('click', () => {
-    const users = getUsers(), idx = users.findIndex(u => u.id === _approveUid);
+    const users = getUsers() || [], idx = users.findIndex(u => u.id === _approveUid);
     if (idx === -1) return;
     users[idx].activo = false; users[idx].rechazado = true;
     users[idx].motivo_rechazo = $a('approve-reject-reason').value.trim() || null;
@@ -350,7 +334,7 @@ function renderLabList() {
 
 function openEditModal(uid) {
     _editUid = uid;
-    const u = getUsers().find(x => x.id === uid);
+    const u = (getUsers() || []).find(x => x.id === uid);
     if (!u) return;
     $a('modal-avatar').textContent     = ini(u);
     $a('modal-edit-name').textContent  = `${u.nombres} ${u.apellidos}`;
@@ -400,7 +384,7 @@ $a('btn-add-lab')?.addEventListener('click', () => {
 });
 
 $a('btn-toggle-active')?.addEventListener('click', () => {
-    const users = getUsers(), idx = users.findIndex(u => u.id === _editUid);
+    const users = getUsers() || [], idx = users.findIndex(u => u.id === _editUid);
     if (idx === -1) return;
     users[idx].activo = !users[idx].activo;
     saveUsers(users);
@@ -412,7 +396,7 @@ $a('btn-toggle-active')?.addEventListener('click', () => {
 });
 
 $a('btn-save-user')?.addEventListener('click', () => {
-    const users = getUsers(), idx = users.findIndex(u => u.id === _editUid);
+    const users = getUsers() || [], idx = users.findIndex(u => u.id === _editUid);
     if (idx === -1) return;
 
     const nomVal = $a('modal-nombres').value.trim();
@@ -439,7 +423,6 @@ $a('btn-save-user')?.addEventListener('click', () => {
 
     saveUsers(users);
 
-    // Actualizar fila del usuario en Supabase de forma dirigida
     if (typeof sbUpdateRow === 'function')
         sbUpdateRow('usuarios', _editUid, {
             nombres:              users[idx].nombres,
@@ -454,7 +437,6 @@ $a('btn-save-user')?.addEventListener('click', () => {
             rol_sistema_id:       users[idx].rol_sistema_id,
         });
 
-    // Actualizar permisos de lab
     const allPerms = getPerms().filter(p => p.usuario_id !== _editUid).concat(_editPerms);
     savePerms(allPerms);
     if (typeof sbReplaceUserPerms === 'function')
@@ -471,7 +453,7 @@ function openAccessModal(id) {
     _accessId = id;
     const a = getAccesos().find(x => x.id === id);
     if (!a) return;
-    const u = getUsers().find(x => x.id === a.usuario_id);
+    const u = (getUsers() || []).find(x => x.id === a.usuario_id);
     $a('access-request-card').innerHTML = `
         <div class="uc-row"><span class="uc-label">Solicitante</span><span class="uc-value">${u?`${u.nombres} ${u.apellidos}`:'—'}</span></div>
         <div class="uc-row"><span class="uc-label">Justificación</span><span class="uc-value">${a.justificacion}</span></div>
@@ -516,7 +498,6 @@ $a('btn-reject-access')?.addEventListener('click', () => {
     $a(id)?.addEventListener('input',  renderUsers);
     $a(id)?.addEventListener('change', renderUsers);
 });
-
 
 const GEO = {
     getProvs  : () => window._store.geo_provincias || [],
@@ -1023,7 +1004,6 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
         GEO.saveLabs(allLabs.filter(l => !labIds.includes(l.id)));
         savePerms(getPerms().filter(p => !labIds.includes(p.laboratorio_id)));
 
-        // Supabase: orden correcto por FK (labs cascade-borra permisos)
         if (typeof sbDeleteRow === 'function') {
             labIds.forEach(lid  => sbDeleteRow('laboratorios',  lid));
             centroIds.forEach(cid => sbDeleteRow('centros_salud', cid));
@@ -1063,7 +1043,7 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
 
     } else if (tipo === 'usuario') {
         const uid = id;
-        saveUsers(getUsers().filter(u => u.id !== uid));
+        saveUsers((getUsers() || []).filter(u => u.id !== uid));
         savePerms(getPerms().filter(p => p.usuario_id !== uid));
         saveAccesos(getAccesos().filter(a => a.usuario_id !== uid));
         if (typeof sbDeleteRow === 'function') sbDeleteRow('usuarios', uid);
@@ -1082,7 +1062,7 @@ document.addEventListener('click', e => {
     const nombre = btn.dataset.nombre || uid;
     if (!uid) return;
 
-    const u = getUsers().find(x => x.id === uid);
+    const u = (getUsers() || []).find(x => x.id === uid);
     if (!u) return;
 
     if (u.rol_sistema_id === 6) return;
@@ -1098,7 +1078,6 @@ document.addEventListener('click', e => {
     _pendingDelete = { tipo: 'usuario', id: uid };
     _modalDel().show();
 });
-
 
 function fillProvSelect(sel, selectedId) {
     sel.innerHTML = '<option value="">— Seleccione —</option>';
@@ -1140,7 +1119,7 @@ function showLocErr(errId, msg) {
 
 function seedDemo() {
     if (typeof IS_ONLINE === 'function' && IS_ONLINE()) return;
-    if (getUsers().length) return;
+    if ((getUsers() || []).length) return;
     saveUsers([
         { id:'demo_001', ci:'8501025678', nombres:'Ana María', apellidos:'Rodríguez Pérez', rol_profesional_id:1, rol_profesional_nom:'Médico/a', registro_profesional:'RM-12345', provincia_id:1, municipio_id:101, centro_texto:'Hospital Hermanos Ameijeiras', pin_hash:'x', rol_sistema_id:1, activo:true, aprobado:false, creado_en:new Date(Date.now()-172800000).toISOString() },
         { id:'demo_002', ci:'9203147890', nombres:'Carlos', apellidos:'Vidal Suárez', rol_profesional_id:2, rol_profesional_nom:'Enfermero/a', registro_profesional:null, provincia_id:6, municipio_id:601, centro_texto:'Hospital Arnaldo Milián Castro', pin_hash:'x', rol_sistema_id:1, activo:true, aprobado:false, creado_en:new Date(Date.now()-86400000).toISOString() },
