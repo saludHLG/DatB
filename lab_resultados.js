@@ -1,7 +1,7 @@
 /* =========================================================
    lab_resultados.js — Modal de resultados, formularios por
    tipo de examen y vista de solo lectura.
-   Requiere: laboratorio_core.js
+   Sin localStorage. Requiere: laboratorio_core.js
    ========================================================= */
 
 /* ══════════════════════════════════════════════════════════════
@@ -139,7 +139,8 @@ function _showModalSuccess(alertId) {
    ══════════════════════════════════════════════════════════════ */
 
 function _abrirModalResultados(rec, ind, user, rootEl, emitirIds, editarIds) {
-    const pac     = (JSON.parse(localStorage.getItem(_store.pacientes.find(p => p.id === ind.paciente_id));
+    /* ── Buscar paciente en _store (sin localStorage) ── */
+    const pac     = (window._store.pacientes || []).find(p => p.id === ind.paciente_id) || null;
     const snap    = rec.snap || {};
     const pacSnap = snap.paciente || null;
     const pacNom  = pac ? `${pac.apellidos}, ${pac.nombres}` : pacSnap ? `${pacSnap.apellidos}, ${pacSnap.nombres}` : '—';
@@ -286,14 +287,13 @@ function _formCultivo(rec, user, body, onSuccess) {
     const resDef   = existing?.resultado || 'en_estudio';
     const fCult    = existing?.fecha_cultivo || hoy;
     const fRes     = existing?.fecha_resultado || _addDays(fCult, 56);
-    const showMicro = existing && /^[1-9]$/.test(existing.resultado);
+    const showMicro  = existing && /^[1-9]$/.test(existing.resultado);
+    const showAntigen = showMicro;
 
     const codOpts   = Array.from({ length: 10 }, (_, i) =>
         `<option value="${i}" ${resDef === String(i) ? 'selected' : ''}>${i}${i === 0 ? ' — Sin crecimiento' : ''}</option>`).join('');
     const microOpts = micros.map(m =>
         `<option value="${m.id}" ${existing?.microorganismo_id === m.id ? 'selected' : ''}>${m.nombre}</option>`).join('');
-
-    const showAntigen = showMicro; // antígeno visible cuando cod >= 1 (igual que micro)
 
     body.innerHTML = `
     ${!existing || existing.resultado === 'en_estudio' ? `
@@ -350,8 +350,8 @@ function _formCultivo(rec, user, body, onSuccess) {
                 <label class="admin-label">Antígeno MTP-94</label>
                 <select id="cult-antigeno" class="form-select admin-select">
                     <option value="no_realizado" ${(existing?.antigeno_mtp94 || 'no_realizado') === 'no_realizado' ? 'selected' : ''}>No realizado</option>
-                    <option value="positivo" ${existing?.antigeno_mtp94 === 'positivo' ? 'selected' : ''}>Positivo</option>
-                    <option value="negativo" ${existing?.antigeno_mtp94 === 'negativo' ? 'selected' : ''}>Negativo</option>
+                    <option value="positivo"     ${existing?.antigeno_mtp94 === 'positivo' ? 'selected' : ''}>Positivo</option>
+                    <option value="negativo"     ${existing?.antigeno_mtp94 === 'negativo' ? 'selected' : ''}>Negativo</option>
                 </select>
             </div>
             <div class="col-4 ${showMicro ? '' : 'd-none'}" id="block-micro">
@@ -374,7 +374,7 @@ function _formCultivo(rec, user, body, onSuccess) {
         r.addEventListener('change', function () {
             document.querySelectorAll('.res-resultado-opt').forEach(l => l.classList.remove('active'));
             this.closest('.res-resultado-opt').classList.add('active');
-            const esCodif = this.value === 'codificacion';
+            const esCodif  = this.value === 'codificacion';
             document.getElementById('block-codif').classList.toggle('d-none', !esCodif);
             const cod = parseInt(document.getElementById('cult-cod')?.value || '0');
             const hasGrowth = esCodif && cod > 0;
@@ -402,8 +402,8 @@ function _guardarCultivo(rec, user, existing, onSuccess) {
     const microId  = document.getElementById('cult-micro')?.value;
     let ok = true;
 
-    [['cult-nmuestra',    'err-cult-nmuestra',    !nMuestra || nMuestra < 1, 'N.° de muestra requerido.'],
-     ['cult-fecha-cult',  'err-cult-fecha-cult',  !fCult,                    'Fecha de siembra requerida.'],
+    [['cult-nmuestra',   'err-cult-nmuestra',   !nMuestra || nMuestra < 1, 'N.° de muestra requerido.'],
+     ['cult-fecha-cult', 'err-cult-fecha-cult', !fCult,                    'Fecha de siembra requerida.'],
     ].forEach(([id, errId, cond, msg]) => {
         const inp = document.getElementById(id), err = document.getElementById(errId);
         if (cond) { inp.classList.add('is-invalid'); err.textContent = msg; err.classList.add('show'); ok = false; }
@@ -440,12 +440,12 @@ function _guardarCultivo(rec, user, existing, onSuccess) {
 }
 
 function _formXpertUltra(rec, user, body, onSuccess) {
-    const existing  = _getResXpertUltra().find(r => r.recepcion_id === rec.id) || null;
-    const hoy       = _todayLab();
+    const existing   = _getResXpertUltra().find(r => r.recepcion_id === rec.id) || null;
+    const hoy        = _todayLab();
     const resultados = ['MTB NO DETECTADO', 'MTB DETECTADO', 'ERROR AL CORRER LA PRUEBA', 'RESULTADO INVALIDADO', 'SIN RESULTADO'];
-    const adnVals   = ['NO PROCEDE', 'TRAZAS', 'MUY BAJO', 'BAJO', 'MEDIO', 'ALTO'];
-    const rifVals   = ['NO PROCEDE', 'RESISTENCIA A RIFAMPICINA NO DETECTADO', 'RESISTENCIA A RIFAMPICINA DETECTADO', 'RESISTENCIA A RIFAMPICINA INDETERMINADO'];
-    const errVals   = ['NO ERROR', 'Error 2127', 'Error 2008', 'Error 2037', 'Error 2014', 'Error 4006', 'Error 1001', 'Error 2035', 'Error 4017', 'Error 5007'];
+    const adnVals    = ['NO PROCEDE', 'TRAZAS', 'MUY BAJO', 'BAJO', 'MEDIO', 'ALTO'];
+    const rifVals    = ['NO PROCEDE', 'RESISTENCIA A RIFAMPICINA NO DETECTADO', 'RESISTENCIA A RIFAMPICINA DETECTADO', 'RESISTENCIA A RIFAMPICINA INDETERMINADO'];
+    const errVals    = ['NO ERROR', 'Error 2127', 'Error 2008', 'Error 2037', 'Error 2014', 'Error 4006', 'Error 1001', 'Error 2035', 'Error 4017', 'Error 5007'];
     const sel = (arr, val) => arr.map(v => `<option value="${v}" ${val === v ? 'selected' : ''}>${v}</option>`).join('');
 
     body.innerHTML = `
@@ -528,10 +528,10 @@ function _formXpertUltra(rec, user, body, onSuccess) {
         const entry = {
             id: existing?.id || _genId(), recepcion_id: rec.id,
             numero_muestra: nMuestra, fecha, resultado,
-            adn: document.getElementById('xu-adn').value,
+            adn:                     document.getElementById('xu-adn').value,
             resistencia_rifampicina: document.getElementById('xu-rifampicina').value,
-            tipo_error: document.getElementById('xu-error').value,
-            modulo: document.getElementById('xu-modulo').value.trim(),
+            tipo_error:              document.getElementById('xu-error').value,
+            modulo:                  document.getElementById('xu-modulo').value.trim(),
             registrado_por: user.id, registrado_en: existing?.registrado_en || new Date().toISOString(),
             editado_en: existing ? new Date().toISOString() : undefined
         };
@@ -596,27 +596,18 @@ function _formXpertXDR(rec, user, body, onSuccess) {
             <span class="modal-section-sub">Solo cuando MTB DETECTADO</span>
         </div>
         <div class="row g-2">
-            <div class="col-6"><label class="admin-label">Isoniazida</label>
-                ${sel(isoVals,  existing?.resistencia_isoniazida    || 'NO DETECTADO', 'xdr-iso')}</div>
-            <div class="col-6"><label class="admin-label">Fluorquinolona</label>
-                ${sel(floqVals, existing?.resistencia_fluorquinolona || 'NO DETECTADO', 'xdr-floq')}</div>
-            <div class="col-6"><label class="admin-label">Amikacina</label>
-                ${sel(amiVals,  existing?.resistencia_amikacina      || 'NO DETECTADO', 'xdr-ami')}</div>
-            <div class="col-6"><label class="admin-label">Kanamicina</label>
-                ${sel(kanVals,  existing?.resistencia_kanamicina      || 'NO DETECTADO', 'xdr-kan')}</div>
-            <div class="col-6"><label class="admin-label">Capreomicina</label>
-                ${sel(capVals,  existing?.resistencia_capreomicina    || 'NO DETECTADO', 'xdr-cap')}</div>
-            <div class="col-6"><label class="admin-label">Etionamida</label>
-                ${sel(etioVals, existing?.resistencia_etionamida      || 'NO DETECTADO', 'xdr-etio')}</div>
+            <div class="col-6"><label class="admin-label">Isoniazida</label>    ${sel(isoVals,  existing?.resistencia_isoniazida     || 'NO DETECTADO', 'xdr-iso')}</div>
+            <div class="col-6"><label class="admin-label">Fluorquinolona</label>${sel(floqVals, existing?.resistencia_fluorquinolona  || 'NO DETECTADO', 'xdr-floq')}</div>
+            <div class="col-6"><label class="admin-label">Amikacina</label>     ${sel(amiVals,  existing?.resistencia_amikacina       || 'NO DETECTADO', 'xdr-ami')}</div>
+            <div class="col-6"><label class="admin-label">Kanamicina</label>    ${sel(kanVals,  existing?.resistencia_kanamicina       || 'NO DETECTADO', 'xdr-kan')}</div>
+            <div class="col-6"><label class="admin-label">Capreomicina</label>  ${sel(capVals,  existing?.resistencia_capreomicina     || 'NO DETECTADO', 'xdr-cap')}</div>
+            <div class="col-6"><label class="admin-label">Etionamida</label>    ${sel(etioVals, existing?.resistencia_etionamida       || 'NO DETECTADO', 'xdr-etio')}</div>
         </div>
     </div>
     <div class="modal-section">
         <div class="modal-section-title"><i class="bi bi-tools"></i> Datos técnicos</div>
         <div class="row g-2">
-            <div class="col-8">
-                <label class="admin-label">Tipo de error</label>
-                ${sel(errVals, existing?.tipo_error || 'NO ERROR', 'xdr-error')}
-            </div>
+            <div class="col-8"><label class="admin-label">Tipo de error</label>${sel(errVals, existing?.tipo_error || 'NO ERROR', 'xdr-error')}</div>
             <div class="col-4">
                 <label class="admin-label">Módulo</label>
                 <input type="text" id="xdr-modulo" class="form-control ctrl-mono"
@@ -654,12 +645,12 @@ function _formXpertXDR(rec, user, body, onSuccess) {
         const entry = {
             id: existing?.id || _genId(), recepcion_id: rec.id,
             numero_muestra: nMuestra, fecha, resultado,
-            resistencia_isoniazida:    get('xdr-iso'),
-            resistencia_fluorquinolona:get('xdr-floq'),
-            resistencia_amikacina:     get('xdr-ami'),
-            resistencia_kanamicina:    get('xdr-kan'),
-            resistencia_capreomicina:  get('xdr-cap'),
-            resistencia_etionamida:    get('xdr-etio'),
+            resistencia_isoniazida:     get('xdr-iso'),
+            resistencia_fluorquinolona: get('xdr-floq'),
+            resistencia_amikacina:      get('xdr-ami'),
+            resistencia_kanamicina:     get('xdr-kan'),
+            resistencia_capreomicina:   get('xdr-cap'),
+            resistencia_etionamida:     get('xdr-etio'),
             tipo_error: get('xdr-error'),
             modulo: document.getElementById('xdr-modulo').value.trim(),
             registrado_por: user.id, registrado_en: existing?.registrado_en || new Date().toISOString(),
