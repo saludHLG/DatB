@@ -34,8 +34,10 @@ function _lr_buildShell(user, content) {
         return;
     }
 
-    const allLabs = JSON.parse(localStorage.getItem('_store.geo_labs') || 'null')
-                 || (typeof DATOS_GEO !== 'undefined' ? DATOS_GEO.laboratorios : []);
+    /* ── CORREGIDO: leer de _store en lugar de localStorage ── */
+    const allLabs = (window._store.geo_labs && window._store.geo_labs.length)
+                  ? window._store.geo_labs
+                  : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
     const labs    = permLabIds.map(id => allLabs.find(l => l.id === id)).filter(Boolean);
 
     content.innerHTML = `
@@ -89,15 +91,14 @@ function _lr_buildShell(user, content) {
 
     const _run = () => {
         const labText = document.getElementById('lr-lab-input')?.value.trim();
-        let ids = permLabIds; // Por defecto: todos los permitidos
+        let ids = permLabIds;
 
         if (labText) {
             const matched = labs.find(l => {
                 const nombreCompleto = `${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}`;
                 return nombreCompleto.toLowerCase() === labText.toLowerCase();
             });
-            // Si el texto coincide, asignamos ese ID. Si es texto inválido, devolvemos vacío para no mostrar resultados cruzados.
-            ids = matched ? [matched.id] : []; 
+            ids = matched ? [matched.id] : [];
         }
 
         const from = document.getElementById('lr-from')?.value  || null;
@@ -264,7 +265,6 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
         }
     </style>`;
 
-    /* Renderizar todos los gráficos en el siguiente frame */
     requestAnimationFrame(() => {
         if (total > 0)                              _lr_chartEstados(d);
         if (Object.keys(d.byExamen).length > 0)    _lr_chartExamenes(d);
@@ -281,13 +281,14 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
    CÓMPUTO DE DATOS
    ══════════════════════════════════════════════════════════ */
 function _lr_computeData(labIds, dateFrom, dateTo) {
-    const allInds   = JSON.parse(localStorage.getItem('_store.indicaciones')   || '[]');
+    /* ── CORREGIDO: todas las fuentes desde window._store ── */
+    const allInds   = window._store.indicaciones      || [];
     const recs      = _getRecepciones();
     const baci      = _getResBaci();
     const cult      = _getResCultivo();
     const xpertU    = _getResXpertUltra();
     const xpertXDR  = _getResXpertXDR();
-    const pacs      = JSON.parse(localStorage.getItem('_store.pacientes')      || '[]');
+    const pacs      = window._store.pacientes         || [];
     const microCat  = _getMicroCat();
     const gvCat     = typeof _getGVCat  === 'function' ? _getGVCat()  : [];
     const tmCat     = typeof _getTMCat  === 'function' ? _getTMCat()  : [];
@@ -343,10 +344,7 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         let hasPos = false, hasNeg = false;
         (ind.examenes_ids || []).forEach(eidRaw => {
             const eid = Number(eidRaw);
-            
-            // NUEVO: Excluir Xpert MTB/XDR porque sesga la tasa de positividad real
-            if (eid === 5) return; 
-            
+            if (eid === 5) return; // Excluir XDR (sesga tasa de positividad real)
             const rec = getRec(ind.id, eid);
             if (!rec || rec.estado === 'rechazada') return;
             if (_lr_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR)) hasPos = true;
@@ -434,60 +432,47 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         microorganisms.total++;
     });
 
-    /* ── Clasificación TB Resistente ───────────────────────── */
+    /* ── Clasificación TB Resistente ── */
     const tbClass = { 'Sensible': 0, 'Monoresistente': 0, 'Polirresistente': 0, 'TB-MDR': 0, 'TB pre-XDR': 0, 'TB-XDR': 0 };
-    
+
     inds.forEach(ind => {
         const uRec = getRec(ind.id, 3);
         const xRec = getRec(ind.id, 5);
-
         const uRes = uRec ? xpertU.find(r => r.recepcion_id === uRec.id) : null;
         const xRes = xRec ? xpertXDR.find(r => r.recepcion_id === xRec.id) : null;
 
         if ((uRes && uRes.resultado === 'MTB DETECTADO') || (xRes && xRes.resultado === 'MTB DETECTADO')) {
             let rR = false, rH = false, rFq = false, rSli = false;
-            let tested = false;
-            let resistCount = 0;
+            let tested = false, resistCount = 0;
 
             const check = (val) => {
                 if (!val || val === 'NO PROCEDE' || val === 'INDETERMINADO') return false;
                 tested = true;
-                if (val.includes('DETECTADO') && !val.includes('NO DETECTADO')) {
-                    resistCount++;
-                    return true;
-                }
+                if (val.includes('DETECTADO') && !val.includes('NO DETECTADO')) { resistCount++; return true; }
                 return false;
             };
 
             if (uRes) rR = check(uRes.resistencia_rifampicina);
             if (xRes) {
-                rH = check(xRes.resistencia_isoniazida);
-                rFq = check(xRes.resistencia_fluorquinolona);
+                rH   = check(xRes.resistencia_isoniazida);
+                rFq  = check(xRes.resistencia_fluorquinolona);
                 const amk = check(xRes.resistencia_amikacina);
                 const kan = check(xRes.resistencia_kanamicina);
                 const cap = check(xRes.resistencia_capreomicina);
                 rSli = amk || kan || cap;
             }
-
             if (!tested) return;
 
-            const isMDR = rR && rH;
+            const isMDR    = rR && rH;
             const isPreXDR = isMDR && (rFq || rSli);
-            const isXDR = isMDR && rFq && rSli;
+            const isXDR    = isMDR && rFq && rSli;
 
-            if (isXDR) {
-                tbClass['TB-XDR']++;
-            } else if (isPreXDR) {
-                tbClass['TB pre-XDR']++;
-            } else if (isMDR) {
-                tbClass['TB-MDR']++;
-            } else if (resistCount >= 2) {
-                tbClass['Polirresistente']++;
-            } else if (resistCount === 1) {
-                tbClass['Monoresistente']++;
-            } else {
-                tbClass['Sensible']++;
-            }
+            if      (isXDR)           tbClass['TB-XDR']++;
+            else if (isPreXDR)        tbClass['TB pre-XDR']++;
+            else if (isMDR)           tbClass['TB-MDR']++;
+            else if (resistCount >= 2) tbClass['Polirresistente']++;
+            else if (resistCount === 1) tbClass['Monoresistente']++;
+            else                       tbClass['Sensible']++;
         }
     });
 
@@ -593,25 +578,10 @@ function _lr_hasResult(recId, eid, baci, cult, xpertU, xpertXDR) {
     return false;
 }
 
-/**
- * Determina si un resultado es "positivo" para fines estadísticos.
- * Para Xpert MTB/XDR: positivo = algún marcador de resistencia DETECTADO
- * (dado que este examen se realiza en muestras con MTB confirmado, la
- * positividad estadística relevante es la presencia de resistencia).
- */
 function _lr_isPositive(recId, eid, baci, cult, xpertU, xpertXDR) {
-    if (eid === 1) {
-        const r = baci.find(x => x.recepcion_id === recId);
-        return !!(r && r.codificacion > 0);
-    }
-    if (eid === 2) {
-        const r = cult.find(x => x.recepcion_id === recId);
-        return !!(r && /^[1-9]$/.test(r.resultado));
-    }
-    if (eid === 3) {
-        const r = xpertU.find(x => x.recepcion_id === recId);
-        return !!(r && r.resultado === 'MTB DETECTADO');
-    }
+    if (eid === 1) { const r = baci.find(x => x.recepcion_id === recId);    return !!(r && r.codificacion > 0); }
+    if (eid === 2) { const r = cult.find(x => x.recepcion_id === recId);    return !!(r && /^[1-9]$/.test(r.resultado)); }
+    if (eid === 3) { const r = xpertU.find(x => x.recepcion_id === recId);  return !!(r && r.resultado === 'MTB DETECTADO'); }
     if (eid === 5) {
         const r = xpertXDR.find(x => x.recepcion_id === recId);
         if (!r || r.resultado !== 'MTB DETECTADO') return false;
@@ -624,24 +594,10 @@ function _lr_isPositive(recId, eid, baci, cult, xpertU, xpertXDR) {
     return false;
 }
 
-/**
- * Determina si un resultado es "negativo" / "sensible".
- * Para Xpert MTB/XDR: negativo = MTB detectado pero sin marcadores
- * de resistencia detectados (todos los marcadores probados = NO DETECTADO).
- */
 function _lr_isNegative(recId, eid, baci, cult, xpertU, xpertXDR) {
-    if (eid === 1) {
-        const r = baci.find(x => x.recepcion_id === recId);
-        return !!(r && r.codificacion === 0);
-    }
-    if (eid === 2) {
-        const r = cult.find(x => x.recepcion_id === recId);
-        return !!(r && r.resultado === '0');
-    }
-    if (eid === 3) {
-        const r = xpertU.find(x => x.recepcion_id === recId);
-        return !!(r && r.resultado === 'MTB NO DETECTADO');
-    }
+    if (eid === 1) { const r = baci.find(x => x.recepcion_id === recId);    return !!(r && r.codificacion === 0); }
+    if (eid === 2) { const r = cult.find(x => x.recepcion_id === recId);    return !!(r && r.resultado === '0'); }
+    if (eid === 3) { const r = xpertU.find(x => x.recepcion_id === recId);  return !!(r && r.resultado === 'MTB NO DETECTADO'); }
     if (eid === 5) {
         const r = xpertXDR.find(x => x.recepcion_id === recId);
         if (!r || r.resultado !== 'MTB DETECTADO') return false;
@@ -688,7 +644,6 @@ function _lr_empty(msg) {
    GRÁFICOS (Chart.js — almacenados en _hl_charts)
    ══════════════════════════════════════════════════════════ */
 
-/* Doughnut — distribución por estado */
 function _lr_chartEstados(d) {
     const c = document.getElementById('lr-c-estados'); if (!c) return;
     _hl_charts['lr-estados'] = new Chart(c, {
@@ -698,61 +653,44 @@ function _lr_chartEstados(d) {
             datasets: [{
                 data: [d.counts.pendiente, d.counts.recibida, d.counts.rechazada, d.counts.completada],
                 backgroundColor: ['#f0a500', '#1a56db', '#e0435a', '#00b87a'],
-                borderWidth: 2,
-                borderColor: '#fff'
+                borderWidth: 2, borderColor: '#fff'
             }]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { font:{ size:11 }, padding:8, boxWidth:12, color:'#334155' }
-                }
-            }
+            plugins: { legend: { position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } }
         }
     });
 }
 
-/* Bar apilada — por tipo de examen */
 function _lr_chartExamenes(d) {
     const c = document.getElementById('lr-c-examenes'); if (!c) return;
     const examIds = Object.keys(d.byExamen).map(Number)
         .filter(id => Object.values(d.byExamen[id]).some(v => v > 0));
     const labels  = examIds.map(id => _EXAMENES_CAT.find(e => e.id === id)?.codigo || `Ex.${id}`);
     const mk = (label, key, bg) => ({
-        label,
-        backgroundColor: bg,
-        borderRadius: 3,
-        maxBarThickness: 40,
+        label, backgroundColor: bg, borderRadius: 3, maxBarThickness: 40,
         data: examIds.map(id => d.byExamen[id][key] || 0)
     });
     _hl_charts['lr-examenes'] = new Chart(c, {
         type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                mk('Pendientes',  'pendiente', '#f0a500'),
-                mk('Recibidas',   'recibida',  '#1a56db'),
-                mk('Rechazadas',  'rechazada', '#e0435a'),
-                mk('Completadas', 'completada','#00b87a'),
-            ]
-        },
+        data: { labels, datasets: [
+            mk('Pendientes',  'pendiente', '#f0a500'),
+            mk('Recibidas',   'recibida',  '#1a56db'),
+            mk('Rechazadas',  'rechazada', '#e0435a'),
+            mk('Completadas', 'completada','#00b87a'),
+        ]},
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             scales: {
-                x: { stacked: true, grid:{ display:false } },
-                y: { stacked: true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } }
+                x: { stacked:true, grid:{ display:false } },
+                y: { stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } }
             },
-            plugins: {
-                legend: { position:'bottom', labels:{ font:{size:11}, padding:6, boxWidth:12, color:'#334155' } }
-            }
+            plugins: { legend:{ position:'bottom', labels:{ font:{size:11}, padding:6, boxWidth:12, color:'#334155' } } }
         }
     });
 }
 
-/* Bar horizontal agrupada — tipos de muestra × positivos / negativos */
 function _lr_chartTM(d) {
     const c = document.getElementById('lr-c-tm'); if (!c) return;
     const entries = Object.entries(d.byTMResult)
@@ -760,109 +698,74 @@ function _lr_chartTM(d) {
         .filter(e => e.pos + e.neg > 0)
         .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg))
         .slice(0, 12);
-
     _hl_charts['lr-tm'] = new Chart(c, {
         type: 'bar',
-        data: {
-            labels: entries.map(e => e.label),
-            datasets: [
-                { label: 'Positivos', data: entries.map(e => e.pos), backgroundColor: 'rgba(224,67,90,.85)', borderRadius: 3 },
-                { label: 'Negativos', data: entries.map(e => e.neg), backgroundColor: 'rgba(0,184,122,.85)', borderRadius: 3 }
-            ]
-        },
+        data: { labels: entries.map(e => e.label), datasets: [
+            { label:'Positivos', data:entries.map(e=>e.pos), backgroundColor:'rgba(224,67,90,.85)', borderRadius:3 },
+            { label:'Negativos', data:entries.map(e=>e.neg), backgroundColor:'rgba(0,184,122,.85)', borderRadius:3 }
+        ]},
         options: {
-            indexAxis: 'y', responsive: true,
+            indexAxis:'y', responsive:true,
             scales: {
-                x: { stacked: true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
-                y: { stacked: true, ticks:{ font:{size:10}, color:'#334155' }, grid:{ display:false } }
+                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
+                y:{ stacked:true, ticks:{ font:{size:10}, color:'#334155' }, grid:{ display:false } }
             },
-            plugins: {
-                legend: { position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } }
-            }
+            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } }
         }
     });
 }
 
-/* Bar horizontal — casos por microorganismo */
 function _lr_chartMicro(d) {
     const c = document.getElementById('lr-c-micro'); if (!c) return;
     const entries = Object.entries(d.microorganisms.data).sort((a, b) => b[1] - a[1]);
     _hl_charts['lr-micro'] = new Chart(c, {
         type: 'bar',
         data: {
-            labels: entries.map(e => e[0].length > 38 ? e[0].slice(0, 35) + '…' : e[0]),
-            datasets: [{
-                label: 'Casos identificados',
-                data: entries.map(e => e[1]),
-                backgroundColor: 'rgba(26,86,219,.75)',
-                borderRadius: 3
-            }]
+            labels: entries.map(e => e[0].length > 38 ? e[0].slice(0,35)+'…' : e[0]),
+            datasets: [{ label:'Casos identificados', data:entries.map(e=>e[1]), backgroundColor:'rgba(26,86,219,.75)', borderRadius:3 }]
         },
         options: {
-            indexAxis: 'y',
-            responsive: true,
+            indexAxis:'y', responsive:true,
             scales: {
-                x: { ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
-                y: { ticks:{ font:{ size:10, style:'italic' }, color:'#334155' }, grid:{ display:false } }
+                x:{ ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
+                y:{ ticks:{ font:{ size:10, style:'italic' }, color:'#334155' }, grid:{ display:false } }
             },
-            plugins: { legend:{ display:false } }
+            plugins:{ legend:{ display:false } }
         }
     });
 }
 
-/* Bar horizontal apilada — resistencia antimicrobiana */
 function _lr_chartAMR(d) {
     const c = document.getElementById('lr-c-amr'); if (!c) return;
     const markers = Object.entries(d.amr.markers)
         .filter(([, v]) => v.detected + v.not_detected + v.indeterminate > 0);
     const labels = markers.map(([k, v]) => `${k}${v.source === 'Ultra' ? ' ★' : ''}`);
 
-    /* Altura dinámica para que quepan las etiquetas */
     const h = Math.max(220, markers.length * 52);
     const wrapper = document.getElementById('lr-amr-wrapper');
     if (wrapper) wrapper.style.height = h + 'px';
 
     _hl_charts['lr-amr'] = new Chart(c, {
         type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                { label:'Resistencia detectada', data:markers.map(([,v])=>v.detected),      backgroundColor:'rgba(224,67,90,.85)', borderRadius:3 },
-                { label:'Indeterminado',          data:markers.map(([,v])=>v.indeterminate), backgroundColor:'rgba(240,165,0,.80)', borderRadius:3 },
-                { label:'No detectada',           data:markers.map(([,v])=>v.not_detected),  backgroundColor:'rgba(0,184,122,.80)', borderRadius:3 },
-            ]
-        },
+        data: { labels, datasets: [
+            { label:'Resistencia detectada', data:markers.map(([,v])=>v.detected),      backgroundColor:'rgba(224,67,90,.85)', borderRadius:3 },
+            { label:'Indeterminado',          data:markers.map(([,v])=>v.indeterminate), backgroundColor:'rgba(240,165,0,.80)', borderRadius:3 },
+            { label:'No detectada',           data:markers.map(([,v])=>v.not_detected),  backgroundColor:'rgba(0,184,122,.80)', borderRadius:3 },
+        ]},
         options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
             scales: {
-                x: {
-                    stacked: true,
-                    ticks:  { precision:0, color:'#64748b' },
-                    grid:   { color:'rgba(0,0,0,.05)' }
-                },
-                y: {
-                    stacked: true,
-                    ticks:  { font:{ size:11 }, color:'#334155' },
-                    grid:   { display:false },
-                    afterFit(scale) { scale.width = Math.max(scale.width, 128); }
-                }
+                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
+                y:{ stacked:true, ticks:{ font:{size:11}, color:'#334155' }, grid:{ display:false },
+                    afterFit(scale) { scale.width = Math.max(scale.width, 128); } }
             },
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { font:{size:11}, padding:8, boxWidth:12, color:'#334155' }
-                },
-                tooltip: {
-                    callbacks: {
-                        title: ctx => {
-                            const lbl = ctx[0].label.replace(' ★', '');
-                            const src = d.amr.markers[lbl]?.source;
-                            return `${lbl}${src ? ' (' + src + ')' : ''}`;
-                        }
-                    }
-                }
+                legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } },
+                tooltip:{ callbacks:{ title: ctx => {
+                    const lbl = ctx[0].label.replace(' ★','');
+                    const src = d.amr.markers[lbl]?.source;
+                    return `${lbl}${src ? ' (' + src + ')' : ''}`;
+                }}}
             }
         }
     });
@@ -872,14 +775,10 @@ function _lr_chartAMR(d) {
    RENDERIZADOS NO-CHART
    ══════════════════════════════════════════════════════════ */
 
-/* Barras de progreso — resultados emitidos por examen y Clasificación de Resistencia */
 function _lr_renderResultados(d, el) {
     if (!el) return;
     const exIds = Object.keys(d.resultados).map(Number);
-    if (!exIds.length) {
-        el.innerHTML = _lr_empty('Sin resultados emitidos en el período.');
-        return;
-    }
+    if (!exIds.length) { el.innerHTML = _lr_empty('Sin resultados emitidos en el período.'); return; }
 
     const posKeys = new Set(['Positivo', 'MTB DETECTADO']);
     const negKeys = new Set(['Negativo', 'Sin crecimiento', 'MTB NO DETECTADO']);
@@ -890,9 +789,7 @@ function _lr_renderResultados(d, el) {
         const ex    = _EXAMENES_CAT.find(e => e.id === eid);
         const bars  = Object.entries(res).map(([label, cnt]) => {
             const pct = total > 0 ? Math.round(cnt / total * 100) : 0;
-            const col = posKeys.has(label) ? '#e0435a'
-                      : negKeys.has(label) ? '#00b87a'
-                      : '#8fa3bf';
+            const col = posKeys.has(label) ? '#e0435a' : negKeys.has(label) ? '#00b87a' : '#8fa3bf';
             return `<div class="mb-2">
                 <div class="d-flex justify-content-between" style="font-size:.77rem;margin-bottom:3px">
                     <span style="color:#475569">${label}</span>
@@ -917,60 +814,47 @@ function _lr_renderResultados(d, el) {
         </div>`;
     }).join('');
 
-    /* Añadir Perfil de Farmacorresistencia TB al final */
+    /* Perfil de Farmacorresistencia TB */
     const tc = d.tbClass;
     const totalRes = Object.values(tc).reduce((a, b) => a + b, 0);
     if (totalRes > 0) {
         const mapColors = {
-            'Sensible': '#00b87a',
-            'Monoresistente': '#f0a500',
-            'Polirresistente': '#f97316',
-            'TB-MDR': '#e0435a',
-            'TB pre-XDR': '#be123c',
-            'TB-XDR': '#881337'
+            'Sensible':'#00b87a','Monoresistente':'#f0a500','Polirresistente':'#f97316',
+            'TB-MDR':'#e0435a','TB pre-XDR':'#be123c','TB-XDR':'#881337'
         };
         let resHtml = `<div style="margin-top:1.2rem;padding-top:1rem;border-top:1.5px dashed #cbd5e1">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <span style="font-size:.82rem;font-weight:700;color:#0b1e3d"><i class="bi bi-shield-virus me-1"></i>Perfil de Farmacorresistencia (TB)</span>
                 <span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${totalRes}</span>
             </div>`;
-
         Object.entries(tc).forEach(([label, cnt]) => {
             if (cnt === 0) return;
             const pct = Math.round(cnt / totalRes * 100);
-            const col = mapColors[label];
             resHtml += `<div class="mb-2">
                 <div class="d-flex justify-content-between" style="font-size:.77rem;margin-bottom:3px">
                     <span style="color:#475569;font-weight:600">${label}</span>
                     <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span>
                 </div>
                 <div style="height:6px;background:#f1f5f9;border-radius:3px">
-                    <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .4s ease"></div>
+                    <div style="height:100%;width:${pct}%;background:${mapColors[label]};border-radius:3px;transition:width .4s ease"></div>
                 </div>
             </div>`;
         });
         resHtml += `</div>`;
         html += resHtml;
     }
-
     el.innerHTML = html;
 }
 
-/* Pirámide poblacional pos/neg — CSS puro, sin Chart.js */
 function _lr_renderPyramid(pyramid, el) {
     if (!el) return;
-    if (pyramid.total === 0) {
-        el.innerHTML = _lr_empty('Sin pacientes con resultados en el período.');
-        return;
-    }
+    if (pyramid.total === 0) { el.innerHTML = _lr_empty('Sin pacientes con resultados en el período.'); return; }
 
     const max = Math.max(
-        ...pyramid.ageGroups.map((_, i) =>
-            Math.max(
-                pyramid.M_pos[i] + pyramid.M_neg[i],
-                pyramid.F_pos[i] + pyramid.F_neg[i]
-            )
-        ), 1
+        ...pyramid.ageGroups.map((_, i) => Math.max(
+            pyramid.M_pos[i] + pyramid.M_neg[i],
+            pyramid.F_pos[i] + pyramid.F_neg[i]
+        )), 1
     );
 
     el.innerHTML = `
@@ -987,56 +871,36 @@ function _lr_renderPyramid(pyramid, el) {
             const mP = pyramid.M_pos[i], mN = pyramid.M_neg[i];
             const fP = pyramid.F_pos[i], fN = pyramid.F_neg[i];
             const mTotal = mP + mN, fTotal = fP + fN;
-            const mPPct = (mP / max * 100).toFixed(1);
-            const mNPct = (mN / max * 100).toFixed(1);
-            const fPPct = (fP / max * 100).toFixed(1);
-            const fNPct = (fN / max * 100).toFixed(1);
+            const mPPct = (mP / max * 100).toFixed(1), mNPct = (mN / max * 100).toFixed(1);
+            const fPPct = (fP / max * 100).toFixed(1), fNPct = (fN / max * 100).toFixed(1);
             return `<div class="d-flex align-items-center" style="gap:6px;margin-bottom:6px">
                 <div style="flex:1;display:flex;justify-content:flex-end;align-items:center;gap:2px">
-                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;
-                                 margin-right:4px">${mTotal || ''}</span>
-                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);
-                                border-radius:3px 0 0 3px;min-width:${mP > 0 ? 3 : 0}px"
-                         title="M pos: ${mP}"></div>
-                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);
-                                border-radius:${mP > 0 ? '0' : '3px'} 0 0 ${mP > 0 ? '0' : '3px'};
-                                min-width:${mN > 0 ? 3 : 0}px"
-                         title="M neg: ${mN}"></div>
+                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-right:4px">${mTotal || ''}</span>
+                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);border-radius:3px 0 0 3px;min-width:${mP>0?3:0}px" title="M pos: ${mP}"></div>
+                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);border-radius:${mP>0?'0':'3px'} 0 0 ${mP>0?'0':'3px'};min-width:${mN>0?3:0}px" title="M neg: ${mN}"></div>
                 </div>
-                <div style="min-width:68px;text-align:center;font-size:.77rem;font-weight:600;
-                            color:#475569;white-space:nowrap">${g}</div>
+                <div style="min-width:68px;text-align:center;font-size:.77rem;font-weight:600;color:#475569;white-space:nowrap">${g}</div>
                 <div style="flex:1;display:flex;align-items:center;gap:2px">
-                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);
-                                border-radius:0 ${fP > 0 ? '0' : '3px'} ${fP > 0 ? '0' : '3px'} 0;
-                                min-width:${fN > 0 ? 3 : 0}px"
-                         title="F neg: ${fN}"></div>
-                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);
-                                border-radius:0 3px 3px 0;min-width:${fP > 0 ? 3 : 0}px"
-                         title="F pos: ${fP}"></div>
-                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;
-                                 margin-left:4px">${fTotal || ''}</span>
+                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);border-radius:0 ${fP>0?'0':'3px'} ${fP>0?'0':'3px'} 0;min-width:${fN>0?3:0}px" title="F neg: ${fN}"></div>
+                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);border-radius:0 3px 3px 0;min-width:${fP>0?3:0}px" title="F pos: ${fP}"></div>
+                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-left:4px">${fTotal || ''}</span>
                 </div>
             </div>`;
         }).join('')}
     </div>`;
 }
 
-/* Grupos de vulnerabilidad — barras CSS */
 function _lr_renderGV(d, el) {
     if (!el) return;
     const entries = Object.entries(d.gvStats)
         .map(([id, v]) => ({
             label: d.gvCat.find(g => g.id === Number(id))?.nombre || `Grupo ${id}`,
-            pos: v.pos,
-            neg: v.neg
+            pos: v.pos, neg: v.neg
         }))
         .filter(e => e.pos + e.neg > 0)
         .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg));
 
-    if (!entries.length) {
-        el.innerHTML = _lr_empty('Sin resultados definitivos registrados.');
-        return;
-    }
+    if (!entries.length) { el.innerHTML = _lr_empty('Sin resultados definitivos registrados.'); return; }
 
     el.innerHTML = entries.slice(0, 12).map(e => {
         const total  = e.pos + e.neg;
@@ -1045,18 +909,15 @@ function _lr_renderGV(d, el) {
         const lbl    = e.label.length > 40 ? e.label.slice(0, 37) + '…' : e.label;
         return `<div style="margin-bottom:.6rem">
             <div class="d-flex justify-content-between" style="font-size:.75rem;margin-bottom:3px">
-                <span style="color:#334155;overflow:hidden;text-overflow:ellipsis;
-                             white-space:nowrap;max-width:72%">${lbl}</span>
+                <span style="color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%">${lbl}</span>
                 <span style="font-family:'IBM Plex Mono',monospace;white-space:nowrap;margin-left:.4rem">
                     <span style="color:#e0435a;font-weight:700">${e.pos}</span><span style="color:#ccc;font-size:.65rem">+</span>
                     <span style="color:#00b87a;font-weight:700;margin-left:.2rem">${e.neg}</span><span style="color:#ccc;font-size:.65rem">−</span>
                 </span>
             </div>
             <div style="height:6px;background:#f1f5f9;border-radius:3px;display:flex;overflow:hidden">
-                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;
-                    border-radius:${e.neg ? '3px 0 0 3px' : '3px'}"></div>` : ''}
-                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;
-                    border-radius:${e.pos ? '0 3px 3px 0' : '3px'}"></div>` : ''}
+                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;border-radius:${e.neg?'3px 0 0 3px':'3px'}"></div>` : ''}
+                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;border-radius:${e.pos?'0 3px 3px 0':'3px'}"></div>` : ''}
             </div>
         </div>`;
     }).join('');
