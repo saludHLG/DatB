@@ -1389,6 +1389,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     initGeoData();
     seedDemo();
-    checkAccess();
+    await checkAccess();
     renderAll();
 });
