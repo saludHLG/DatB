@@ -1,26 +1,25 @@
 window._store = window._store || {
     usuarios: [], permisos_lab: [], accesos_temp: [],
-    geo_provincias: [], geo_municipios: [], geo_centros: [], geo_labs: []
+    geo_provincias: [], geo_municipios: [], geo_centros: [], geo_labs: [],
+    grupos_vulnerables: [], tipos_muestra: [], microorganismos: []
 };
 const $a = id => document.getElementById(id);
 
-// Lee desde _store (cargado por sbInitAll en supabase_client.js)
+/* ── Lectura desde _store (cargado por sbInitAll) ──────── */
 const getUsers   = () => window._store?.usuarios     || [];
 const getPerms   = () => window._store?.permisos_lab || [];
-const getAccesos = () => window._store?.accesos_temp || [];emporales', a).catch(e => console.error('saveAccesos:', e.message));
-};
+const getAccesos = () => window._store?.accesos_temp || [];
 
-/* ── Saves con sync a Supabase (best-effort, async) ──────── */
+/* ── Saves en memoria con sync a Supabase (async) ──────── */
 const saveUsers = u => {
-    localStorage.setItem('sr_usuarios', JSON.stringify(u));
+    window._store.usuarios = u;
     // Evitar upsert masivo — usar sbUpdateRow / sbDeleteRow por operación individual
 };
 const savePerms = p => {
-    // Permisos: se maneja con sbReplaceUserPerms por usuario en btn-save-user.
-    localStorage.setItem('sr_permisos_lab', JSON.stringify(p));
+    window._store.permisos_lab = p;
 };
 const saveAccesos = a => {
-    localStorage.setItem('sr_accesos_temp', JSON.stringify(a));
+    window._store.accesos_temp = a;
     if (typeof sbUpsertRows === 'function')
         sbUpsertRows('accesos_temporales', a).catch(e => console.error('saveAccesos:', e.message));
 };
@@ -35,7 +34,7 @@ const ROL_SIS_HINTS = {
     6:'Acceso total. Gestión de usuarios y configuración.'
 };
 
-/* Mapeo clave localStorage → tabla Supabase para catálogos */
+/* Mapeo clave interna -> tabla Supabase para catálogos */
 const _SB_CAT_TABLA = {
     'sr_grupos_vulnerables': 'grupos_vulnerables',
     'sr_tipos_muestra'     : 'tipos_muestra',
@@ -55,16 +54,16 @@ function toast(msg, type='success') {
 function geoName(type, id) {
     if (!id) return '—';
     const m = {
-        provincia: GEO.getProvs()   || DATOS_GEO.provincias,
-        municipio: GEO.getMuns()    || DATOS_GEO.municipios,
-        centro:    GEO.getCentros() || DATOS_GEO.centros_salud
+        provincia: GEO.getProvs(),
+        municipio: GEO.getMuns(),
+        centro:    GEO.getCentros()
     };
     return m[type]?.find(x => x.id === Number(id))?.nombre || '—';
 }
 
 const fmt = iso => iso ? new Date(iso).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' }) : '—';
 const ini = u => ((u.nombres?.[0]||'')+(u.apellidos?.[0]||'')).toUpperCase();
-const rolProfName = u => u.rol_profesional_nom || ROLES_PROFESIONALES[u.rol_profesional_id]?.nombre || '—';
+const rolProfName = u => u.rol_profesional_nom || (typeof ROLES_PROFESIONALES !== 'undefined' ? ROLES_PROFESIONALES[u.rol_profesional_id]?.nombre : '—');
 
 let _adminUser = null;
 
@@ -74,19 +73,19 @@ function checkAccess() {
     const hasAdmin = users.some(u => u.rol_sistema_id === 6 && u.activo);
 
     if (!hasAdmin) {
-        $a('bootstrap-bar').classList.remove('d-none');
-        $a('admin-app').classList.remove('d-none');
-        $a('sidebar-admin-name').textContent = 'Modo bootstrap';
+        $a('bootstrap-bar')?.classList.remove('d-none');
+        $a('admin-app')?.classList.remove('d-none');
+        if($a('sidebar-admin-name')) $a('sidebar-admin-name').textContent = 'Modo bootstrap';
         return;
     }
     const me = users.find(u => u.id === uid);
     if (!me || me.rol_sistema_id !== 6 || !me.activo) {
-        $a('access-denied').classList.remove('d-none');
+        $a('access-denied')?.classList.remove('d-none');
         return;
     }
     _adminUser = me;
-    $a('sidebar-admin-name').textContent = `${me.nombres} ${me.apellidos}`;
-    $a('admin-app').classList.remove('d-none');
+    if($a('sidebar-admin-name')) $a('sidebar-admin-name').textContent = `${me.nombres} ${me.apellidos}`;
+    $a('admin-app')?.classList.remove('d-none');
 }
 
 $a('btn-make-admin')?.addEventListener('click', () => {
@@ -97,9 +96,13 @@ $a('btn-make-admin')?.addEventListener('click', () => {
     users[idx].rol_sistema_id = 6;
     users[idx].aprobado = users[idx].activo = true;
     saveUsers(users);
+    
+    if (typeof sbUpdateRow === 'function')
+        sbUpdateRow('usuarios', uid, { rol_sistema_id: 6, aprobado: true, activo: true });
+
     _adminUser = users[idx];
-    $a('bootstrap-bar').classList.add('d-none');
-    $a('sidebar-admin-name').textContent = `${users[idx].nombres} ${users[idx].apellidos}`;
+    $a('bootstrap-bar')?.classList.add('d-none');
+    if($a('sidebar-admin-name')) $a('sidebar-admin-name').textContent = `${users[idx].nombres} ${users[idx].apellidos}`;
     toast('Cuenta promovida a Administrador.', 'success');
     renderAll();
 });
@@ -120,8 +123,8 @@ document.querySelectorAll('.snav-btn[data-tab]').forEach(btn => {
         const id = btn.dataset.tab;
         $a(id)?.classList.remove('d-none');
         const meta = TAB_META[id] || { title: id, sub: '' };
-        $a('admin-page-title').textContent = meta.title;
-        $a('admin-page-sub').textContent   = meta.sub;
+        if($a('admin-page-title')) $a('admin-page-title').textContent = meta.title;
+        if($a('admin-page-sub'))   $a('admin-page-sub').textContent   = meta.sub;
         if (id === 'tab-locations') {
             initGeoData();
             renderLocPanel('provincias');
@@ -137,19 +140,22 @@ document.querySelectorAll('.snav-btn[data-tab]').forEach(btn => {
 function renderStats() {
     const u = getUsers();
     const total = u.length, pending = u.filter(x => x.activo && !x.aprobado).length, active = u.filter(x => x.aprobado && x.activo).length;
-    $a('header-stats').innerHTML = `
-        <div class="stat-pill"><span class="stat-pill-num">${total}</span><span class="stat-pill-label">Total</span></div>
-        <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-warning)">${pending}</span><span class="stat-pill-label">Pendientes</span></div>
-        <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-success)">${active}</span><span class="stat-pill-label">Activos</span></div>`;
+    if($a('header-stats')) {
+        $a('header-stats').innerHTML = `
+            <div class="stat-pill"><span class="stat-pill-num">${total}</span><span class="stat-pill-label">Total</span></div>
+            <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-warning)">${pending}</span><span class="stat-pill-label">Pendientes</span></div>
+            <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-success)">${active}</span><span class="stat-pill-label">Activos</span></div>`;
+    }
     const bp = $a('badge-pending'), ba = $a('badge-access');
-    bp.textContent = pending; bp.style.display = pending > 0 ? '' : 'none';
+    if(bp) { bp.textContent = pending; bp.style.display = pending > 0 ? '' : 'none'; }
     const ap = getAccesos().filter(a => a.estado === 'pendiente').length;
-    ba.textContent = ap; ba.style.display = ap > 0 ? '' : 'none';
+    if(ba) { ba.textContent = ap; ba.style.display = ap > 0 ? '' : 'none'; }
 }
 
 function renderPending() {
     const users = getUsers().filter(u => u.activo && !u.aprobado);
     const tbody = $a('pending-tbody'), wrap = $a('pending-table-wrap'), empty = $a('pending-empty');
+    if(!tbody || !wrap || !empty) return;
     if (!users.length) { wrap.classList.add('d-none'); empty.classList.remove('d-none'); return; }
     wrap.classList.remove('d-none'); empty.classList.add('d-none');
     tbody.innerHTML = users.map(u => `
@@ -185,6 +191,7 @@ function renderUsers() {
     if (est === 'inactivo')  users = users.filter(u => !u.activo);
 
     const tbody = $a('users-tbody'), empty = $a('users-empty');
+    if(!tbody || !empty) return;
     if (!users.length) { tbody.innerHTML=''; empty.classList.remove('d-none'); return; }
     empty.classList.add('d-none');
 
@@ -220,6 +227,7 @@ function renderUsers() {
 function renderAccesos() {
     const accesos = getAccesos(), users = getUsers();
     const tbody = $a('access-tbody'), wrap = $a('access-table-wrap'), empty = $a('access-empty');
+    if(!tbody || !wrap || !empty) return;
     if (!accesos.length) { wrap.classList.add('d-none'); empty.classList.remove('d-none'); return; }
     wrap.classList.remove('d-none'); empty.classList.add('d-none');
     tbody.innerHTML = accesos.map(a => {
@@ -300,7 +308,7 @@ let _editUid = null, _editPerms = [];
 function populateLabSelect(provId) {
     const sel = $a('modal-lab-select');
     sel.innerHTML = '<option value="">— Seleccione laboratorio —</option>';
-    const labs = GEO.getLabs() || DATOS_GEO.laboratorios || [];
+    const labs = GEO.getLabs() || [];
     [...labs]
         .filter(lab => lab.activo !== false)
         .sort((a,b) => (a.provincia_id===provId?-1:b.provincia_id===provId?1:0))
@@ -314,10 +322,11 @@ function populateLabSelect(provId) {
 
 function renderLabList() {
     const container = $a('lab-perms-list'), emptyMsg = $a('empty-lab-msg');
+    if (!container || !emptyMsg) return;
     if (!_editPerms.length) { container.innerHTML=''; emptyMsg.classList.remove('d-none'); return; }
     emptyMsg.classList.add('d-none');
     container.innerHTML = _editPerms.map((p, i) => {
-        const lab = (GEO.getLabs() || DATOS_GEO.laboratorios || []).find(l => l.id === Number(p.laboratorio_id));
+        const lab = (GEO.getLabs() || []).find(l => l.id === Number(p.laboratorio_id));
         return `
         <div class="lab-perm-row">
             <span class="lab-perm-name">${lab?.nombre||'Lab #'+p.laboratorio_id}</span>
@@ -346,7 +355,7 @@ function openEditModal(uid) {
     $a('modal-edit-name').textContent  = `${u.nombres} ${u.apellidos}`;
     $a('modal-ci').textContent         = `CI: ${u.ci}`;
     $a('modal-prof-badge').textContent = rolProfName(u);
-    $a('modal-rol-sistema').value = String(u.rol_sistema_id||1);
+    $a('modal-rol-sistema').value      = String(u.rol_sistema_id||1);
     $a('modal-rol-hint').textContent   = ROL_SIS_HINTS[u.rol_sistema_id]||'';
 
     const btn = $a('btn-toggle-active');
@@ -412,7 +421,7 @@ $a('btn-save-user')?.addEventListener('click', () => {
     users[idx].apellidos           = apVal;
     const rpId = Number($a('modal-rol-prof-edit').value);
     users[idx].rol_profesional_id  = rpId;
-    users[idx].rol_profesional_nom = ROLES_PROFESIONALES[rpId]?.nombre || '';
+    users[idx].rol_profesional_nom = typeof ROLES_PROFESIONALES !== 'undefined' ? ROLES_PROFESIONALES[rpId]?.nombre : '';
     users[idx].registro_profesional = $a('modal-registro').value.trim() || null;
     users[idx].provincia_id        = Number($a('modal-prov-edit').value)  || null;
     users[idx].municipio_id        = Number($a('modal-mun-edit').value)   || null;
@@ -429,7 +438,6 @@ $a('btn-save-user')?.addEventListener('click', () => {
 
     saveUsers(users);
 
-    // Actualizar fila del usuario en Supabase de forma dirigida
     if (typeof sbUpdateRow === 'function')
         sbUpdateRow('usuarios', _editUid, {
             nombres:              users[idx].nombres,
@@ -444,7 +452,6 @@ $a('btn-save-user')?.addEventListener('click', () => {
             rol_sistema_id:       users[idx].rol_sistema_id,
         });
 
-    // Actualizar permisos de lab: reemplazar en localStorage y en Supabase
     const allPerms = getPerms().filter(p => p.usuario_id !== _editUid).concat(_editPerms);
     savePerms(allPerms);
     if (typeof sbReplaceUserPerms === 'function')
@@ -507,23 +514,23 @@ $a('btn-reject-access')?.addEventListener('click', () => {
     $a(id)?.addEventListener('change', renderUsers);
 });
 
-
+/* ── Módulo GEO 100% Memoria / Supabase ── */
 const GEO = {
-    getProvs  : () => JSON.parse(localStorage.getItem('sr_geo_provincias') || 'null'),
-    getMuns   : () => JSON.parse(localStorage.getItem('sr_geo_municipios')  || 'null'),
-    getCentros: () => JSON.parse(localStorage.getItem('sr_geo_centros')     || 'null'),
-    getLabs   : () => JSON.parse(localStorage.getItem('sr_geo_labs')        || 'null'),
-    saveProvs  : v => { localStorage.setItem('sr_geo_provincias', JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('provincias',   v).catch(console.error); },
-    saveMuns   : v => { localStorage.setItem('sr_geo_municipios',  JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('municipios',    v).catch(console.error); },
-    saveCentros: v => { localStorage.setItem('sr_geo_centros',     JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('centros_salud', v).catch(console.error); },
-    saveLabs   : v => { localStorage.setItem('sr_geo_labs',        JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('laboratorios',  v).catch(console.error); },
+    getProvs  : () => window._store?.geo_provincias || [],
+    getMuns   : () => window._store?.geo_municipios || [],
+    getCentros: () => window._store?.geo_centros || [],
+    getLabs   : () => window._store?.geo_labs || [],
+    saveProvs  : v => { window._store.geo_provincias = v; if (typeof sbUpsertRows === 'function') sbUpsertRows('provincias',   v).catch(console.error); },
+    saveMuns   : v => { window._store.geo_municipios = v; if (typeof sbUpsertRows === 'function') sbUpsertRows('municipios',    v).catch(console.error); },
+    saveCentros: v => { window._store.geo_centros = v;    if (typeof sbUpsertRows === 'function') sbUpsertRows('centros_salud', v).catch(console.error); },
+    saveLabs   : v => { window._store.geo_labs = v;       if (typeof sbUpsertRows === 'function') sbUpsertRows('laboratorios',  v).catch(console.error); },
 };
 
 function initGeoData() {
-    if (!GEO.getProvs())   GEO.saveProvs(DATOS_GEO.provincias.map(p => ({...p})));
-    if (!GEO.getMuns())    GEO.saveMuns(DATOS_GEO.municipios.map(m => ({...m})));
-    if (!GEO.getCentros()) GEO.saveCentros(DATOS_GEO.centros_salud.map(c => ({...c})));
-    if (!GEO.getLabs())    GEO.saveLabs((DATOS_GEO.laboratorios||[]).map(l => ({...l, activo: l.activo ?? true})));
+    if (!GEO.getProvs().length && typeof DATOS_GEO !== 'undefined')   GEO.saveProvs(DATOS_GEO.provincias.map(p => ({...p})));
+    if (!GEO.getMuns().length && typeof DATOS_GEO !== 'undefined')    GEO.saveMuns(DATOS_GEO.municipios.map(m => ({...m})));
+    if (!GEO.getCentros().length && typeof DATOS_GEO !== 'undefined') GEO.saveCentros(DATOS_GEO.centros_salud.map(c => ({...c})));
+    if (!GEO.getLabs().length && typeof DATOS_GEO !== 'undefined')    GEO.saveLabs((DATOS_GEO.laboratorios||[]).map(l => ({...l, activo: l.activo ?? true})));
 }
 
 const geoProvName   = id => GEO.getProvs()?.find(p => p.id === Number(id))?.nombre   || '—';
@@ -556,6 +563,7 @@ function renderProvs() {
     const centros  = GEO.getCentros() || [];
     const labs     = GEO.getLabs() || [];
     const tbody    = $a('tbody-provincias');
+    if(!tbody) return;
     $a('count-provincias').textContent = `${provs.length} provincia(s)`;
     tbody.innerHTML = '';
 
@@ -645,6 +653,7 @@ function renderMuns() {
 
     $a('count-municipios').textContent = `${muns.length} municipio(s)`;
     const tbody = $a('tbody-municipios');
+    if(!tbody) return;
     tbody.innerHTML = '';
 
     muns.forEach(m => {
@@ -738,6 +747,7 @@ function renderCentros() {
 
     $a('count-centros').textContent = `${centros.length} centro(s)`;
     const tbody = $a('tbody-centros');
+    if(!tbody) return;
     tbody.innerHTML = '';
 
     centros.forEach(c => {
@@ -849,6 +859,7 @@ function renderLabs() {
 
     $a('count-laboratorios').textContent = `${labs.length} laboratorio(s)`;
     const tbody = $a('tbody-laboratorios');
+    if(!tbody) return;
     tbody.innerHTML = '';
 
     labs.forEach(l => {
@@ -1013,7 +1024,6 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
         GEO.saveLabs(allLabs.filter(l => !labIds.includes(l.id)));
         savePerms(getPerms().filter(p => !labIds.includes(p.laboratorio_id)));
 
-        // Supabase: orden correcto por FK (labs cascade-borra permisos)
         if (typeof sbDeleteRow === 'function') {
             labIds.forEach(lid  => sbDeleteRow('laboratorios',  lid));
             centroIds.forEach(cid => sbDeleteRow('centros_salud', cid));
@@ -1048,7 +1058,6 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
     } else if (tipo === 'laboratorio') {
         GEO.saveLabs((GEO.getLabs() || []).filter(l => l.id !== id));
         savePerms(getPerms().filter(p => p.laboratorio_id !== id));
-        // permisos_lab se elimina en cascada desde Supabase al borrar el lab
         if (typeof sbDeleteRow === 'function') sbDeleteRow('laboratorios', id);
         renderLabs();
 
@@ -1057,7 +1066,6 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
         saveUsers(getUsers().filter(u => u.id !== uid));
         savePerms(getPerms().filter(p => p.usuario_id !== uid));
         saveAccesos(getAccesos().filter(a => a.usuario_id !== uid));
-        // permisos_lab se elimina en cascada desde Supabase al borrar el usuario
         if (typeof sbDeleteRow === 'function') sbDeleteRow('usuarios', uid);
         renderAll();
     }
@@ -1091,8 +1099,8 @@ document.addEventListener('click', e => {
     _modalDel().show();
 });
 
-
 function fillProvSelect(sel, selectedId) {
+    if(!sel) return;
     sel.innerHTML = '<option value="">— Seleccione —</option>';
     (GEO.getProvs() || []).forEach(p => {
         const opt = new Option(p.nombre, p.id);
@@ -1102,6 +1110,7 @@ function fillProvSelect(sel, selectedId) {
 }
 
 function fillMunSelect(sel, provId, selectedId) {
+    if(!sel) return;
     sel.innerHTML = '<option value="">— Seleccione —</option>';
     (GEO.getMuns() || []).filter(m => m.provincia_id === Number(provId)).forEach(m => {
         const opt = new Option(m.nombre, m.id);
@@ -1111,6 +1120,7 @@ function fillMunSelect(sel, provId, selectedId) {
 }
 
 function fillCentroSelect(sel, munId, selectedId) {
+    if(!sel) return;
     sel.innerHTML = '<option value="">— Seleccione —</option>';
     const centros = (GEO.getCentros() || []).filter(c => c.municipio_id === Number(munId));
     centros.forEach(c => {
@@ -1126,13 +1136,14 @@ function fillCentroSelect(sel, munId, selectedId) {
 
 function showLocErr(errId, msg) {
     const el = $a(errId);
-    el.textContent = msg;
-    el.classList.remove('d-none');
+    if(el) {
+        el.textContent = msg;
+        el.classList.remove('d-none');
+    }
 }
 
 function seedDemo() {
-    // No sembrar datos demo cuando hay conexión a Supabase (evita basura en BD)
-    if (typeof IS_ONLINE === 'function' && IS_ONLINE()) return;
+    if (typeof window.IS_ONLINE === 'function' && window.IS_ONLINE()) return;
     if (getUsers().length) return;
     saveUsers([
         { id:'demo_001', ci:'8501025678', nombres:'Ana María', apellidos:'Rodríguez Pérez', rol_profesional_id:1, rol_profesional_nom:'Médico/a', registro_profesional:'RM-12345', provincia_id:1, municipio_id:101, centro_texto:'Hospital Hermanos Ameijeiras', pin_hash:'x', rol_sistema_id:1, activo:true, aprobado:false, creado_en:new Date(Date.now()-172800000).toISOString() },
@@ -1142,7 +1153,7 @@ function seedDemo() {
     saveAccesos([{ id:'ac_001', usuario_id:'demo_003', justificacion:'Tesis de maestría en epidemiología de infecciones respiratorias', alcance_solicitado:'Resultados de cultivos respiratorios provincia Santiago de Cuba 2023-2024', estado:'pendiente', creado_en:new Date(Date.now()-18000000).toISOString() }]);
 }
 
-
+/* ── Catálogos 100% Memoria / Supabase ── */
 const LS_GV = 'sr_grupos_vulnerables';
 const LS_TM = 'sr_tipos_muestra';
 
@@ -1168,23 +1179,29 @@ const TM_DEFAULTS = [
     'Orina','Pus de lesión','Secreción'
 ];
 
-function _getCat(key)       { return JSON.parse(localStorage.getItem(key) || 'null'); }
+const CAT_STORE_MAP = {
+    'sr_grupos_vulnerables': 'grupos_vulnerables',
+    'sr_tipos_muestra': 'tipos_muestra',
+    'sr_microorganismos': 'microorganismos'
+};
 
-/**
- * Guarda catálogo en localStorage y sincroniza a Supabase.
- * sbSyncCatalogo hace upsert, no elimina filas borradas.
- * Las eliminaciones se manejan con sbDeleteRow en cada handler.
- */
-function _saveCat(key, arr) {
-    localStorage.setItem(key, JSON.stringify(arr));
-    if (typeof sbSyncCatalogo === 'function')
-        sbSyncCatalogo(key, arr).catch(e => console.error('_saveCat sync:', e.message));
+function _getCat(lsKey) { 
+    const key = CAT_STORE_MAP[lsKey];
+    return window._store?.[key] || []; 
 }
 
-function _initCatIfNeeded(key, defaults) {
-    if (_getCat(key) !== null) return;
-    const arr = defaults.map((nombre, i) => ({ id: i + 1, nombre, activo: true }));
-    _saveCat(key, arr);
+function _saveCat(lsKey, arr) {
+    const key = CAT_STORE_MAP[lsKey];
+    window._store[key] = arr;
+    if (typeof sbSyncCatalogo === 'function')
+        sbSyncCatalogo(lsKey, arr).catch(e => console.error('_saveCat sync:', e.message));
+}
+
+function _initCatIfNeeded(lsKey, defaults) {
+    const arr = _getCat(lsKey);
+    if (arr && arr.length > 0) return;
+    const initialArr = defaults.map((nombre, i) => ({ id: i + 1, nombre, activo: true }));
+    _saveCat(lsKey, initialArr);
 }
 
 function _nextCatId(arr) {
@@ -1249,7 +1266,6 @@ function _bindCatEvents(type, lsKey, renderFn) {
             $a('btn-confirm-delete').onclick = () => {
                 const updated = arr.filter(x => x.id !== id);
                 _saveCat(lsKey, updated);
-                // Eliminar fila específica de Supabase
                 const sbTabla = _SB_CAT_TABLA[lsKey];
                 if (sbTabla && typeof sbDeleteRow === 'function') sbDeleteRow(sbTabla, id);
                 bsModal.hide();
@@ -1262,8 +1278,7 @@ function _bindCatEvents(type, lsKey, renderFn) {
 }
 
 function _openCatModal(type, item) {
-    const isGV = type === 'gv';
-    $a('modal-cat-title').innerHTML = `<i class="bi bi-tag"></i> ${item ? 'Editar' : 'Nuevo'} — ${isGV ? 'Grupo de vulnerabilidad' : 'Tipo de muestra'}`;
+    $a('modal-cat-title').innerHTML = `<i class="bi bi-tag"></i> ${item ? 'Editar' : 'Nuevo'} — ${type === 'gv' ? 'Grupo de vulnerabilidad' : 'Tipo de muestra'}`;
     $a('cat-edit-id').value   = item ? item.id : '';
     $a('cat-edit-type').value = type;
     $a('cat-nombre').value    = item ? item.nombre : '';
@@ -1274,11 +1289,9 @@ function _openCatModal(type, item) {
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
-// Listener único para GV y TM (NO para micro — se maneja abajo por separado)
 $a('btn-save-cat')?.addEventListener('click', () => {
-    const type   = $a('cat-edit-type').value;
-    // Bug fix: si es 'micro', lo maneja el listener específico de micro
-    if (type === 'micro') return;
+    const type = $a('cat-edit-type').value;
+    if (type === 'micro') return; 
 
     const lsKey    = type === 'gv' ? LS_GV : LS_TM;
     const renderFn = type === 'gv' ? renderCatGV : renderCatTM;
@@ -1320,12 +1333,13 @@ const MICRO_DEFAULTS = [
 ];
 
 function _getMicroAdmin() {
-    const stored = JSON.parse(localStorage.getItem(LS_MICRO_ADMIN) || 'null');
-    if (!stored) { _saveMicro(MICRO_DEFAULTS); return MICRO_DEFAULTS; }
+    const stored = window._store?.microorganismos;
+    if (!stored || !stored.length) { _saveMicro(MICRO_DEFAULTS); return MICRO_DEFAULTS; }
     return stored;
 }
+
 function _saveMicro(arr) {
-    localStorage.setItem(LS_MICRO_ADMIN, JSON.stringify(arr));
+    window._store.microorganismos = arr;
     if (typeof sbSyncCatalogo === 'function')
         sbSyncCatalogo(LS_MICRO_ADMIN, arr).catch(e => console.error('_saveMicro sync:', e.message));
 }
@@ -1391,7 +1405,6 @@ function _openMicroModal(item) {
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-cat-item')).show();
 }
 
-// Listener específico para guardar microorganismos
 $a('btn-save-cat')?.addEventListener('click', () => {
     if ($a('cat-edit-type').value !== 'micro') return;
     const nombre = $a('cat-nombre').value.trim();
