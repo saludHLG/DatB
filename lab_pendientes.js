@@ -29,7 +29,7 @@ function _renderPendientes(inds, content, user, rootEl, emitirIds) {
     const _filtrar = q => {
         if (!q) return inds;
         // Cambio realizado: Leer directamente desde _store en lugar de localStorage
-        const pacs = _store.pacientes || [];
+        const pacs = window._store.pacientes || [];
         return inds.filter(ind => {
             const pac = pacs.find(p => p.id === ind.paciente_id);
             return pac && (
@@ -97,7 +97,7 @@ function _renderFormRecepcion(ind, user, rootEl) {
     // Cambio realizado: Leer directamente desde _store
     const pac   = (_store.pacientes || []).find(p => p.id === ind.paciente_id);
     const lab   = _labNombre(ind.laboratorio_id);
-    const tmAll = _store.tipos_muestra || [];
+    const tmAll = window._store.tipos_muestra || [];
     const tm    = tmAll.find(m => m.id === ind.tipo_muestra_id)?.nombre || `Muestra #${ind.tipo_muestra_id}`;
     const exNom = _examenNombre(ind._examen_id);
 
@@ -154,7 +154,7 @@ function _renderFormRecepcion(ind, user, rootEl) {
         })
     );
 
-    document.getElementById('btn-confirmar-rec').addEventListener('click', () => {
+    document.getElementById('btn-confirmar-rec').addEventListener('click', async () => {
         const decision = document.querySelector('input[name="rec-decision"]:checked')?.value;
         const motivo   = document.getElementById('rec-motivo').value.trim();
         const errEl    = document.getElementById('err-rec-motivo');
@@ -168,7 +168,7 @@ function _renderFormRecepcion(ind, user, rootEl) {
 
         // Cambio realizado: Leer directamente desde _store
         const _pacSnap   = (_store.pacientes || []).find(p => p.id === ind.paciente_id) || null;
-        const _indUsers  = _store.usuarios || [];
+        const _indUsers  = window._store.usuarios || [];
         const _indicador = _indUsers.find(u => u.id === ind.indicado_por) || null;
 
         const nueva = {
@@ -188,10 +188,8 @@ function _renderFormRecepcion(ind, user, rootEl) {
                 indicador_nombre: _indicador ? `${_indicador.nombres} ${_indicador.apellidos}` : null,
             },
         };
-        const recs = _getRecepciones(); recs.push(nueva); _saveRecepciones(recs);
-        if (typeof sbUpsertRow === 'function') sbUpsertRow('recepciones_muestra', nueva).catch(console.error);
-        _recalcIndEstado(ind.id);
-
+        const recs = _getRecepciones(); recs.push(nueva); await _saveRecepciones(recs);
+      
         const alertEl = document.getElementById('rec-alert');
         alertEl.className = `alert-custom alert-${decision === 'recibida' ? 'success' : 'warning'}`;
         alertEl.innerHTML = decision === 'recibida'
