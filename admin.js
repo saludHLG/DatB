@@ -3,20 +3,21 @@ const getUsers  = () => JSON.parse(localStorage.getItem('sr_usuarios')     || '[
 const getPerms  = () => JSON.parse(localStorage.getItem('sr_permisos_lab') || '[]');
 const getAccesos  = () => JSON.parse(localStorage.getItem('sr_accesos_temp') || '[]');
 
+/* ── Saves con sync a Supabase (best-effort, async) ──────── */
 const saveUsers = u => {
     localStorage.setItem('sr_usuarios', JSON.stringify(u));
     if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('usuarios', u).catch(console.error);
+        sbUpsertRows('usuarios', u).catch(e => console.error('saveUsers:', e.message));
 };
 const savePerms = p => {
+    // Permisos: se maneja con sbReplaceUserPerms por usuario en btn-save-user.
+    // Aquí solo actualizamos localStorage para consistencia local.
     localStorage.setItem('sr_permisos_lab', JSON.stringify(p));
-    if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('permisos_lab', p).catch(console.error);
 };
 const saveAccesos = a => {
     localStorage.setItem('sr_accesos_temp', JSON.stringify(a));
     if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('accesos_temporales', a).catch(console.error);
+        sbUpsertRows('accesos_temporales', a).catch(e => console.error('saveAccesos:', e.message));
 };
 
 const ROL_SIS_NAMES = { 1:'Usuario común', 2:'Mod. institucional', 3:'Mod. municipal', 4:'Mod. provincial', 5:'Mod. nacional', 6:'Administrador' };
@@ -27,6 +28,13 @@ const ROL_SIS_HINTS = {
     4:'Modera datos de su provincia.',
     5:'Modera datos a nivel nacional.',
     6:'Acceso total. Gestión de usuarios y configuración.'
+};
+
+/* Mapeo clave localStorage → tabla Supabase para catálogos */
+const _SB_CAT_TABLA = {
+    'sr_grupos_vulnerables': 'grupos_vulnerables',
+    'sr_tipos_muestra'     : 'tipos_muestra',
+    'sr_microorganismos'   : 'microorganismos',
 };
 
 function toast(msg, type='success') {
@@ -409,8 +417,13 @@ $a('btn-save-user')?.addEventListener('click', () => {
     users[idx].rol_sistema_id = Number($a('modal-rol-sistema').value);
 
     saveUsers(users);
+
+    // Actualizar permisos de lab: reemplazar en localStorage y en Supabase
     const allPerms = getPerms().filter(p => p.usuario_id !== _editUid).concat(_editPerms);
     savePerms(allPerms);
+    if (typeof sbReplaceUserPerms === 'function')
+        sbReplaceUserPerms(_editUid, _editPerms).catch(e => console.error('perms sync:', e.message));
+
     bootstrap.Modal.getInstance($a('modal-edit-user'))?.hide();
     toast('Cambios guardados correctamente.', 'success');
     renderAll();
@@ -471,10 +484,10 @@ const GEO = {
     getMuns   : () => JSON.parse(localStorage.getItem('sr_geo_municipios')  || 'null'),
     getCentros: () => JSON.parse(localStorage.getItem('sr_geo_centros')     || 'null'),
     getLabs   : () => JSON.parse(localStorage.getItem('sr_geo_labs')        || 'null'),
-    saveProvs  : v => localStorage.setItem('sr_geo_provincias', JSON.stringify(v)),
-    saveMuns   : v => localStorage.setItem('sr_geo_municipios',  JSON.stringify(v)),
-    saveCentros: v => localStorage.setItem('sr_geo_centros',     JSON.stringify(v)),
-    saveLabs   : v => localStorage.setItem('sr_geo_labs',        JSON.stringify(v)),
+    saveProvs  : v => { localStorage.setItem('sr_geo_provincias', JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('provincias',   v).catch(console.error); },
+    saveMuns   : v => { localStorage.setItem('sr_geo_municipios',  JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('municipios',    v).catch(console.error); },
+    saveCentros: v => { localStorage.setItem('sr_geo_centros',     JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('centros_salud', v).catch(console.error); },
+    saveLabs   : v => { localStorage.setItem('sr_geo_labs',        JSON.stringify(v)); if (typeof sbUpsertRows === 'function') sbUpsertRows('laboratorios',  v).catch(console.error); },
 };
 
 function initGeoData() {
@@ -766,7 +779,6 @@ $a('btn-save-centro')?.addEventListener('click', () => {
     if (!tipo)   return showLocErr('centro-err', 'Seleccione el tipo de centro.');
     if (!munId)  return showLocErr('centro-err', 'Seleccione el municipio.');
 
-    const mun    = (GEO.getMuns() || []).find(m => m.id === munId);
     const centros = GEO.getCentros() || [];
     const editId  = Number($a('centro-edit-id').value);
 
@@ -959,51 +971,68 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
     const { tipo, id } = _pendingDelete;
 
     if (tipo === 'provincia') {
-        const muns    = GEO.getMuns()    || [];
-        const munIds  = muns.filter(m => m.provincia_id === id).map(m => m.id);
-        const labs    = GEO.getLabs()    || [];
-        const labIds  = labs
-            .filter(l => l.provincia_id === id || munIds.includes(l.municipio_id))
-            .map(l => l.id);
+        const allMuns    = GEO.getMuns()    || [];
+        const allCentros = GEO.getCentros() || [];
+        const allLabs    = GEO.getLabs()    || [];
+        const munIds     = allMuns.filter(m => m.provincia_id === id).map(m => m.id);
+        const centroIds  = allCentros.filter(c => munIds.includes(c.municipio_id)).map(c => c.id);
+        const labIds     = allLabs.filter(l => l.provincia_id === id || munIds.includes(l.municipio_id)).map(l => l.id);
 
         GEO.saveProvs((GEO.getProvs()   || []).filter(p => p.id !== id));
-        GEO.saveMuns(muns.filter(m => !munIds.includes(m.id)));
-        GEO.saveCentros((GEO.getCentros() || []).filter(c => !munIds.includes(c.municipio_id)));
-        GEO.saveLabs(labs.filter(l => !labIds.includes(l.id)));
+        GEO.saveMuns(allMuns.filter(m => !munIds.includes(m.id)));
+        GEO.saveCentros(allCentros.filter(c => !munIds.includes(c.municipio_id)));
+        GEO.saveLabs(allLabs.filter(l => !labIds.includes(l.id)));
         savePerms(getPerms().filter(p => !labIds.includes(p.laboratorio_id)));
+
+        // Supabase: orden correcto por FK (labs cascade-borra permisos)
+        if (typeof sbDeleteRow === 'function') {
+            labIds.forEach(lid  => sbDeleteRow('laboratorios',  lid));
+            centroIds.forEach(cid => sbDeleteRow('centros_salud', cid));
+            munIds.forEach(mid  => sbDeleteRow('municipios',    mid));
+            sbDeleteRow('provincias', id);
+        }
         renderProvs();
 
     } else if (tipo === 'municipio') {
-        const labs   = GEO.getLabs() || [];
-        const labIds = labs.filter(l => l.municipio_id === id).map(l => l.id);
+        const allLabs    = GEO.getLabs()    || [];
+        const allCentros = GEO.getCentros() || [];
+        const labIds     = allLabs.filter(l => l.municipio_id === id).map(l => l.id);
+        const centroIds  = allCentros.filter(c => c.municipio_id === id).map(c => c.id);
 
         GEO.saveMuns((GEO.getMuns()     || []).filter(m => m.id !== id));
-        GEO.saveCentros((GEO.getCentros() || []).filter(c => c.municipio_id !== id));
-        GEO.saveLabs(labs.filter(l => l.municipio_id !== id));
+        GEO.saveCentros(allCentros.filter(c => c.municipio_id !== id));
+        GEO.saveLabs(allLabs.filter(l => l.municipio_id !== id));
         savePerms(getPerms().filter(p => !labIds.includes(p.laboratorio_id)));
+
+        if (typeof sbDeleteRow === 'function') {
+            labIds.forEach(lid  => sbDeleteRow('laboratorios',  lid));
+            centroIds.forEach(cid => sbDeleteRow('centros_salud', cid));
+            sbDeleteRow('municipios', id);
+        }
         renderMuns();
 
     } else if (tipo === 'centro') {
         GEO.saveCentros((GEO.getCentros() || []).filter(c => c.id !== id));
+        if (typeof sbDeleteRow === 'function') sbDeleteRow('centros_salud', id);
         renderCentros();
 
     } else if (tipo === 'laboratorio') {
-    GEO.saveLabs((GEO.getLabs() || []).filter(l => l.id !== id));
-    savePerms(getPerms().filter(p => p.laboratorio_id !== id));
-    // AÑADIR:
-    if (typeof sbDeleteRow === 'function') sbDeleteRow('laboratorios', id);
-    renderLabs();
-}
+        GEO.saveLabs((GEO.getLabs() || []).filter(l => l.id !== id));
+        savePerms(getPerms().filter(p => p.laboratorio_id !== id));
+        // permisos_lab se elimina en cascada desde Supabase al borrar el lab
+        if (typeof sbDeleteRow === 'function') sbDeleteRow('laboratorios', id);
+        renderLabs();
 
     } else if (tipo === 'usuario') {
-    const uid = id;
-    saveUsers(getUsers().filter(u => u.id !== uid));
-    savePerms(getPerms().filter(p => p.usuario_id !== uid));
-    saveAccesos(getAccesos().filter(a => a.usuario_id !== uid));
-    // AÑADIR:
-    if (typeof sbDeleteRow === 'function') sbDeleteRow('usuarios', uid);
-    renderAll();
-}
+        const uid = id;
+        saveUsers(getUsers().filter(u => u.id !== uid));
+        savePerms(getPerms().filter(p => p.usuario_id !== uid));
+        saveAccesos(getAccesos().filter(a => a.usuario_id !== uid));
+        // permisos_lab se elimina en cascada desde Supabase al borrar el usuario
+        if (typeof sbDeleteRow === 'function') sbDeleteRow('usuarios', uid);
+        renderAll();
+    }
+
     _pendingDelete = null;
     _modalDel().hide();
     toast('Registro eliminado.', 'info');
@@ -1072,9 +1101,9 @@ function showLocErr(errId, msg) {
     el.classList.remove('d-none');
 }
 
-document.addEventListener('DOMContentLoaded', () => { initGeoData(); }, { once: false });
-
 function seedDemo() {
+    // No sembrar datos demo cuando hay conexión a Supabase (evita basura en BD)
+    if (typeof IS_ONLINE === 'function' && IS_ONLINE()) return;
     if (getUsers().length) return;
     saveUsers([
         { id:'demo_001', ci:'8501025678', nombres:'Ana María', apellidos:'Rodríguez Pérez', rol_profesional_id:1, rol_profesional_nom:'Médico/a', registro_profesional:'RM-12345', provincia_id:1, municipio_id:101, centro_texto:'Hospital Hermanos Ameijeiras', pin_hash:'x', rol_sistema_id:1, activo:true, aprobado:false, creado_en:new Date(Date.now()-172800000).toISOString() },
@@ -1111,7 +1140,17 @@ const TM_DEFAULTS = [
 ];
 
 function _getCat(key)       { return JSON.parse(localStorage.getItem(key) || 'null'); }
-function _saveCat(key, arr) { localStorage.setItem(key, JSON.stringify(arr)); }
+
+/**
+ * Guarda catálogo en localStorage y sincroniza a Supabase.
+ * sbSyncCatalogo hace upsert, no elimina filas borradas.
+ * Las eliminaciones se manejan con sbDeleteRow en cada handler.
+ */
+function _saveCat(key, arr) {
+    localStorage.setItem(key, JSON.stringify(arr));
+    if (typeof sbSyncCatalogo === 'function')
+        sbSyncCatalogo(key, arr).catch(e => console.error('_saveCat sync:', e.message));
+}
 
 function _initCatIfNeeded(key, defaults) {
     if (_getCat(key) !== null) return;
@@ -1181,6 +1220,9 @@ function _bindCatEvents(type, lsKey, renderFn) {
             $a('btn-confirm-delete').onclick = () => {
                 const updated = arr.filter(x => x.id !== id);
                 _saveCat(lsKey, updated);
+                // Eliminar fila específica de Supabase
+                const sbTabla = _SB_CAT_TABLA[lsKey];
+                if (sbTabla && typeof sbDeleteRow === 'function') sbDeleteRow(sbTabla, id);
                 bsModal.hide();
                 renderFn();
                 toast('Ítem eliminado.', 'info');
@@ -1203,13 +1245,17 @@ function _openCatModal(type, item) {
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
+// Listener único para GV y TM (NO para micro — se maneja abajo por separado)
 $a('btn-save-cat')?.addEventListener('click', () => {
     const type   = $a('cat-edit-type').value;
-    const lsKey  = type === 'gv' ? LS_GV : LS_TM;
+    // Bug fix: si es 'micro', lo maneja el listener específico de micro
+    if (type === 'micro') return;
+
+    const lsKey    = type === 'gv' ? LS_GV : LS_TM;
     const renderFn = type === 'gv' ? renderCatGV : renderCatTM;
-    const nombre = $a('cat-nombre').value.trim();
-    const activo = document.querySelector('input[name="cat-activo"]:checked')?.value === 'true';
-    const errEl  = $a('cat-err');
+    const nombre   = $a('cat-nombre').value.trim();
+    const activo   = document.querySelector('input[name="cat-activo"]:checked')?.value === 'true';
+    const errEl    = $a('cat-err');
 
     if (!nombre) {
         errEl.textContent = 'El nombre es obligatorio.';
@@ -1246,10 +1292,14 @@ const MICRO_DEFAULTS = [
 
 function _getMicroAdmin() {
     const stored = JSON.parse(localStorage.getItem(LS_MICRO_ADMIN) || 'null');
-    if (!stored) { localStorage.setItem(LS_MICRO_ADMIN, JSON.stringify(MICRO_DEFAULTS)); return MICRO_DEFAULTS; }
+    if (!stored) { _saveMicro(MICRO_DEFAULTS); return MICRO_DEFAULTS; }
     return stored;
 }
-function _saveMicro(arr) { localStorage.setItem(LS_MICRO_ADMIN, JSON.stringify(arr)); }
+function _saveMicro(arr) {
+    localStorage.setItem(LS_MICRO_ADMIN, JSON.stringify(arr));
+    if (typeof sbSyncCatalogo === 'function')
+        sbSyncCatalogo(LS_MICRO_ADMIN, arr).catch(e => console.error('_saveMicro sync:', e.message));
+}
 
 function renderCatMicro() {
     const items = _getMicroAdmin();
@@ -1294,6 +1344,7 @@ function renderCatMicro() {
             $a('delete-confirm-msg').textContent = `¿Eliminar "${item.nombre}"?`;
             $a('btn-confirm-delete').onclick = () => {
                 _saveMicro(_getMicroAdmin().filter(x => x.id !== id));
+                if (typeof sbDeleteRow === 'function') sbDeleteRow('microorganismos', id);
                 bsModal.hide(); renderCatMicro(); toast('Microorganismo eliminado.', 'info');
             };
             bsModal.show();
@@ -1311,9 +1362,9 @@ function _openMicroModal(item) {
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-cat-item')).show();
 }
 
-const _origSaveCat = $a('btn-save-cat')?.onclick;
+// Listener específico para guardar microorganismos
 $a('btn-save-cat')?.addEventListener('click', () => {
-    if ($a('cat-edit-type').value !== 'micro') return; // los otros tipos ya tienen su handler
+    if ($a('cat-edit-type').value !== 'micro') return;
     const nombre = $a('cat-nombre').value.trim();
     const activo = document.querySelector('input[name="cat-activo"]:checked')?.value === 'true';
     const errEl  = $a('cat-err');
@@ -1337,8 +1388,20 @@ $a('btn-save-cat')?.addEventListener('click', () => {
     toast(editId ? 'Microorganismo actualizado.' : 'Microorganismo agregado.', 'success');
 });
 
+/* ── Inicialización ─────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-    seedDemo();
-    checkAccess();
-    renderAll();
+    const init = () => { seedDemo(); checkAccess(); renderAll(); };
+
+    if (typeof IS_ONLINE === 'function' && IS_ONLINE()) {
+        // Cargar desde Supabase primero; initGeoData solo rellena lo que falte
+        Promise.all([
+            typeof sbInitGeo  === 'function' ? sbInitGeo()  : Promise.resolve(),
+            typeof sbGetUsers === 'function' ? sbGetUsers() : Promise.resolve(),
+        ])
+        .catch(e => console.error('Admin init Supabase:', e))
+        .finally(() => { initGeoData(); init(); });
+    } else {
+        initGeoData();
+        init();
+    }
 });
