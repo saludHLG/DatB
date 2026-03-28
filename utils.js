@@ -1,6 +1,7 @@
 /* =========================================================
-   utils.js — Utilidades compartidas  DatB
-   Cargado primero; disponible para todos los módulos.
+   utils.js — Utilidades compartidas DatB
+   Lee/escribe en _store (definido en supabase_client.js).
+   Sin localStorage.
    ========================================================= */
 
 /* ── Atajos DOM ─────────────────────────────────────────── */
@@ -9,41 +10,34 @@ const show = id => { const el = $(id); if (el) el.classList.remove('d-none'); };
 const hide = id => { const el = $(id); if (el) el.classList.add('d-none'); };
 
 /* ── Seguridad ──────────────────────────────────────────── */
-/**
- * Hash djb2 — SÓLO para prototipo local (localStorage).
- * En producción reemplazar por bcrypt/argon2 en servidor.
- */
 function hashPin(pin) {
     let h = 5381;
     for (let i = 0; i < pin.length; i++) h = (h * 33) ^ pin.charCodeAt(i);
     return (h >>> 0).toString(36);
 }
 
-/* ── PIN — lectura y construcción ───────────────────────── */
-/** Lee el valor completo de un grupo de inputs PIN */
+/* ── PIN ────────────────────────────────────────────────── */
 function readPin(gridId) {
     return [...document.querySelectorAll(`#${gridId} .pin-input`)]
         .map(i => i.value).join('');
 }
 
-/** Genera dinámicamente los 4 inputs de un grid PIN */
 function buildPinGrid(gridId) {
     const grid = $(gridId);
     if (!grid || grid.children.length > 0) return;
     for (let i = 0; i < 4; i++) {
         const inp = document.createElement('input');
-        inp.type        = 'password';
-        inp.className   = 'pin-input';
-        inp.maxLength   = 1;
-        inp.inputMode   = 'numeric';
-        inp.pattern     = '[0-9]';
+        inp.type      = 'password';
+        inp.className = 'pin-input';
+        inp.maxLength = 1;
+        inp.inputMode = 'numeric';
+        inp.pattern   = '[0-9]';
         inp.setAttribute('aria-label', `Dígito ${i + 1}`);
         grid.appendChild(inp);
     }
     bindPinNavigation(gridId);
 }
 
-/** Navegación automática entre celdas PIN (incluye paste y backspace) */
 function bindPinNavigation(gridId) {
     const inputs = [...document.querySelectorAll(`#${gridId} .pin-input`)];
     inputs.forEach((inp, idx) => {
@@ -63,40 +57,34 @@ function bindPinNavigation(gridId) {
     });
 }
 
-/* ── Validación de campos ───────────────────────────────── */
+/* ── Validación ─────────────────────────────────────────── */
 function setInvalid(inputId, errId, msg) {
-    const el = $(inputId);
-    if (el) el.classList.add('is-invalid');
-    const err = $(errId);
-    if (err) { err.textContent = msg; err.classList.add('show'); }
+    const el = $(inputId); if (el) el.classList.add('is-invalid');
+    const err = $(errId);  if (err) { err.textContent = msg; err.classList.add('show'); }
 }
 
 function clearInvalid(inputId, errId) {
-    const el = $(inputId);
-    if (el) el.classList.remove('is-invalid');
-    const err = $(errId);
-    if (err) { err.textContent = ''; err.classList.remove('show'); }
+    const el = $(inputId); if (el) el.classList.remove('is-invalid');
+    const err = $(errId);  if (err) { err.textContent = ''; err.classList.remove('show'); }
 }
 
-/** Limpia múltiples pares [inputId, errId] de una vez */
 function clearAllInvalid(...pairs) {
     pairs.forEach(([i, e]) => clearInvalid(i, e));
 }
 
-/* ── Alertas en contenedores fijos ─────────────────────── */
+/* ── Alertas ────────────────────────────────────────────── */
 function showAlert(containerId, msg, type = 'danger') {
-    const el = $(containerId);
-    if (!el) return;
-    el.className = `alert-custom alert-${type}`;
+    const el = $(containerId); if (!el) return;
+    el.className  = `alert-custom alert-${type}`;
     el.textContent = msg;
     el.classList.remove('d-none');
 }
 
-/* ── Toast de notificación (app-shell) ──────────────────── */
+/* ── Toast (app-shell) ──────────────────────────────────── */
 function showToastApp(msg, type = 'success') {
     let toast = $('app-toast');
     if (!toast) {
-        toast = document.createElement('div');
+        toast    = document.createElement('div');
         toast.id = 'app-toast';
         document.body.appendChild(toast);
     }
@@ -108,24 +96,24 @@ function showToastApp(msg, type = 'success') {
     toast._t = setTimeout(() => { toast.className = 'app-toast-msg app-toast-hide'; }, 2800);
 }
 
-/* ── Navegación entre vistas del layout de autenticación ── */
+/* ── Vistas ─────────────────────────────────────────────── */
 function showView(viewId) {
     document.querySelectorAll('.form-view').forEach(v => v.classList.remove('active'));
     const target = $(viewId);
     if (target) target.classList.add('active');
 }
 
-/* ── Almacenamiento de usuarios ─────────────────────────── */
-function getUsers()       { return JSON.parse(localStorage.getItem('sr_usuarios') || '[]'); }
-function saveUsers(users) {
-    localStorage.setItem('sr_usuarios', JSON.stringify(users));
-    if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('usuarios', users).catch(e => console.error('saveUsers:', e.message));
-}
+/* ── Usuarios — usa _store ──────────────────────────────── */
+function getUsers()       { return _store.usuarios; }
+function saveUsers(users) { _store.usuarios = users; }
 
-/* ── Helpers compartidos (evitan duplicación entre módulos) ─ */
+/* ── Accesores geográficos — usa _store con fallback estático */
+const getGeoProvs   = () => _store.geo_provincias.length   ? _store.geo_provincias   : (typeof DATOS_GEO !== 'undefined' ? DATOS_GEO.provincias   : []);
+const getGeoMuns    = () => _store.geo_municipios.length    ? _store.geo_municipios    : (typeof DATOS_GEO !== 'undefined' ? DATOS_GEO.municipios    : []);
+const getGeoCentros = () => _store.geo_centros.length       ? _store.geo_centros       : (typeof DATOS_GEO !== 'undefined' ? DATOS_GEO.centros_salud : []);
+const getGeoLabs    = () => _store.geo_labs.length          ? _store.geo_labs          : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
 
-/** Genera UUID v4 */
+/* ── Helpers de fecha/ID compartidos ────────────────────── */
 function genIdShared() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
         const r = Math.random() * 16 | 0;
@@ -133,12 +121,10 @@ function genIdShared() {
     });
 }
 
-/** Fecha de hoy en formato YYYY-MM-DD */
 function todayShared() {
     return new Date().toISOString().split('T')[0];
 }
 
-/** Formatea YYYY-MM-DD → DD/MM/YYYY */
 function fmtDateShared(d) {
     if (!d) return '—';
     const p = String(d).split('T')[0].split('-');
@@ -146,44 +132,24 @@ function fmtDateShared(d) {
     return `${p[2]}/${p[1]}/${p[0]}`;
 }
 
-/** Suma N días a una fecha YYYY-MM-DD, devuelve YYYY-MM-DD */
 function addDaysShared(dateStr, days) {
     const d = new Date(dateStr + 'T00:00:00');
     d.setDate(d.getDate() + days);
     return d.toISOString().split('T')[0];
 }
 
-/* ── Accesores geo (con fallback a datos estáticos) ─────── */
-/*
- * Leen primero el localStorage (que puede haber sido editado por admin),
- * y si está vacío usan los datos estáticos de data.js.
- * DATOS_GEO se define en data.js, cargado justo después de utils.js.
- */
-const getGeoProvs   = () => JSON.parse(localStorage.getItem('sr_geo_provincias') || 'null') || DATOS_GEO.provincias;
-const getGeoMuns    = () => JSON.parse(localStorage.getItem('sr_geo_municipios')  || 'null') || DATOS_GEO.municipios;
-const getGeoCentros = () => JSON.parse(localStorage.getItem('sr_geo_centros')     || 'null') || DATOS_GEO.centros_salud;
-const getGeoLabs    = () => JSON.parse(localStorage.getItem('sr_geo_labs')        || 'null') || (DATOS_GEO.laboratorios || []);
-
-/* ── Diálogo de confirmación nativo de la app ────────────────
-   Reemplaza window.confirm() con un modal Bootstrap reutilizable.
-   Uso: _appConfirm('¿Eliminar esto?', callback, 'Eliminar');
-   El tercer argumento (opcional) personaliza el texto del botón OK.
-   ─────────────────────────────────────────────────────────── */
+/* ── Diálogo de confirmación ────────────────────────────── */
 function _appConfirm(msg, onOk, okLabel) {
     const modalEl = document.getElementById('app-confirm-modal');
-    if (!modalEl) { if (window.confirm(msg)) onOk(); return; } // fallback seguro
+    if (!modalEl) { if (window.confirm(msg)) onOk(); return; }
 
     document.getElementById('app-confirm-msg').innerHTML = msg;
-
     const btnOk     = document.getElementById('app-confirm-ok');
     const btnCancel = document.getElementById('app-confirm-cancel');
     btnOk.innerHTML = `<i class="bi bi-trash"></i> ${okLabel || 'Eliminar'}`;
 
     const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-
-    // Reemplazar onclick directamente evita duplicar listeners
     btnOk.onclick     = () => { bsModal.hide(); onOk(); };
     btnCancel.onclick = () => bsModal.hide();
-
     bsModal.show();
 }
