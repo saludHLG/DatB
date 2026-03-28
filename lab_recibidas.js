@@ -98,8 +98,8 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
         return;
     }
 
-    const inds = window._store.indicaciones || [];
-    const pacs = JSON.parse(localStorage.getItem('_store.pacientes')    || '[]');
+    const inds = window..indicaciones || [];
+    const pacs = window._store.pacientes || [];
     const baci = _getResBaci();
     const cult = _getResCultivo();
 
