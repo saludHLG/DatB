@@ -28,7 +28,8 @@ function _renderPendientes(inds, content, user, rootEl, emitirIds) {
 
     const _filtrar = q => {
         if (!q) return inds;
-        const pacs = JSON.parse(localStorage.getItem('_store.pacientes') || '[]');
+        // Cambio realizado: Leer directamente desde _store en lugar de localStorage
+        const pacs = _store.pacientes || [];
         return inds.filter(ind => {
             const pac = pacs.find(p => p.id === ind.paciente_id);
             return pac && (
@@ -63,7 +64,8 @@ function _renderPendientes(inds, content, user, rootEl, emitirIds) {
 }
 
 function _cardPendiente(ind, emitirIds) {
-    const pac    = (JSON.parse(localStorage.getItem('_store.pacientes') || '[]')).find(p => p.id === ind.paciente_id);
+    // Cambio realizado: Leer directamente desde _store
+    const pac    = (_store.pacientes || []).find(p => p.id === ind.paciente_id);
     const centro = _centroNombreDeIndicador(ind.indicado_por);
     const ex     = _examenNombre(ind._examen_id);
     const medNom = ind.medico ? `Dr./Dra. ${ind.medico.nombres} ${ind.medico.apellidos}` : '—';
@@ -92,9 +94,10 @@ function _cardPendiente(ind, emitirIds) {
 }
 
 function _renderFormRecepcion(ind, user, rootEl) {
-    const pac   = (JSON.parse(localStorage.getItem('_store.pacientes') || '[]')).find(p => p.id === ind.paciente_id);
+    // Cambio realizado: Leer directamente desde _store
+    const pac   = (_store.pacientes || []).find(p => p.id === ind.paciente_id);
     const lab   = _labNombre(ind.laboratorio_id);
-    const tmAll = JSON.parse(localStorage.getItem('_store.tipos_muestra') || 'null') || [];
+    const tmAll = _store.tipos_muestra || [];
     const tm    = tmAll.find(m => m.id === ind.tipo_muestra_id)?.nombre || `Muestra #${ind.tipo_muestra_id}`;
     const exNom = _examenNombre(ind._examen_id);
 
@@ -163,8 +166,9 @@ function _renderFormRecepcion(ind, user, rootEl) {
         document.getElementById('rec-motivo').classList.remove('is-invalid');
         errEl.classList.remove('show');
 
-        const _pacSnap   = (JSON.parse(localStorage.getItem('_store.pacientes') || '[]')).find(p => p.id === ind.paciente_id) || null;
-        const _indUsers  = JSON.parse(localStorage.getItem('_store.usuarios') || '[]');
+        // Cambio realizado: Leer directamente desde _store
+        const _pacSnap   = (_store.pacientes || []).find(p => p.id === ind.paciente_id) || null;
+        const _indUsers  = _store.usuarios || [];
         const _indicador = _indUsers.find(u => u.id === ind.indicado_por) || null;
 
         const nueva = {
