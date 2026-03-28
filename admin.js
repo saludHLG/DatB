@@ -988,18 +988,22 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
         renderCentros();
 
     } else if (tipo === 'laboratorio') {
-        GEO.saveLabs((GEO.getLabs() || []).filter(l => l.id !== id));
-        savePerms(getPerms().filter(p => p.laboratorio_id !== id));
-        renderLabs();
+    GEO.saveLabs((GEO.getLabs() || []).filter(l => l.id !== id));
+    savePerms(getPerms().filter(p => p.laboratorio_id !== id));
+    // AÑADIR:
+    if (typeof sbDeleteRow === 'function') sbDeleteRow('laboratorios', id);
+    renderLabs();
+}
 
     } else if (tipo === 'usuario') {
-        const uid = id; 
-        saveUsers(getUsers().filter(u => u.id !== uid));
-        savePerms(getPerms().filter(p => p.usuario_id !== uid));
-        saveAccesos(getAccesos().filter(a => a.usuario_id !== uid));
-        renderAll();
-    }
-
+    const uid = id;
+    saveUsers(getUsers().filter(u => u.id !== uid));
+    savePerms(getPerms().filter(p => p.usuario_id !== uid));
+    saveAccesos(getAccesos().filter(a => a.usuario_id !== uid));
+    // AÑADIR:
+    if (typeof sbDeleteRow === 'function') sbDeleteRow('usuarios', uid);
+    renderAll();
+}
     _pendingDelete = null;
     _modalDel().hide();
     toast('Registro eliminado.', 'info');
