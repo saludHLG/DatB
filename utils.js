@@ -116,18 +116,11 @@ function showView(viewId) {
 }
 
 /* ── Almacenamiento de usuarios ─────────────────────────── */
-function getUsers() {
-    return JSON.parse(localStorage.getItem('sr_usuarios') || '[]');
-}
-
-/**
- * Guarda usuarios en localStorage y sincroniza a Supabase (async, best-effort).
- * Actualiza solo el array completo (piloto con volumen bajo de usuarios).
- */
+function getUsers()       { return JSON.parse(localStorage.getItem('sr_usuarios') || '[]'); }
 function saveUsers(users) {
     localStorage.setItem('sr_usuarios', JSON.stringify(users));
     if (typeof sbUpsertRows === 'function')
-        sbUpsertRows('usuarios', users).catch(e => console.error('saveUsers sync:', e.message));
+        sbUpsertRows('usuarios', users).catch(e => console.error('saveUsers:', e.message));
 }
 
 /* ── Helpers compartidos (evitan duplicación entre módulos) ─ */
@@ -161,6 +154,11 @@ function addDaysShared(dateStr, days) {
 }
 
 /* ── Accesores geo (con fallback a datos estáticos) ─────── */
+/*
+ * Leen primero el localStorage (que puede haber sido editado por admin),
+ * y si está vacío usan los datos estáticos de data.js.
+ * DATOS_GEO se define en data.js, cargado justo después de utils.js.
+ */
 const getGeoProvs   = () => JSON.parse(localStorage.getItem('sr_geo_provincias') || 'null') || DATOS_GEO.provincias;
 const getGeoMuns    = () => JSON.parse(localStorage.getItem('sr_geo_municipios')  || 'null') || DATOS_GEO.municipios;
 const getGeoCentros = () => JSON.parse(localStorage.getItem('sr_geo_centros')     || 'null') || DATOS_GEO.centros_salud;
@@ -169,10 +167,11 @@ const getGeoLabs    = () => JSON.parse(localStorage.getItem('sr_geo_labs')      
 /* ── Diálogo de confirmación nativo de la app ────────────────
    Reemplaza window.confirm() con un modal Bootstrap reutilizable.
    Uso: _appConfirm('¿Eliminar esto?', callback, 'Eliminar');
+   El tercer argumento (opcional) personaliza el texto del botón OK.
    ─────────────────────────────────────────────────────────── */
 function _appConfirm(msg, onOk, okLabel) {
     const modalEl = document.getElementById('app-confirm-modal');
-    if (!modalEl) { if (window.confirm(msg)) onOk(); return; }
+    if (!modalEl) { if (window.confirm(msg)) onOk(); return; } // fallback seguro
 
     document.getElementById('app-confirm-msg').innerHTML = msg;
 
@@ -182,6 +181,7 @@ function _appConfirm(msg, onOk, okLabel) {
 
     const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
+    // Reemplazar onclick directamente evita duplicar listeners
     btnOk.onclick     = () => { bsModal.hide(); onOk(); };
     btnCancel.onclick = () => bsModal.hide();
 
