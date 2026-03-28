@@ -1,46 +1,43 @@
 /* =========================================================
    laboratorio_core.js — Núcleo compartido del módulo de Lab.
-   Constantes, helpers de localStorage, utilidades y permisos.
-   Debe cargarse ANTES que los demás archivos del módulo.
+   Lee/escribe en _store. Sin localStorage.
    ========================================================= */
 
-/* ── Claves localStorage ──────────────────────────────────── */
-const LS_RECEPCIONES     = 'sr_recepciones';
-const LS_RES_BACI        = 'sr_res_baci';
-const LS_RES_CULTIVO     = 'sr_res_cultivo';
-const LS_RES_XPERT_ULTRA = 'sr_res_xpert_ultra';
-const LS_RES_XPERT_XDR   = 'sr_res_xpert_xdr';
-const LS_MICRO           = 'sr_microorganismos';
+/* ── Claves de store ───────────────────────────────────── */
+// Accesores de recepciones y resultados (leen de _store)
+function _getRecepciones()       { return _store.recepciones; }
+function _getResBaci()           { return _store.res_baci; }
+function _getResCultivo()        { return _store.res_cultivo; }
+function _getResXpertUltra()     { return _store.res_xpert_ultra; }
+function _getResXpertXDR()       { return _store.res_xpert_xdr; }
 
+// Escritores (actualizan _store + Supabase)
+function _saveRecepciones(arr)   {
+    _store.recepciones = arr;
+}
+function _saveResBaci(arr)       { _store.res_baci = arr; }
+function _saveResCultivo(arr)    { _store.res_cultivo = arr; }
+function _saveResXpertUltra(arr) { _store.res_xpert_ultra = arr; }
+function _saveResXpertXDR(arr)   { _store.res_xpert_xdr = arr; }
+
+/* ── Microorganismos ────────────────────────────────────── */
 const _MICRO_DEFAULTS = [
-    { id: 1, nombre: 'Mycobacterium tuberculosis',          sistema: true, activo: true },
-    { id: 2, nombre: 'MNTB (Micobacteria No Tuberculosa)',  sistema: true, activo: true },
+    { id: 1, nombre: 'Mycobacterium tuberculosis',         sistema: true, activo: true },
+    { id: 2, nombre: 'MNTB (Micobacteria No Tuberculosa)', sistema: true, activo: true },
 ];
 
-/* ── Accesores de recepciones y resultados ────────────────── */
-function _getRecepciones()       { return JSON.parse(localStorage.getItem(LS_RECEPCIONES)     || '[]'); }
-function _saveRecepciones(arr)   { localStorage.setItem(LS_RECEPCIONES,     JSON.stringify(arr)); }
-function _getResBaci()           { return JSON.parse(localStorage.getItem(LS_RES_BACI)        || '[]'); }
-function _saveResBaci(arr)       { localStorage.setItem(LS_RES_BACI,        JSON.stringify(arr)); }
-function _getResCultivo()        { return JSON.parse(localStorage.getItem(LS_RES_CULTIVO)     || '[]'); }
-function _saveResCultivo(arr)    { localStorage.setItem(LS_RES_CULTIVO,     JSON.stringify(arr)); }
-function _getResXpertUltra()     { return JSON.parse(localStorage.getItem(LS_RES_XPERT_ULTRA) || '[]'); }
-function _saveResXpertUltra(arr) { localStorage.setItem(LS_RES_XPERT_ULTRA, JSON.stringify(arr)); }
-function _getResXpertXDR()       { return JSON.parse(localStorage.getItem(LS_RES_XPERT_XDR)  || '[]'); }
-function _saveResXpertXDR(arr)   { localStorage.setItem(LS_RES_XPERT_XDR,  JSON.stringify(arr)); }
-
 function _getMicroCat() {
-    const stored = JSON.parse(localStorage.getItem(LS_MICRO) || 'null');
-    return (stored || _MICRO_DEFAULTS).filter(x => x.activo !== false);
+    const stored = _store.microorganismos;
+    return (stored.length ? stored : _MICRO_DEFAULTS).filter(x => x.activo !== false);
 }
 
-/* ── Aliases de utils.js ──────────────────────────────────── */
+/* ── Aliases de utils.js ────────────────────────────────── */
 function _addDays(dateStr, days) { return addDaysShared(dateStr, days); }
 function _todayLab()             { return todayShared(); }
 function _fmtDate(d)             { return fmtDateShared(d); }
 function _genId()                { return genIdShared(); }
 
-/* ── Catálogo de exámenes ─────────────────────────────────── */
+/* ── Catálogo de exámenes ────────────────────────────────── */
 const _EXAMENES_CAT = [
     { id: 1, nombre: 'Baciloscopia',          codigo: 'BACI'        },
     { id: 2, nombre: 'Cultivo',               codigo: 'CULT'        },
@@ -50,10 +47,11 @@ const _EXAMENES_CAT = [
 ];
 const _SOPORTADOS = new Set([1, 2, 3, 5]);
 
-/* ── Permisos ─────────────────────────────────────────────── */
+/* ── Permisos de laboratorio ────────────────────────────── */
 function _labsConPermiso(userId, campo = 'puede_emitir') {
-    const perms = JSON.parse(localStorage.getItem('sr_permisos_lab') || '[]');
-    return perms.filter(p => p.usuario_id === userId && p[campo] && p.activo).map(p => p.laboratorio_id);
+    return _store.permisos_lab
+        .filter(p => p.usuario_id === userId && p[campo] && p.activo)
+        .map(p => p.laboratorio_id);
 }
 
 function _recepcionesDelLab(userId) {
@@ -65,19 +63,18 @@ function _recepcionesDelLab(userId) {
     return _getRecepciones().filter(r => labIds.includes(r.laboratorio_id));
 }
 
-/* ── Utilidades de resolución de nombres ──────────────────── */
+/* ── Utilidades de resolución de nombres ─────────────────── */
 function _userName(userId) {
     if (!userId) return '—';
-    const u = (JSON.parse(localStorage.getItem('sr_usuarios') || '[]')).find(x => x.id === userId);
+    const u = _store.usuarios.find(x => x.id === userId);
     return u ? `${u.nombres} ${u.apellidos}` : '—';
 }
 
 function _indicacionesPendientes(userId) {
-    const labIds      = _labsConPermiso(userId, 'puede_emitir');
+    const labIds = _labsConPermiso(userId, 'puede_emitir');
     if (!labIds.length) return [];
     const recepciones = _getRecepciones();
-    const inds        = (JSON.parse(localStorage.getItem('sr_indicaciones') || '[]'))
-        .filter(i => labIds.includes(i.laboratorio_id));
+    const inds = _store.indicaciones.filter(i => labIds.includes(i.laboratorio_id));
     const result = [];
     inds.forEach(ind => {
         (ind.examenes_ids || []).forEach(eid => {
@@ -91,8 +88,7 @@ function _indicacionesPendientes(userId) {
 }
 
 function _labNombre(id) {
-    const all = JSON.parse(localStorage.getItem('sr_geo_labs') || 'null')
-             || (typeof DATOS_GEO !== 'undefined' ? DATOS_GEO.laboratorios : []);
+    const all = _store.geo_labs.length ? _store.geo_labs : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
     return all.find(l => l.id === Number(id))?.nombre || `Lab #${id}`;
 }
 
@@ -101,7 +97,7 @@ function _examenNombre(id) {
 }
 
 function _centroNombreDeIndicador(userId) {
-    const u = (JSON.parse(localStorage.getItem('sr_usuarios') || '[]')).find(x => x.id === userId);
+    const u = _store.usuarios.find(x => x.id === userId);
     if (!u) return '—';
     if (u.centro_salud_id) {
         const c = getGeoCentros().find(x => x.id === Number(u.centro_salud_id));
@@ -115,8 +111,7 @@ function _tipoMuestraNombreById(id) {
         const f = _getTMCat().find(m => m.id === Number(id));
         if (f) return f.nombre;
     }
-    const cat = JSON.parse(localStorage.getItem('sr_tipos_muestra') || 'null')
-             || (typeof _TM_DEFAULTS !== 'undefined' ? _TM_DEFAULTS : []);
+    const cat = _store.tipos_muestra.length ? _store.tipos_muestra : (typeof _TM_DEFAULTS !== 'undefined' ? _TM_DEFAULTS : []);
     return cat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`;
 }
 
@@ -133,7 +128,7 @@ function _resultadoXpertCls(resultado) {
     return 'res-contam';
 }
 
-/* ── Estado calculado de indicación ──────────────────────── */
+/* ── Recalcular estado de indicación ─────────────────────── */
 function _tieneResultadoFinal(recId, exId) {
     const n = Number(exId);
     if (n === 1) return _getResBaci().some(r => r.recepcion_id === recId);
@@ -144,10 +139,9 @@ function _tieneResultadoFinal(recId, exId) {
 }
 
 function _recalcIndEstado(indId) {
-    const inds = JSON.parse(localStorage.getItem('sr_indicaciones') || '[]');
-    const idx  = inds.findIndex(i => i.id === indId);
+    const idx = _store.indicaciones.findIndex(i => i.id === indId);
     if (idx === -1) return;
-    const ind     = inds[idx];
+    const ind     = _store.indicaciones[idx];
     const recs    = _getRecepciones().filter(r => r.indicacion_id === indId);
     const examIds = (ind.examenes_ids || []).map(Number);
     if (!examIds.length) return;
@@ -161,11 +155,12 @@ function _recalcIndEstado(indId) {
         if (!_tieneResultadoFinal(rec.id, eid)) allFinal = false;
     }
 
-    inds[idx].estado = hasPending ? 'pendiente'
-        : allRejected    ? 'rechazada'
+    const nuevoEstado = hasPending ? 'pendiente'
+        : allRejected              ? 'rechazada'
         : (hasAccepted && allFinal) ? 'completada'
         : 'recibida';
-    localStorage.setItem('sr_indicaciones', JSON.stringify(inds));
+
+    _store.indicaciones[idx].estado = nuevoEstado;
     if (typeof sbUpdateRow === 'function')
-        sbUpdateRow('indicaciones_examen', indId, { estado: inds[idx].estado }).catch(console.error);
+        sbUpdateRow('indicaciones_examen', indId, { estado: nuevoEstado }).catch(console.error);
 }
