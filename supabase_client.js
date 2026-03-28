@@ -1,6 +1,8 @@
 /* ================================================================
    supabase_client.js — Capa de datos DatB
-   Auth directo contra tabla `usuarios` (sin Supabase Auth/email).
+   PATCH: Bypass de Supabase Auth (email rate limit).
+   Login y registro operan directamente sobre la tabla `usuarios`.
+   Requisito previo: patch_no_auth.sql aplicado en Supabase.
    ================================================================ */
 
 (function (global) {
@@ -24,48 +26,47 @@
         return _sb;
     }
 
+    /** true cuando Supabase está configurado y disponible */
     global.IS_ONLINE = () => !!_client();
 
     /* ================================================================
-       AUTH  —  CI + PIN directo, sin Supabase Auth, sin email
+       AUTH — sin Supabase Auth, directo a tabla usuarios
        ================================================================ */
 
     global.sbLogin = async function (ci, pin) {
         const sb = _client();
+        const pinHash = hashPin(String(pin));
 
-        /* Modo offline (localStorage) */
+        // Modo offline (localStorage)
         if (!sb) {
             const user = (typeof getUsers === 'function' ? getUsers() : [])
-                .find(u => u.ci === ci && u.pin_hash === hashPin(String(pin)));
+                .find(u => u.ci === ci && u.pin_hash === pinHash);
             if (!user)        return { user: null, error: 'CI o PIN incorrecto.' };
             if (!user.activo) return { user: null, error: 'Cuenta desactivada.' };
             return { user, error: null };
         }
 
-        /* Modo online: consulta directa a la tabla usuarios */
+        // Modo online — consulta directa a tabla usuarios
         const { data, error } = await sb
             .from('usuarios')
             .select('*')
             .eq('ci', ci)
-            .maybeSingle();
+            .eq('pin_hash', pinHash)
+            .single();
 
-        if (error)  return { user: null, error: error.message };
-        if (!data)  return { user: null, error: 'CI o PIN incorrecto.' };
-        if (data.pin_hash !== hashPin(String(pin)))
-                    return { user: null, error: 'CI o PIN incorrecto.' };
-        if (!data.activo)
-                    return { user: null, error: 'Cuenta desactivada.' };
+        if (error || !data) return { user: null, error: 'CI o PIN incorrecto.' };
+        if (!data.activo)   return { user: null, error: 'Cuenta desactivada.' };
 
-        sessionStorage.setItem('sr_active_user', data.id);
         _cacheUser(data);
+        sessionStorage.setItem('sr_active_user', data.id);
         return { user: data, error: null };
     };
 
     global.sbRegister = async function (perfil, pin) {
-        const sb      = _client();
+        const sb = _client();
         const pinHash = hashPin(String(pin));
 
-        /* Modo offline */
+        // Modo offline (localStorage)
         if (!sb) {
             const users = typeof getUsers === 'function' ? getUsers() : [];
             if (users.find(u => u.ci === perfil.ci))
@@ -75,65 +76,68 @@
             return { error: null };
         }
 
-        /* Verificar duplicado de CI */
-        const { data: dup } = await sb
+        // Verificar duplicado de CI
+        const { data: existing } = await sb
             .from('usuarios')
             .select('id')
             .eq('ci', perfil.ci)
             .maybeSingle();
-        if (dup) return { error: 'Este CI ya está registrado.' };
 
-        /* Insertar directamente en usuarios (sin auth.signUp) */
+        if (existing) return { error: 'Este CI ya está registrado.' };
+
+        // Insertar directamente en tabla usuarios (sin Supabase Auth)
         const nuevoId = perfil.id || crypto.randomUUID();
-        const { error } = await sb.from('usuarios').insert({
+        const { error: insErr } = await sb.from('usuarios').insert({
             ...perfil,
             id       : nuevoId,
             pin_hash : pinHash,
             creado_en: new Date().toISOString(),
         });
 
-        if (error) return { error: error.message };
+        if (insErr) return { error: insErr.message };
         return { error: null };
     };
 
     global.sbLogout = async function () {
+        // Sin sesión de Auth que cerrar; solo limpiar estado local
         sessionStorage.removeItem('sr_active_user');
     };
 
     global.sbGetSession = async function () {
-        const sb  = _client();
+        const sb = _client();
         const uid = sessionStorage.getItem('sr_active_user');
 
-        /* Modo offline */
+        // Modo offline
         if (!sb) {
             if (!uid) return null;
             return (typeof getUsers === 'function' ? getUsers() : [])
                 .find(u => u.id === uid && u.activo) || null;
         }
 
+        // Modo online — restaurar desde tabla usuarios por UID en sessionStorage
         if (!uid) return null;
 
         const { data } = await sb
             .from('usuarios')
             .select('*')
             .eq('id', uid)
-            .maybeSingle();
+            .single();
 
-        if (data) {
+        if (data && data.activo) {
             _cacheUser(data);
-            return data.activo ? data : null;
+            return data;
         }
         return null;
     };
 
     global.sbChangePin = async function (userId, newPin) {
-        const sb      = _client();
+        const sb = _client();
         const newHash = hashPin(String(newPin));
 
-        /* Actualizar caché local siempre */
+        // Actualizar caché local
         if (typeof getUsers === 'function' && typeof saveUsers === 'function') {
             const users = getUsers();
-            const idx   = users.findIndex(u => u.id === userId);
+            const idx = users.findIndex(u => u.id === userId);
             if (idx !== -1) { users[idx].pin_hash = newHash; saveUsers(users); }
         }
 
@@ -143,11 +147,12 @@
             .from('usuarios')
             .update({ pin_hash: newHash })
             .eq('id', userId);
+
         return { error: error?.message || null };
     };
 
     /* ================================================================
-       USUARIOS
+       USUARIOS (lectura/escritura)
        ================================================================ */
 
     global.sbGetUsers = async function () {
@@ -162,7 +167,7 @@
     global.sbUpsertUser = async function (user) {
         if (typeof getUsers === 'function' && typeof saveUsers === 'function') {
             const users = getUsers();
-            const idx   = users.findIndex(u => u.id === user.id);
+            const idx = users.findIndex(u => u.id === user.id);
             if (idx !== -1) users[idx] = user; else users.push(user);
             saveUsers(users);
         }
@@ -210,12 +215,14 @@
     global.sbInitGeo = async function () {
         const sb = _client();
         if (!sb) return;
+
         const [p, m, c, l] = await Promise.all([
             sb.from('provincias').select('*').order('nombre'),
             sb.from('municipios').select('*').order('nombre'),
             sb.from('centros_salud').select('*').order('nombre'),
             sb.from('laboratorios').select('*').order('nombre'),
         ]);
+
         if (p.data?.length) localStorage.setItem('sr_geo_provincias', JSON.stringify(p.data));
         if (m.data?.length) localStorage.setItem('sr_geo_municipios',  JSON.stringify(m.data));
         if (c.data?.length) localStorage.setItem('sr_geo_centros',     JSON.stringify(c.data));
@@ -241,8 +248,8 @@
 
     const _CAT_TABLA = {
         sr_grupos_vulnerables: 'grupos_vulnerables',
-        sr_tipos_muestra     : 'tipos_muestra',
-        sr_microorganismos   : 'microorganismos',
+        sr_tipos_muestra      : 'tipos_muestra',
+        sr_microorganismos    : 'microorganismos',
     };
 
     global.sbSyncCatalogo = async function (lsKey, data) {
@@ -268,7 +275,7 @@
     };
 
     global.sbSavePaciente = async function (pac) {
-        const LS  = 'sr_pacientes';
+        const LS = 'sr_pacientes';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(p => p.id === pac.id);
         if (idx !== -1) arr[idx] = pac; else arr.push(pac);
@@ -287,8 +294,7 @@
         const sb = _client();
         const LS = 'sr_indicaciones';
         if (!sb) return JSON.parse(localStorage.getItem(LS) || '[]');
-        const { data } = await sb
-            .from('indicaciones_examen')
+        const { data } = await sb.from('indicaciones_examen')
             .select('*, indicacion_examenes(examen_id)');
         if (data) {
             const adapted = data.map(ind => ({
@@ -302,11 +308,12 @@
     };
 
     global.sbSaveIndicacion = async function (ind, exIds) {
-        const LS  = 'sr_indicaciones';
+        const LS = 'sr_indicaciones';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(i => i.id === ind.id);
         if (idx !== -1) arr[idx] = ind; else arr.push(ind);
         localStorage.setItem(LS, JSON.stringify(arr));
+
         const sb = _client();
         if (!sb) return;
         const { error } = await sb.from('indicaciones_examen').upsert(ind);
@@ -341,7 +348,7 @@
     };
 
     global.sbSaveRecepcion = async function (rec) {
-        const LS  = 'sr_recepciones';
+        const LS = 'sr_recepciones';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(r => r.id === rec.id);
         if (idx !== -1) arr[idx] = rec; else arr.push(rec);
@@ -366,10 +373,10 @@
        ================================================================ */
 
     const _RES_MAP = {
-        baci       : { ls: 'sr_res_baci',       tabla: 'resultados_baciloscopia' },
-        cultivo    : { ls: 'sr_res_cultivo',     tabla: 'resultados_cultivo'      },
-        xpert_ultra: { ls: 'sr_res_xpert_ultra', tabla: 'resultados_xpert_ultra'  },
-        xpert_xdr  : { ls: 'sr_res_xpert_xdr',   tabla: 'resultados_xpert_xdr'    },
+        baci        : { ls: 'sr_res_baci',        tabla: 'resultados_baciloscopia' },
+        cultivo     : { ls: 'sr_res_cultivo',      tabla: 'resultados_cultivo'     },
+        xpert_ultra : { ls: 'sr_res_xpert_ultra',  tabla: 'resultados_xpert_ultra' },
+        xpert_xdr   : { ls: 'sr_res_xpert_xdr',    tabla: 'resultados_xpert_xdr'   },
     };
 
     global.sbSaveResultado = async function (tipo, item) {
@@ -407,7 +414,7 @@
     };
 
     global.sbSaveAcceso = async function (acc) {
-        const LS  = 'sr_accesos_temp';
+        const LS = 'sr_accesos_temp';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(a => a.id === acc.id);
         if (idx !== -1) arr[idx] = acc; else arr.push(acc);
@@ -424,7 +431,7 @@
     function _cacheUser(user) {
         if (typeof getUsers !== 'function' || typeof saveUsers !== 'function') return;
         const users = getUsers();
-        const idx   = users.findIndex(u => u.id === user.id);
+        const idx = users.findIndex(u => u.id === user.id);
         if (idx !== -1) users[idx] = user; else users.push(user);
         saveUsers(users);
     }
