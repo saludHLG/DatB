@@ -11,8 +11,8 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
         return;
     }
 
-    const inds = JSON.parse(localStorage.getItem('sr_indicaciones') || '[]');
-    const pacs = JSON.parse(localStorage.getItem('sr_pacientes')    || '[]');
+    const inds = JSON.parse(localStorage.getItem('') || '[]');
+    const pacs = JSON.parse(localStorage.getItem('_store.pacientes')    || '[]');
     const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     const _buildRows = q => {
@@ -98,8 +98,8 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
         return;
     }
 
-    const inds = JSON.parse(localStorage.getItem('sr_indicaciones') || '[]');
-    const pacs = JSON.parse(localStorage.getItem('sr_pacientes')    || '[]');
+    const inds = JSON.parse(localStorage.getItem('') || '[]');
+    const pacs = JSON.parse(localStorage.getItem('_store.pacientes')    || '[]');
     const baci = _getResBaci();
     const cult = _getResCultivo();
 
