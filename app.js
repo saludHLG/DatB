@@ -12,7 +12,7 @@ function loadDashboard(user) {
 
     if (typeof sbInitAll === 'function') sbInitAll().catch(() => {});
  
-    sessionStorage.setItem('sr_active_user', user.id);
+    window._store.active_user = user.id;
 
     document.querySelector('.layout-wrapper')?.classList.add('d-none');
     $('app-shell').classList.remove('d-none');
@@ -72,7 +72,7 @@ function buildModulos(user) {
 
     // Evaluamos primero el rol para determinar si mostramos el "Inicio"
     const esLabProfesional = [3, 4].includes(user.rol_profesional_id);
-    const perms = JSON.parse(localStorage.getItem('sr_permisos_lab') || '[]');
+    const perms = window._store.permisos_lab || [];
     const tienePermiso = perms.some(p =>
         p.usuario_id === user.id &&
         (p.puede_emitir || p.puede_editar || p.puede_eliminar) && p.activo
@@ -287,7 +287,7 @@ function renderPerfil(user, el) {
             <div class="perfil-card">
                 <div class="perfil-card-header"><i class="bi bi-pen"></i> Firma digital</div>
                 <div class="firma-wrap">
-                    <p class="firma-hint">Dibuje su firma con el ratón o con el dedo. Se guarda localmente.</p>
+                    <p class="firma-hint">Dibuje su firma con el ratón o con el dedo.</p>
                     <div class="canvas-container">
                         <canvas id="firma-canvas" width="440" height="180"></canvas>
                         <div class="canvas-placeholder" id="canvas-placeholder">
@@ -422,7 +422,9 @@ function initFirmaCanvas(user) {
     ctx.lineJoin = 'round';
     let drawing  = false, hasMark = false;
 
-    const saved = localStorage.getItem(`sr_firma_${user.id}`);
+    if (!window._store.firmas) window._store.firmas = {};
+    const saved = window._store.firmas[`sr_firma_${user.id}`];
+
     if (saved) {
         const img = new Image();
         img.onload = () => ctx.drawImage(img, 0, 0);
@@ -469,13 +471,13 @@ function initFirmaCanvas(user) {
     $('btn-firma-save').onclick = () => {
         if (!hasMark) return;
         const data = canvas.toDataURL('image/png');
-        localStorage.setItem(`sr_firma_${user.id}`, data);
+        window._store.firmas[`sr_firma_${user.id}`] = data;
         $('firma-saved-img').src = data;
         $('firma-saved-wrap').classList.remove('d-none');
         showToastApp('Firma guardada.', 'success');
     };
     $('btn-firma-delete').onclick = () => {
-        localStorage.removeItem(`sr_firma_${user.id}`);
+        delete window._store.firmas[`sr_firma_${user.id}`];
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         $('canvas-placeholder').classList.remove('d-none');
         $('firma-saved-wrap').classList.add('d-none');
