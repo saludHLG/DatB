@@ -11,7 +11,7 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
         return;
     }
 
-    const inds = JSON.parse(localStorage.getItem('') || '[]');
+    const inds = JSON.parse(localStorage.getItem('_store.indicaciones') || '[]');
     const pacs = JSON.parse(localStorage.getItem('_store.pacientes')    || '[]');
     const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -98,7 +98,7 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
         return;
     }
 
-    const inds = JSON.parse(localStorage.getItem('') || '[]');
+    const inds = JSON.parse(localStorage.getItem('_store.indicaciones') || '[]');
     const pacs = JSON.parse(localStorage.getItem('_store.pacientes')    || '[]');
     const baci = _getResBaci();
     const cult = _getResCultivo();
