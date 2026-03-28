@@ -372,6 +372,11 @@ function renderPerfil(user, el) {
             users[idx].centro_salud_id = null;
         }
         saveUsers(users);
+       if (typeof sbUpdateRow === 'function')
+       sbUpdateRow('usuarios', user.id, {
+        nombres: nom, apellidos: ap,
+        rol_profesional_id: rpId, /* etc. */
+          });
 
         $('sp-name').textContent     = `${nom} ${ap}`;
         $('topbar-name').textContent = `${nom} ${ap}`;
