@@ -1,43 +1,73 @@
 /* =========================================================
    laboratorio_core.js — Núcleo compartido del módulo de Lab.
-   Lee/escribe en _store. Sin localStorage.
+   Arquitectura en Memoria (Stateless Browser) + Red (Supabase)
    ========================================================= */
 
-/* ── Claves de store ───────────────────────────────────── */
-// Accesores de recepciones y resultados (leen de _store)
-function _getRecepciones()       { return _store.recepciones; }
-function _getResBaci()           { return _store.res_baci; }
-function _getResCultivo()        { return _store.res_cultivo; }
-function _getResXpertUltra()     { return _store.res_xpert_ultra; }
-function _getResXpertXDR()       { return _store.res_xpert_xdr; }
+/* ── Estado Global en Memoria ───────────────────────────── */
+window._store = window._store || {
+    pacientes: [],
+    indicaciones: [],
+    recepciones: [],
+    res_baci: [],
+    res_cultivo: [],
+    res_xpert_ultra: [],
+    res_xpert_xdr: [],
+    usuarios: [],
+    laboratorios: [],
+    permisos_lab: [],
+    tipos_muestra: [],
+    microorganismos: [],
+    grupos_vulnerables: [],
+    geo_labs: [],
+    firmas: {}, // Reemplaza localStorage para las firmas
+    active_user: null // Reemplaza sessionStorage
+};
 
-// Escritores (actualizan _store + Supabase)
-function _saveRecepciones(arr)   {
-    _store.recepciones = arr;
+/* ── Accesores (Leen de la memoria RAM) ─────────────────── */
+function _getRecepciones()       { return window._store.recepciones || []; }
+function _getResBaci()           { return window._store.res_baci || []; }
+function _getResCultivo()        { return window._store.res_cultivo || []; }
+function _getResXpertUltra()     { return window._store.res_xpert_ultra || []; }
+function _getResXpertXDR()       { return window._store.res_xpert_xdr || []; }
+
+/* ── Escritores (Async: Actualizan Memoria y luego Red) ─── */
+async function _saveRecepciones(arr) {
+    window._store.recepciones = arr;
+    if (typeof sbUpsertRow === 'function') await sbUpsertRow('recepciones_muestra', arr);
 }
-function _saveResBaci(arr)       { _store.res_baci = arr; }
-function _saveResCultivo(arr)    { _store.res_cultivo = arr; }
-function _saveResXpertUltra(arr) { _store.res_xpert_ultra = arr; }
-function _saveResXpertXDR(arr)   { _store.res_xpert_xdr = arr; }
+async function _saveResBaci(arr) { 
+    window._store.res_baci = arr; 
+    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_baciloscopia', arr); 
+}
+async function _saveResCultivo(arr) { 
+    window._store.res_cultivo = arr; 
+    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_cultivo', arr); 
+}
+async function _saveResXpertUltra(arr) { 
+    window._store.res_xpert_ultra = arr; 
+    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_xpert_ultra', arr); 
+}
+async function _saveResXpertXDR(arr) { 
+    window._store.res_xpert_xdr = arr; 
+    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_xpert_xdr', arr); 
+}
 
-/* ── Microorganismos ────────────────────────────────────── */
+/* ── Catálogos y Aliases ────────────────────────────────── */
 const _MICRO_DEFAULTS = [
     { id: 1, nombre: 'Mycobacterium tuberculosis',         sistema: true, activo: true },
     { id: 2, nombre: 'MNTB (Micobacteria No Tuberculosa)', sistema: true, activo: true },
 ];
 
 function _getMicroCat() {
-    const stored = _store.microorganismos;
+    const stored = window._store.microorganismos || [];
     return (stored.length ? stored : _MICRO_DEFAULTS).filter(x => x.activo !== false);
 }
 
-/* ── Aliases de utils.js ────────────────────────────────── */
 function _addDays(dateStr, days) { return addDaysShared(dateStr, days); }
 function _todayLab()             { return todayShared(); }
 function _fmtDate(d)             { return fmtDateShared(d); }
 function _genId()                { return genIdShared(); }
 
-/* ── Catálogo de exámenes ────────────────────────────────── */
 const _EXAMENES_CAT = [
     { id: 1, nombre: 'Baciloscopia',          codigo: 'BACI'        },
     { id: 2, nombre: 'Cultivo',               codigo: 'CULT'        },
@@ -47,9 +77,9 @@ const _EXAMENES_CAT = [
 ];
 const _SOPORTADOS = new Set([1, 2, 3, 5]);
 
-/* ── Permisos de laboratorio ────────────────────────────── */
+/* ── Resolutores de Nombres y Lógicas de Negocio ────────── */
 function _labsConPermiso(userId, campo = 'puede_emitir') {
-    return _store.permisos_lab
+    return (window._store.permisos_lab || [])
         .filter(p => p.usuario_id === userId && p[campo] && p.activo)
         .map(p => p.laboratorio_id);
 }
@@ -63,10 +93,9 @@ function _recepcionesDelLab(userId) {
     return _getRecepciones().filter(r => labIds.includes(r.laboratorio_id));
 }
 
-/* ── Utilidades de resolución de nombres ─────────────────── */
 function _userName(userId) {
     if (!userId) return '—';
-    const u = _store.usuarios.find(x => x.id === userId);
+    const u = (window._store.usuarios || []).find(x => x.id === userId);
     return u ? `${u.nombres} ${u.apellidos}` : '—';
 }
 
@@ -74,7 +103,7 @@ function _indicacionesPendientes(userId) {
     const labIds = _labsConPermiso(userId, 'puede_emitir');
     if (!labIds.length) return [];
     const recepciones = _getRecepciones();
-    const inds = _store.indicaciones.filter(i => labIds.includes(i.laboratorio_id));
+    const inds = (window._store.indicaciones || []).filter(i => labIds.includes(i.laboratorio_id));
     const result = [];
     inds.forEach(ind => {
         (ind.examenes_ids || []).forEach(eid => {
@@ -88,7 +117,7 @@ function _indicacionesPendientes(userId) {
 }
 
 function _labNombre(id) {
-    const all = _store.geo_labs.length ? _store.geo_labs : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
+    const all = (window._store.geo_labs && window._store.geo_labs.length) ? window._store.geo_labs : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
     return all.find(l => l.id === Number(id))?.nombre || `Lab #${id}`;
 }
 
@@ -97,7 +126,7 @@ function _examenNombre(id) {
 }
 
 function _centroNombreDeIndicador(userId) {
-    const u = _store.usuarios.find(x => x.id === userId);
+    const u = (window._store.usuarios || []).find(x => x.id === userId);
     if (!u) return '—';
     if (u.centro_salud_id) {
         const c = getGeoCentros().find(x => x.id === Number(u.centro_salud_id));
@@ -111,7 +140,7 @@ function _tipoMuestraNombreById(id) {
         const f = _getTMCat().find(m => m.id === Number(id));
         if (f) return f.nombre;
     }
-    const cat = _store.tipos_muestra.length ? _store.tipos_muestra : (typeof _TM_DEFAULTS !== 'undefined' ? _TM_DEFAULTS : []);
+    const cat = (window._store.tipos_muestra && window._store.tipos_muestra.length) ? window._store.tipos_muestra : (typeof _TM_DEFAULTS !== 'undefined' ? _TM_DEFAULTS : []);
     return cat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`;
 }
 
@@ -128,7 +157,6 @@ function _resultadoXpertCls(resultado) {
     return 'res-contam';
 }
 
-/* ── Recalcular estado de indicación ─────────────────────── */
 function _tieneResultadoFinal(recId, exId) {
     const n = Number(exId);
     if (n === 1) return _getResBaci().some(r => r.recepcion_id === recId);
@@ -138,10 +166,10 @@ function _tieneResultadoFinal(recId, exId) {
     return false;
 }
 
-function _recalcIndEstado(indId) {
-    const idx = _store.indicaciones.findIndex(i => i.id === indId);
+async function _recalcIndEstado(indId) {
+    const idx = (window._store.indicaciones || []).findIndex(i => i.id === indId);
     if (idx === -1) return;
-    const ind     = _store.indicaciones[idx];
+    const ind     = window._store.indicaciones[idx];
     const recs    = _getRecepciones().filter(r => r.indicacion_id === indId);
     const examIds = (ind.examenes_ids || []).map(Number);
     if (!examIds.length) return;
@@ -160,7 +188,8 @@ function _recalcIndEstado(indId) {
         : (hasAccepted && allFinal) ? 'completada'
         : 'recibida';
 
-    _store.indicaciones[idx].estado = nuevoEstado;
-    if (typeof sbUpdateRow === 'function')
-        sbUpdateRow('indicaciones_examen', indId, { estado: nuevoEstado }).catch(console.error);
+    window._store.indicaciones[idx].estado = nuevoEstado;
+    if (typeof sbUpdateRow === 'function') {
+        await sbUpdateRow('indicaciones_examen', indId, { estado: nuevoEstado }).catch(console.error);
+    }
 }
