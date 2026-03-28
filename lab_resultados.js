@@ -271,6 +271,7 @@ function _formBaciloscopia(rec, user, body, onSuccess) {
         };
         if (idx !== -1) arr[idx] = entry; else arr.push(entry);
         _saveResBaci(arr);
+        if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_baciloscopia', entry).catch(console.error);
         _recalcIndEstado(rec.indicacion_id);
         _showModalSuccess('baci-alert');
         document.getElementById('lab-modal-save-btn').disabled = true;
@@ -431,6 +432,7 @@ function _guardarCultivo(rec, user, existing, onSuccess) {
     };
     if (idx !== -1) arr[idx] = entry; else arr.push(entry);
     _saveResCultivo(arr);
+    if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_cultivo', entry).catch(console.error);
     _recalcIndEstado(rec.indicacion_id);
     _showModalSuccess('cult-alert');
     document.getElementById('lab-modal-save-btn').disabled = true;
@@ -535,6 +537,7 @@ function _formXpertUltra(rec, user, body, onSuccess) {
         };
         if (idx !== -1) arr[idx] = entry; else arr.push(entry);
         _saveResXpertUltra(arr);
+        if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_xpert_ultra', entry).catch(console.error);
         _recalcIndEstado(rec.indicacion_id);
         _showModalSuccess('xu-alert');
         document.getElementById('lab-modal-save-btn').disabled = true;
@@ -664,6 +667,7 @@ function _formXpertXDR(rec, user, body, onSuccess) {
         };
         if (idx !== -1) arr[idx] = entry; else arr.push(entry);
         _saveResXpertXDR(arr);
+        if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_xpert_xdr', entry).catch(console.error);
         _recalcIndEstado(rec.indicacion_id);
         _showModalSuccess('xdr-alert');
         document.getElementById('lab-modal-save-btn').disabled = true;
