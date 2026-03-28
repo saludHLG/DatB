@@ -1,6 +1,6 @@
 /* =========================================================
    lab_recibidas.js — Tabs "Muestras recibidas" y "Rechazadas".
-   Requiere: laboratorio_core.js, lab_resultados.js
+   Sin localStorage. Requiere: laboratorio_core.js, lab_resultados.js
    ========================================================= */
 
 /* ── Tab: Muestras rechazadas ─────────────────────────────── */
@@ -12,7 +12,7 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
     }
 
     const inds = window._store.indicaciones || [];
-    const pacs = window._store.pacientes || [];
+    const pacs = window._store.pacientes    || [];
     const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     const _buildRows = q => {
@@ -78,10 +78,18 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
     </div>`;
 
     const _rebind = () => content.querySelectorAll('.btn-del-rechazada').forEach(btn =>
-        btn.addEventListener('click', () => _appConfirm(
-            'Se eliminará este registro de rechazo. Esta acción no se puede deshacer.',
-            () => { _saveRecepciones(_getRecepciones().filter(r => r.id !== btn.dataset.recId)); renderLaboratorio(user, rootEl); }
-        ))
+        btn.addEventListener('click', () => {
+            const recId = btn.dataset.recId;
+            _appConfirm(
+                'Se eliminará este registro de rechazo. Esta acción no se puede deshacer.',
+                () => {
+                    _saveRecepciones(_getRecepciones().filter(r => r.id !== recId));
+                    if (typeof sbDeleteRow === 'function')
+                        sbDeleteRow('recepciones_muestra', recId).catch(console.error);
+                    renderLaboratorio(user, rootEl);
+                }
+            );
+        })
     );
     document.getElementById('lab-rech-search').addEventListener('input', function () {
         document.getElementById('lab-rech-tbody').innerHTML = _buildRows(this.value.trim());
@@ -98,8 +106,8 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
         return;
     }
 
-    const inds = window..indicaciones || [];
-    const pacs = window._store.pacientes || [];
+    const inds = window._store.indicaciones || [];   /* ← corregido: era window..indicaciones */
+    const pacs = window._store.pacientes    || [];
     const baci = _getResBaci();
     const cult = _getResCultivo();
 
@@ -168,8 +176,8 @@ function _buildPagination(currentPage, totalPages) {
         let end   = Math.min(totalPages, start + MAX_BTNS - 1);
         if (end - start < MAX_BTNS - 1) start = Math.max(1, end - MAX_BTNS + 1);
         pages = Array.from({ length: end - start + 1 }, (_, i) => start + i);
-        if (pages[0] > 1)              pages = [1, '…', ...pages.slice(pages[0] === 2 ? 0 : 1)];
-        if (pages[pages.length-1] < totalPages) pages = [...pages.slice(0, pages[pages.length-1] === totalPages-1 ? pages.length : -1), '…', totalPages];
+        if (pages[0] > 1)                             pages = [1, '…', ...pages.slice(pages[0] === 2 ? 0 : 1)];
+        if (pages[pages.length - 1] < totalPages)     pages = [...pages.slice(0, pages[pages.length - 1] === totalPages - 1 ? pages.length : -1), '…', totalPages];
     }
     const items = pages.map(p => {
         if (p === '…') return `<li class="page-item disabled"><span class="page-link">…</span></li>`;
@@ -245,10 +253,10 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
         return;
     }
 
-    const currentPage  = (contentEl && contentEl._page) ? contentEl._page : 1;
-    const totalPages   = Math.max(1, Math.ceil(rows.length / _LAB_PAGE_SIZE));
-    const safePage     = Math.min(currentPage, totalPages);
-    const paginated    = rows.slice((safePage - 1) * _LAB_PAGE_SIZE, safePage * _LAB_PAGE_SIZE);
+    const currentPage = (contentEl && contentEl._page) ? contentEl._page : 1;
+    const totalPages  = Math.max(1, Math.ceil(rows.length / _LAB_PAGE_SIZE));
+    const safePage    = Math.min(currentPage, totalPages);
+    const paginated   = rows.slice((safePage - 1) * _LAB_PAGE_SIZE, safePage * _LAB_PAGE_SIZE);
 
     const tbody = paginated.map(({ rec, ind, nMuestra }) => {
         const snap   = rec.snap || {};
@@ -259,10 +267,24 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
         const fInd   = ind?.fecha_indicacion || snap.fecha_indicacion || rec.fecha_recepcion?.slice(0, 10) || '';
 
         let resHtml = '<span class="text-muted" style="font-size:.78rem">Pendiente</span>';
-        if (exId === 1) { const r = baci.find(x => x.recepcion_id === rec.id); if (r) { const cls = r.codificacion === 0 ? 'res-neg' : 'res-pos'; resHtml = `<span class="res-cod ${cls}">${r.codificacion} — ${r.codificacion === 0 ? 'Neg.' : 'Pos.'}</span>`; } }
-        else if (exId === 2) { const r = cult.find(x => x.recepcion_id === rec.id); if (r) { const cls = r.resultado === 'en_estudio' ? 'res-estudio' : r.resultado === 'contaminado' ? 'res-contam' : r.resultado === '0' ? 'res-neg' : 'res-pos'; const lbl = r.resultado === 'en_estudio' ? 'En estudio' : r.resultado === 'contaminado' ? 'Contam.' : r.resultado === '0' ? 'Sin crec.' : `Pos.(${r.resultado})`; const fS = r.fecha_resultado ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.15rem"><i class="bi bi-calendar-check me-1"></i>Salida: ${_fmtDate(r.fecha_resultado)}</div>` : ''; resHtml = `<div><span class="res-cod ${cls}">${lbl}</span>${fS}</div>`; } }
-        else if (exId === 3) { const r = _getResXpertUltra().find(x => x.recepcion_id === rec.id); if (r) resHtml = `<span class="res-cod ${_resultadoXpertCls(r.resultado)}" style="font-size:.72rem">${r.resultado}</span>`; }
-        else if (exId === 5) { const r = _getResXpertXDR().find(x => x.recepcion_id === rec.id); if (r) resHtml = `<span class="res-cod ${_resultadoXpertCls(r.resultado)}" style="font-size:.72rem">${r.resultado}</span>`; }
+        if (exId === 1) {
+            const r = baci.find(x => x.recepcion_id === rec.id);
+            if (r) { const cls = r.codificacion === 0 ? 'res-neg' : 'res-pos'; resHtml = `<span class="res-cod ${cls}">${r.codificacion} — ${r.codificacion === 0 ? 'Neg.' : 'Pos.'}</span>`; }
+        } else if (exId === 2) {
+            const r = cult.find(x => x.recepcion_id === rec.id);
+            if (r) {
+                const cls = r.resultado === 'en_estudio' ? 'res-estudio' : r.resultado === 'contaminado' ? 'res-contam' : r.resultado === '0' ? 'res-neg' : 'res-pos';
+                const lbl = r.resultado === 'en_estudio' ? 'En estudio' : r.resultado === 'contaminado' ? 'Contam.' : r.resultado === '0' ? 'Sin crec.' : `Pos.(${r.resultado})`;
+                const fS  = r.fecha_resultado ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.15rem"><i class="bi bi-calendar-check me-1"></i>Salida: ${_fmtDate(r.fecha_resultado)}</div>` : '';
+                resHtml = `<div><span class="res-cod ${cls}">${lbl}</span>${fS}</div>`;
+            }
+        } else if (exId === 3) {
+            const r = _getResXpertUltra().find(x => x.recepcion_id === rec.id);
+            if (r) resHtml = `<span class="res-cod ${_resultadoXpertCls(r.resultado)}" style="font-size:.72rem">${r.resultado}</span>`;
+        } else if (exId === 5) {
+            const r = _getResXpertXDR().find(x => x.recepcion_id === rec.id);
+            if (r) resHtml = `<span class="res-cod ${_resultadoXpertCls(r.resultado)}" style="font-size:.72rem">${r.resultado}</span>`;
+        }
 
         const puedeEmitir = (emitirIds || []).includes(rec.laboratorio_id);
         const puedeEditar = (editarIds || []).includes(rec.laboratorio_id);
@@ -343,13 +365,12 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
         btn.addEventListener('click', () => {
             const recId = btn.dataset.recId;
             _appConfirm('Se eliminará la recepción y sus resultados asociados. Esta acción no se puede deshacer.', () => {
-                const recId = btn.dataset.recId;
                 _saveResBaci(_getResBaci().filter(r => r.recepcion_id !== recId));
                 _saveResCultivo(_getResCultivo().filter(r => r.recepcion_id !== recId));
                 _saveResXpertUltra(_getResXpertUltra().filter(r => r.recepcion_id !== recId));
                 _saveResXpertXDR(_getResXpertXDR().filter(r => r.recepcion_id !== recId));
                 _saveRecepciones(_getRecepciones().filter(r => r.id !== recId));
-                // Supabase: borrar recepción (resultados se eliminan en cascada por FK)
+                /* Resultados se eliminan en cascada (FK) al borrar la recepción */
                 if (typeof sbDeleteRow === 'function') sbDeleteRow('recepciones_muestra', recId).catch(console.error);
                 renderLaboratorio(user, rootEl);
             });
