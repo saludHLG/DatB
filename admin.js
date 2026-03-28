@@ -1,5 +1,9 @@
 const $a = id => document.getElementById(id);
 
+const getUsers   = () => window._store.usuarios     || [];
+const getPerms   = () => window._store.permisos_lab || [];
+const getAccesos = () => window._store.accesos_temp || [];
+
 /* ── Saves con sync a Supabase (best-effort, async) ──────── */
 const saveUsers = u => {
     localStorage.setItem('sr_usuarios', JSON.stringify(u));
