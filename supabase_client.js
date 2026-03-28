@@ -229,6 +229,93 @@
         if (l.data?.length) localStorage.setItem('sr_geo_labs',        JSON.stringify(l.data));
     };
 
+    /**
+     * Carga COMPLETA de Supabase → localStorage.
+     * Llamar al inicio de cada sesión (DOMContentLoaded, login, restauración).
+     * Garantiza que cualquier usuario vea siempre los datos actualizados en red.
+     */
+    global.sbInitAll = async function () {
+        const sb = _client();
+        if (!sb) return;
+
+        try {
+            const [
+                rProv, rMun,  rCent, rLabs,
+                rUsers, rPerms, rAccesos,
+                rPacs, rInds, rIndEx, rRecs,
+                rBaci, rCult, rXU,   rXDR,
+                rGV,   rTM,   rMicro
+            ] = await Promise.allSettled([
+                sb.from('provincias').select('*').order('nombre'),
+                sb.from('municipios').select('*').order('nombre'),
+                sb.from('centros_salud').select('*').order('nombre'),
+                sb.from('laboratorios').select('*').order('nombre'),
+                sb.from('usuarios').select('*'),
+                sb.from('permisos_lab').select('*'),
+                sb.from('accesos_temporales').select('*'),
+                sb.from('pacientes').select('*'),
+                sb.from('indicaciones_examen').select('*'),
+                sb.from('indicacion_examenes').select('*'),
+                sb.from('recepciones_muestra').select('*'),
+                sb.from('resultados_baciloscopia').select('*'),
+                sb.from('resultados_cultivo').select('*'),
+                sb.from('resultados_xpert_ultra').select('*'),
+                sb.from('resultados_xpert_xdr').select('*'),
+                sb.from('grupos_vulnerables').select('*'),
+                sb.from('tipos_muestra').select('*'),
+                sb.from('microorganismos').select('*'),
+            ]);
+
+            const d   = r => (r.status === 'fulfilled' ? r.value.data : null);
+            const set = (key, data) => {
+                if (data !== null) localStorage.setItem(key, JSON.stringify(data));
+            };
+
+            // Geo
+            set('sr_geo_provincias', d(rProv));
+            set('sr_geo_municipios', d(rMun));
+            set('sr_geo_centros',    d(rCent));
+            set('sr_geo_labs',       d(rLabs));
+
+            // Usuarios y permisos
+            set('sr_usuarios',     d(rUsers));
+            set('sr_permisos_lab', d(rPerms));
+            set('sr_accesos_temp', d(rAccesos));
+
+            // Pacientes
+            set('sr_pacientes', d(rPacs));
+
+            // Indicaciones: merge examenes_ids desde tabla junction si falta en columna
+            if (d(rInds) !== null) {
+                const indExams = d(rIndEx) || [];
+                const merged   = d(rInds).map(ind => ({
+                    ...ind,
+                    examenes_ids: (ind.examenes_ids && ind.examenes_ids.length)
+                        ? ind.examenes_ids
+                        : indExams
+                            .filter(ie => ie.indicacion_id === ind.id)
+                            .map(ie => ie.examen_id),
+                }));
+                localStorage.setItem('sr_indicaciones', JSON.stringify(merged));
+            }
+
+            // Laboratorio
+            set('sr_recepciones',     d(rRecs));
+            set('sr_res_baci',        d(rBaci));
+            set('sr_res_cultivo',     d(rCult));
+            set('sr_res_xpert_ultra', d(rXU));
+            set('sr_res_xpert_xdr',   d(rXDR));
+
+            // Catálogos
+            set('sr_grupos_vulnerables', d(rGV));
+            set('sr_tipos_muestra',      d(rTM));
+            set('sr_microorganismos',    d(rMicro));
+
+        } catch (e) {
+            console.error('sbInitAll error:', e);
+        }
+    };
+
     global.sbUpsertGeo = async function (tabla, item) {
         const sb = _client();
         if (!sb) return;
