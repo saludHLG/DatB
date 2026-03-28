@@ -34,7 +34,7 @@ function _lr_buildShell(user, content) {
         return;
     }
 
-    const allLabs = JSON.parse(localStorage.getItem('sr_geo_labs') || 'null')
+    const allLabs = JSON.parse(localStorage.getItem('_store.geo_labs') || 'null')
                  || (typeof DATOS_GEO !== 'undefined' ? DATOS_GEO.laboratorios : []);
     const labs    = permLabIds.map(id => allLabs.find(l => l.id === id)).filter(Boolean);
 
@@ -281,13 +281,13 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
    CÓMPUTO DE DATOS
    ══════════════════════════════════════════════════════════ */
 function _lr_computeData(labIds, dateFrom, dateTo) {
-    const allInds   = JSON.parse(localStorage.getItem('sr_indicaciones')   || '[]');
+    const allInds   = JSON.parse(localStorage.getItem('_store.indicaciones')   || '[]');
     const recs      = _getRecepciones();
     const baci      = _getResBaci();
     const cult      = _getResCultivo();
     const xpertU    = _getResXpertUltra();
     const xpertXDR  = _getResXpertXDR();
-    const pacs      = JSON.parse(localStorage.getItem('sr_pacientes')      || '[]');
+    const pacs      = JSON.parse(localStorage.getItem('_store.pacientes')      || '[]');
     const microCat  = _getMicroCat();
     const gvCat     = typeof _getGVCat  === 'function' ? _getGVCat()  : [];
     const tmCat     = typeof _getTMCat  === 'function' ? _getTMCat()  : [];
