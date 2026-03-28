@@ -930,60 +930,106 @@ function _clearFirma() {
 
 async function _submitIndicacion() {
     const errFirma = document.getElementById('err-firma');
-    if (!_sigHasContent && !_st.firma) { errFirma.textContent = 'La firma es obligatoria. Trace su firma en el recuadro.'; errFirma.style.display = 'block'; return; }
+    if (!_sigHasContent && !_st.firma) { 
+        errFirma.textContent = 'La firma es obligatoria. Trace su firma en el recuadro.'; 
+        errFirma.style.display = 'block'; 
+        return; 
+    }
     errFirma.style.display = 'none';
-    const btn = document.getElementById('p4-submit'); btn.disabled = true;
+    const btn = document.getElementById('p4-submit');
+    btn.disabled = true;
 
-    const pacientes = _getPacientes();
-    let pacienteId;
+    try {
+        const pacientes = _getPacientes();
+        let pacienteId;
 
-    if (_st.paciente?.id) {
-        // Paciente existente: actualizar grupos_ids
-        pacienteId = _st.paciente.id;
-        const idx = pacientes.findIndex(p => p.id === pacienteId);
-        if (idx !== -1) {
-            pacientes[idx].grupos_ids = _st.paciente.grupos_ids;
+        if (_st.paciente?.id) {
+            // Paciente existente: actualizar grupos_ids
+            pacienteId = _st.paciente.id;
+            const idx = pacientes.findIndex(p => p.id === pacienteId);
+            if (idx !== -1) {
+                pacientes[idx].grupos_ids = _st.paciente.grupos_ids;
+                _savePacientes(pacientes);
+                if (typeof sbUpdateRow === 'function') {
+                    sbUpdateRow('pacientes', pacienteId, { grupos_ids: _st.paciente.grupos_ids })
+                        .catch(e => console.error('upsert paciente:', e));
+                }
+            }
+        } else {
+            const nuevo = { 
+                id: _genUUID(), 
+                ..._st.paciente, 
+                creado_por: _st.user.id, 
+                creado_en: new Date().toISOString() 
+            };
+            pacienteId = nuevo.id; 
+            _st.paciente.id = pacienteId;
+            pacientes.push(nuevo); 
             _savePacientes(pacientes);
-            if (typeof sbUpdateRow === 'function')
-                sbUpdateRow('pacientes', pacienteId, { grupos_ids: _st.paciente.grupos_ids }).catch(console.error);
+            if (typeof sbUpsertRow === 'function') {
+                sbUpsertRow('pacientes', nuevo).catch(e => console.error('upsert paciente:', e));
+            }
         }
-    } else {
-        const nuevo = { id: _genUUID(), ..._st.paciente, creado_por: _st.user.id, creado_en: new Date().toISOString() };
-        pacienteId = nuevo.id; _st.paciente.id = pacienteId;
-        pacientes.push(nuevo); _savePacientes(pacientes);
-        if (typeof sbUpsertRow === 'function') await sbUpsertRow('pacientes', nuevo);
-    }
 
-    let firmaDataUrl = _st.firma || null;
-    if (_sigHasContent) { const canvas = document.getElementById('firma-canvas'); if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); }
+        let firmaDataUrl = _st.firma || null;
+        if (_sigHasContent) { 
+            const canvas = document.getElementById('firma-canvas'); 
+            if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); 
+        }
 
-    const nuevaInd = {
-        id: _genUUID(), paciente_id: pacienteId, indicado_por: _st.user.id,
-        medico: _st.medico, laboratorio_id: _st.laboratorio_id,
-        tipo_muestra_id: _st.tipo_muestra_id, examenes_ids: _st.examenes_ids,
-        observaciones: _st.observaciones, fecha_indicacion: _st.fecha_indicacion,
-        firma_digital: firmaDataUrl, estado: 'pendiente',
-        creado_en: new Date().toISOString(),
-    };
+        const nuevaInd = {
+            id: _genUUID(), 
+            paciente_id: pacienteId, 
+            indicado_por: _st.user.id,
+            medico: _st.medico, 
+            laboratorio_id: _st.laboratorio_id,
+            tipo_muestra_id: _st.tipo_muestra_id, 
+            examenes_ids: _st.examenes_ids,
+            observaciones: _st.observaciones, 
+            fecha_indicacion: _st.fecha_indicacion,
+            firma_digital: firmaDataUrl, 
+            estado: 'pendiente',
+            creado_en: new Date().toISOString(),
+        };
 
-    const indicaciones = _getIndicaciones(); indicaciones.push(nuevaInd); _saveIndicaciones(indicaciones);
+        const indicaciones = _getIndicaciones(); 
+        indicaciones.push(nuevaInd); 
+        _saveIndicaciones(indicaciones);
 
-    if (typeof sbUpsertRow === 'function') {
-        await sbUpsertRow('indicaciones_examen', nuevaInd);
-        // Insertar en tabla junction
-        const sb = window._client ? _client() : null;
-        if (sb && _st.examenes_ids.length) {
-            sb.from('indicacion_examenes')
-              .insert(_st.examenes_ids.map(eid => ({ indicacion_id: nuevaInd.id, examen_id: eid })))
-              .catch(console.error);
+        if (typeof sbUpsertRow === 'function') {
+            sbUpsertRow('indicaciones_examen', nuevaInd)
+                .then(() => {
+                    // Insertar en tabla junction (fire-and-forget)
+                    const sb = window._client ? _client() : null;
+                    if (sb && _st.examenes_ids.length) {
+                        sb.from('indicacion_examenes')
+                          .insert(_st.examenes_ids.map(eid => ({ indicacion_id: nuevaInd.id, examen_id: eid })))
+                          .catch(console.error);
+                    }
+                })
+                .catch(e => console.error('upsert indicacion:', e));
+        }
+
+        const alertEl = document.getElementById('ind-submit-alert');
+        if (alertEl) {
+            alertEl.className = 'alert-custom alert-success';
+            alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Indicación registrada correctamente.';
+            alertEl.classList.remove('d-none');
+        }
+        setTimeout(() => {
+            const el = document.getElementById('app-content-inner');
+            if (el) renderIndicaciones(_st.user, el);
+        }, 1400);
+    } catch (err) {
+        console.error('_submitIndicacion error:', err);
+        btn.disabled = false;
+        const alertEl = document.getElementById('ind-submit-alert');
+        if (alertEl) {
+            alertEl.className = 'alert-custom alert-danger';
+            alertEl.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Error al guardar. Intente nuevamente.';
+            alertEl.classList.remove('d-none');
         }
     }
-
-    const alertEl = document.getElementById('ind-submit-alert');
-    alertEl.className = 'alert-custom alert-success';
-    alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Indicación registrada correctamente.';
-    alertEl.classList.remove('d-none');
-    setTimeout(() => { const el = document.getElementById('app-content-inner'); if (el) renderIndicaciones(_st.user, el); }, 1400);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1051,28 +1097,55 @@ function _initPaso4Edit() {
 async function _submitEdicion() {
     const btn = document.getElementById('p4-submit');
     const errFirma = document.getElementById('err-firma');
-    if (!_sigHasContent && !_st.firma) { errFirma.textContent = 'La firma es obligatoria.'; errFirma.style.display = 'block'; return; }
-    errFirma.style.display = 'none'; btn.disabled = true;
-
-    let firmaDataUrl = _st.firma || null;
-    if (_sigHasContent) { const canvas = document.getElementById('firma-canvas'); if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); }
-
-    const inds = _getIndicaciones();
-    const idx  = inds.findIndex(i => i.id === _st.indId);
-    if (idx !== -1) {
-        inds[idx].laboratorio_id  = _st.laboratorio_id;
-        inds[idx].tipo_muestra_id = _st.tipo_muestra_id;
-        inds[idx].examenes_ids    = _st.examenes_ids;
-        inds[idx].observaciones   = _st.observaciones;
-        inds[idx].firma_digital   = firmaDataUrl;
-        inds[idx].editado_en      = new Date().toISOString();
+    if (!_sigHasContent && !_st.firma) { 
+        errFirma.textContent = 'La firma es obligatoria.'; 
+        errFirma.style.display = 'block'; 
+        return; 
     }
-    _saveIndicaciones(inds);
-    if (typeof sbUpsertRow === 'function') await sbUpsertRow('indicaciones_examen', inds[idx]);
+    errFirma.style.display = 'none'; 
+    btn.disabled = true;
 
-    const alertEl = document.getElementById('ind-submit-alert');
-    alertEl.className = 'alert-custom alert-success';
-    alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Indicación actualizada correctamente.';
-    alertEl.classList.remove('d-none');
-    setTimeout(() => { const el = document.getElementById('app-content-inner'); if (el) renderIndicaciones(_st.user, el); }, 1400);
+    try {
+        let firmaDataUrl = _st.firma || null;
+        if (_sigHasContent) { 
+            const canvas = document.getElementById('firma-canvas'); 
+            if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); 
+        }
+
+        const inds = _getIndicaciones();
+        const idx  = inds.findIndex(i => i.id === _st.indId);
+        if (idx !== -1) {
+            inds[idx].laboratorio_id  = _st.laboratorio_id;
+            inds[idx].tipo_muestra_id = _st.tipo_muestra_id;
+            inds[idx].examenes_ids    = _st.examenes_ids;
+            inds[idx].observaciones   = _st.observaciones;
+            inds[idx].firma_digital   = firmaDataUrl;
+            inds[idx].editado_en      = new Date().toISOString();
+        }
+        _saveIndicaciones(inds);
+        if (typeof sbUpsertRow === 'function') {
+            sbUpsertRow('indicaciones_examen', inds[idx])
+                .catch(e => console.error('upsert indicacion (edición):', e));
+        }
+
+        const alertEl = document.getElementById('ind-submit-alert');
+        if (alertEl) {
+            alertEl.className = 'alert-custom alert-success';
+            alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Indicación actualizada correctamente.';
+            alertEl.classList.remove('d-none');
+        }
+        setTimeout(() => { 
+            const el = document.getElementById('app-content-inner'); 
+            if (el) renderIndicaciones(_st.user, el); 
+        }, 1400);
+    } catch (err) {
+        console.error('_submitEdicion error:', err);
+        btn.disabled = false;
+        const alertEl = document.getElementById('ind-submit-alert');
+        if (alertEl) {
+            alertEl.className = 'alert-custom alert-danger';
+            alertEl.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Error al guardar. Intente nuevamente.';
+            alertEl.classList.remove('d-none');
+        }
+    }
 }
