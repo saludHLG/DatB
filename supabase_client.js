@@ -425,6 +425,52 @@
     };
 
     /* ================================================================
+       HELPERS DE ESCRITURA MASIVA (usados por admin.js y utils.js)
+       ================================================================ */
+
+    /**
+     * Upsert de un array de filas en una tabla Supabase.
+     * Uso: sbUpsertRows('usuarios', arrDeObjetos)
+     */
+    global.sbUpsertRows = async function (tabla, rows) {
+        const sb = _client();
+        if (!sb || !rows || !rows.length) return;
+        const { error } = await sb.from(tabla).upsert(rows);
+        if (error) console.error('sbUpsertRows:', tabla, error.message);
+    };
+
+    /**
+     * Eliminar una fila por clave primaria.
+     * Uso: sbDeleteRow('laboratorios', 4001)
+     *      sbDeleteRow('usuarios', uid)
+     */
+    global.sbDeleteRow = async function (tabla, id, campo = 'id') {
+        const sb = _client();
+        if (!sb) return;
+        const { error } = await sb.from(tabla).delete().eq(campo, id);
+        if (error) console.error('sbDeleteRow:', tabla, error.message);
+    };
+
+    /**
+     * Reemplaza todos los permisos de un usuario en permisos_lab.
+     * Borra los permisos anteriores e inserta los nuevos.
+     * Usado en btn-save-user de admin.js.
+     */
+    global.sbReplaceUserPerms = async function (userId, newPerms) {
+        const sb = _client();
+        if (!sb) return;
+        // Borrar permisos existentes del usuario
+        const { error: delErr } = await sb
+            .from('permisos_lab')
+            .delete()
+            .eq('usuario_id', userId);
+        if (delErr) { console.error('sbReplaceUserPerms delete:', delErr.message); return; }
+        if (!newPerms || !newPerms.length) return;
+        const { error: insErr } = await sb.from('permisos_lab').insert(newPerms);
+        if (insErr) console.error('sbReplaceUserPerms insert:', insErr.message);
+    };
+
+    /* ================================================================
        HELPER INTERNO
        ================================================================ */
 
