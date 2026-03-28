@@ -236,13 +236,13 @@ function _hu_render(user, el, dateFrom, dateTo) {
    CÓMPUTO DE ESTADÍSTICAS
    ══════════════════════════════════════════════════════════ */
 function _hu_computeStats(user, dateFrom, dateTo) {
-    const allInds   = JSON.parse(localStorage.getItem('sr_indicaciones')         || '[]');
-    const recs      = JSON.parse(localStorage.getItem('sr_recepciones')           || '[]');
-    const baci      = JSON.parse(localStorage.getItem('sr_res_baci')              || '[]');
-    const cult      = JSON.parse(localStorage.getItem('sr_res_cultivo')           || '[]');
-    const xpertU    = JSON.parse(localStorage.getItem('sr_res_xpert_ultra')       || '[]');
-    const xpertXDR  = JSON.parse(localStorage.getItem('sr_res_xpert_xdr')         || '[]');
-    const pacs      = JSON.parse(localStorage.getItem('sr_pacientes')             || '[]');
+    const allInds   = JSON.parse(localStorage.getItem('_store.indicaciones')         || '[]');
+    const recs      = JSON.parse(localStorage.getItem('_store.recepciones')           || '[]');
+    const baci      = JSON.parse(localStorage.getItem('_store.res_baci')              || '[]');
+    const cult      = JSON.parse(localStorage.getItem('_store.res_cultivo')           || '[]');
+    const xpertU    = JSON.parse(localStorage.getItem('_store.res_xpert_ultra')       || '[]');
+    const xpertXDR  = JSON.parse(localStorage.getItem('_store.res_xpert_xdr')         || '[]');
+    const pacs      = JSON.parse(localStorage.getItem('_store.pacientes')             || '[]');
     const gvCat     = typeof _getGVCat  === 'function' ? _getGVCat()  : [];
     const tmCat     = typeof _getTMCat  === 'function' ? _getTMCat()  : [];
     const microCat  = typeof _getMicroCat === 'function' ? _getMicroCat() : [];
