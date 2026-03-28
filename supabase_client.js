@@ -1,15 +1,10 @@
 /* ================================================================
-   supabase_client.js — Capa de datos DatB (corregido)
+   supabase_client.js — Capa de datos DatB
+   Auth directo contra tabla `usuarios` (sin Supabase Auth/email).
    ================================================================ */
 
 (function (global) {
     'use strict';
-
-    // Función auxiliar para construir una contraseña válida para Supabase Auth
-    function _buildPassword(pin) {
-        const cleanPin = String(pin).padStart(4, '0').slice(0, 4);
-        return `datb_${cleanPin}_2025`; // 14 caracteres, cumple requisito
-    }
 
     /* ── Cliente singleton ──────────────────────────────────── */
     let _sb = null;
@@ -29,18 +24,17 @@
         return _sb;
     }
 
-    /** true cuando Supabase está configurado y disponible */
     global.IS_ONLINE = () => !!_client();
 
     /* ================================================================
-       AUTH
+       AUTH  —  CI + PIN directo, sin Supabase Auth, sin email
        ================================================================ */
 
     global.sbLogin = async function (ci, pin) {
         const sb = _client();
 
+        /* Modo offline (localStorage) */
         if (!sb) {
-            // Modo offline (localStorage)
             const user = (typeof getUsers === 'function' ? getUsers() : [])
                 .find(u => u.ci === ci && u.pin_hash === hashPin(String(pin)));
             if (!user)        return { user: null, error: 'CI o PIN incorrecto.' };
@@ -48,29 +42,30 @@
             return { user, error: null };
         }
 
-        // Modo online (Supabase)
-        const { data, error } = await sb.auth.signInWithPassword({
-            email   : `${ci.toLowerCase()}@datb.app`,
-            password: _buildPassword(pin),
-        });
-        if (error) return { user: null, error: error.message };
+        /* Modo online: consulta directa a la tabla usuarios */
+        const { data, error } = await sb
+            .from('usuarios')
+            .select('*')
+            .eq('ci', ci)
+            .maybeSingle();
 
-        const { data: profile, error: pErr } = await sb
-            .from('usuarios').select('*').eq('id', data.user.id).single();
-        if (pErr || !profile) return { user: null, error: 'Perfil no encontrado.' };
-        if (!profile.activo) {
-            await sb.auth.signOut();
-            return { user: null, error: 'Cuenta desactivada.' };
-        }
+        if (error)  return { user: null, error: error.message };
+        if (!data)  return { user: null, error: 'CI o PIN incorrecto.' };
+        if (data.pin_hash !== hashPin(String(pin)))
+                    return { user: null, error: 'CI o PIN incorrecto.' };
+        if (!data.activo)
+                    return { user: null, error: 'Cuenta desactivada.' };
 
-        _cacheUser(profile);
-        return { user: profile, error: null };
+        sessionStorage.setItem('sr_active_user', data.id);
+        _cacheUser(data);
+        return { user: data, error: null };
     };
 
     global.sbRegister = async function (perfil, pin) {
-        const sb = _client();
+        const sb      = _client();
         const pinHash = hashPin(String(pin));
 
+        /* Modo offline */
         if (!sb) {
             const users = typeof getUsers === 'function' ? getUsers() : [];
             if (users.find(u => u.ci === perfil.ci))
@@ -80,76 +75,79 @@
             return { error: null };
         }
 
-        // 1 — Crear usuario en Supabase Auth
-        const { data: authData, error: authErr } = await sb.auth.signUp({
-            email   : `${perfil.ci.toLowerCase()}@datb.app`,
-            password: _buildPassword(pin),
-        });
-        console.log('Auth signUp error:', authErr);
-        if (authErr) return { error: authErr.message };
+        /* Verificar duplicado de CI */
+        const { data: dup } = await sb
+            .from('usuarios')
+            .select('id')
+            .eq('ci', perfil.ci)
+            .maybeSingle();
+        if (dup) return { error: 'Este CI ya está registrado.' };
 
-        // 2 — Insertar perfil en tabla usuarios
-        const { error: insErr } = await sb.from('usuarios').insert({
+        /* Insertar directamente en usuarios (sin auth.signUp) */
+        const nuevoId = perfil.id || crypto.randomUUID();
+        const { error } = await sb.from('usuarios').insert({
             ...perfil,
-            id       : authData.user.id,
+            id       : nuevoId,
             pin_hash : pinHash,
             creado_en: new Date().toISOString(),
         });
-        console.log('Insert usuarios error:', insErr);
-        if (insErr) return { error: insErr.message };
 
+        if (error) return { error: error.message };
         return { error: null };
     };
 
     global.sbLogout = async function () {
-        const sb = _client();
-        if (sb) await sb.auth.signOut();
         sessionStorage.removeItem('sr_active_user');
     };
 
     global.sbGetSession = async function () {
-        const sb = _client();
+        const sb  = _client();
+        const uid = sessionStorage.getItem('sr_active_user');
 
+        /* Modo offline */
         if (!sb) {
-            const uid = sessionStorage.getItem('sr_active_user');
             if (!uid) return null;
             return (typeof getUsers === 'function' ? getUsers() : [])
                 .find(u => u.id === uid && u.activo) || null;
         }
 
-        const { data: { session } } = await sb.auth.getSession();
-        if (!session) return null;
+        if (!uid) return null;
 
-        const { data } = await sb.from('usuarios').select('*')
-            .eq('id', session.user.id).single();
-        if (data) _cacheUser(data);
-        return data || null;
+        const { data } = await sb
+            .from('usuarios')
+            .select('*')
+            .eq('id', uid)
+            .maybeSingle();
+
+        if (data) {
+            _cacheUser(data);
+            return data.activo ? data : null;
+        }
+        return null;
     };
 
     global.sbChangePin = async function (userId, newPin) {
-        const sb = _client();
+        const sb      = _client();
         const newHash = hashPin(String(newPin));
 
-        // Actualizar caché local
+        /* Actualizar caché local siempre */
         if (typeof getUsers === 'function' && typeof saveUsers === 'function') {
             const users = getUsers();
-            const idx = users.findIndex(u => u.id === userId);
+            const idx   = users.findIndex(u => u.id === userId);
             if (idx !== -1) { users[idx].pin_hash = newHash; saveUsers(users); }
         }
 
         if (!sb) return { error: null };
 
-        // Actualizar contraseña en Supabase Auth
-        const { error } = await sb.auth.updateUser({ password: _buildPassword(newPin) });
-        if (error) return { error: error.message };
-
-        // Actualizar hash en tabla usuarios
-        await sb.from('usuarios').update({ pin_hash: newHash }).eq('id', userId);
-        return { error: null };
+        const { error } = await sb
+            .from('usuarios')
+            .update({ pin_hash: newHash })
+            .eq('id', userId);
+        return { error: error?.message || null };
     };
 
     /* ================================================================
-       USUARIOS (lectura/escritura)
+       USUARIOS
        ================================================================ */
 
     global.sbGetUsers = async function () {
@@ -164,7 +162,7 @@
     global.sbUpsertUser = async function (user) {
         if (typeof getUsers === 'function' && typeof saveUsers === 'function') {
             const users = getUsers();
-            const idx = users.findIndex(u => u.id === user.id);
+            const idx   = users.findIndex(u => u.id === user.id);
             if (idx !== -1) users[idx] = user; else users.push(user);
             saveUsers(users);
         }
@@ -212,14 +210,12 @@
     global.sbInitGeo = async function () {
         const sb = _client();
         if (!sb) return;
-
         const [p, m, c, l] = await Promise.all([
             sb.from('provincias').select('*').order('nombre'),
             sb.from('municipios').select('*').order('nombre'),
             sb.from('centros_salud').select('*').order('nombre'),
             sb.from('laboratorios').select('*').order('nombre'),
         ]);
-
         if (p.data?.length) localStorage.setItem('sr_geo_provincias', JSON.stringify(p.data));
         if (m.data?.length) localStorage.setItem('sr_geo_municipios',  JSON.stringify(m.data));
         if (c.data?.length) localStorage.setItem('sr_geo_centros',     JSON.stringify(c.data));
@@ -245,8 +241,8 @@
 
     const _CAT_TABLA = {
         sr_grupos_vulnerables: 'grupos_vulnerables',
-        sr_tipos_muestra      : 'tipos_muestra',
-        sr_microorganismos    : 'microorganismos',
+        sr_tipos_muestra     : 'tipos_muestra',
+        sr_microorganismos   : 'microorganismos',
     };
 
     global.sbSyncCatalogo = async function (lsKey, data) {
@@ -272,7 +268,7 @@
     };
 
     global.sbSavePaciente = async function (pac) {
-        const LS = 'sr_pacientes';
+        const LS  = 'sr_pacientes';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(p => p.id === pac.id);
         if (idx !== -1) arr[idx] = pac; else arr.push(pac);
@@ -291,7 +287,9 @@
         const sb = _client();
         const LS = 'sr_indicaciones';
         if (!sb) return JSON.parse(localStorage.getItem(LS) || '[]');
-        const { data } = await sb.from('indicaciones_examen').select('*, indicacion_examenes(examen_id)');
+        const { data } = await sb
+            .from('indicaciones_examen')
+            .select('*, indicacion_examenes(examen_id)');
         if (data) {
             const adapted = data.map(ind => ({
                 ...ind,
@@ -304,19 +302,17 @@
     };
 
     global.sbSaveIndicacion = async function (ind, exIds) {
-        const LS = 'sr_indicaciones';
+        const LS  = 'sr_indicaciones';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(i => i.id === ind.id);
         if (idx !== -1) arr[idx] = ind; else arr.push(ind);
         localStorage.setItem(LS, JSON.stringify(arr));
-
         const sb = _client();
         if (!sb) return;
         const { error } = await sb.from('indicaciones_examen').upsert(ind);
         if (error) { console.error('sbSaveIndicacion:', error); return; }
         if (exIds?.length) {
-            await sb.from('indicacion_examenes')
-                .delete().eq('indicacion_id', ind.id);
+            await sb.from('indicacion_examenes').delete().eq('indicacion_id', ind.id);
             await sb.from('indicacion_examenes')
                 .insert(exIds.map(eid => ({ indicacion_id: ind.id, examen_id: eid })));
         }
@@ -345,7 +341,7 @@
     };
 
     global.sbSaveRecepcion = async function (rec) {
-        const LS = 'sr_recepciones';
+        const LS  = 'sr_recepciones';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(r => r.id === rec.id);
         if (idx !== -1) arr[idx] = rec; else arr.push(rec);
@@ -370,10 +366,10 @@
        ================================================================ */
 
     const _RES_MAP = {
-        baci        : { ls: 'sr_res_baci',         tabla: 'resultados_baciloscopia' },
-        cultivo     : { ls: 'sr_res_cultivo',       tabla: 'resultados_cultivo'     },
-        xpert_ultra : { ls: 'sr_res_xpert_ultra', tabla: 'resultados_xpert_ultra' },
-        xpert_xdr   : { ls: 'sr_res_xpert_xdr',   tabla: 'resultados_xpert_xdr'   },
+        baci       : { ls: 'sr_res_baci',       tabla: 'resultados_baciloscopia' },
+        cultivo    : { ls: 'sr_res_cultivo',     tabla: 'resultados_cultivo'      },
+        xpert_ultra: { ls: 'sr_res_xpert_ultra', tabla: 'resultados_xpert_ultra'  },
+        xpert_xdr  : { ls: 'sr_res_xpert_xdr',   tabla: 'resultados_xpert_xdr'    },
     };
 
     global.sbSaveResultado = async function (tipo, item) {
@@ -411,7 +407,7 @@
     };
 
     global.sbSaveAcceso = async function (acc) {
-        const LS = 'sr_accesos_temp';
+        const LS  = 'sr_accesos_temp';
         const arr = JSON.parse(localStorage.getItem(LS) || '[]');
         const idx = arr.findIndex(a => a.id === acc.id);
         if (idx !== -1) arr[idx] = acc; else arr.push(acc);
@@ -428,7 +424,7 @@
     function _cacheUser(user) {
         if (typeof getUsers !== 'function' || typeof saveUsers !== 'function') return;
         const users = getUsers();
-        const idx = users.findIndex(u => u.id === user.id);
+        const idx   = users.findIndex(u => u.id === user.id);
         if (idx !== -1) users[idx] = user; else users.push(user);
         saveUsers(users);
     }
