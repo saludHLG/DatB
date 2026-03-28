@@ -1,6 +1,7 @@
 /* =========================================================
    laboratorio_core.js — Núcleo compartido del módulo de Lab.
-   Arquitectura en Memoria (Stateless Browser) + Red (Supabase)
+   Arquitectura en Memoria (_store) + Red (Supabase).
+   Sin localStorage.
    ========================================================= */
 
 /* ── Estado Global en Memoria ───────────────────────────── */
@@ -19,40 +20,27 @@ window._store = window._store || {
     microorganismos: [],
     grupos_vulnerables: [],
     geo_labs: [],
-    firmas: {}, // Reemplaza localStorage para las firmas
-    active_user: null // Reemplaza sessionStorage
+    firmas: {},
+    active_user: null
 };
 
-/* ── Accesores (Leen de la memoria RAM) ─────────────────── */
-function _getRecepciones()       { return window._store.recepciones || []; }
-function _getResBaci()           { return window._store.res_baci || []; }
-function _getResCultivo()        { return window._store.res_cultivo || []; }
-function _getResXpertUltra()     { return window._store.res_xpert_ultra || []; }
-function _getResXpertXDR()       { return window._store.res_xpert_xdr || []; }
+/* ── Accesores (leen de _store) ─────────────────────────── */
+function _getRecepciones()       { return window._store.recepciones       || []; }
+function _getResBaci()           { return window._store.res_baci          || []; }
+function _getResCultivo()        { return window._store.res_cultivo       || []; }
+function _getResXpertUltra()     { return window._store.res_xpert_ultra   || []; }
+function _getResXpertXDR()       { return window._store.res_xpert_xdr     || []; }
 
-/* ── Escritores (Async: Actualizan Memoria y luego Red) ─── */
-async function _saveRecepciones(arr) {
-    window._store.recepciones = arr;
-    if (typeof sbUpsertRow === 'function') await sbUpsertRow('recepciones_muestra', arr);
-}
-async function _saveResBaci(arr) { 
-    window._store.res_baci = arr; 
-    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_baciloscopia', arr); 
-}
-async function _saveResCultivo(arr) { 
-    window._store.res_cultivo = arr; 
-    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_cultivo', arr); 
-}
-async function _saveResXpertUltra(arr) { 
-    window._store.res_xpert_ultra = arr; 
-    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_xpert_ultra', arr); 
-}
-async function _saveResXpertXDR(arr) { 
-    window._store.res_xpert_xdr = arr; 
-    if (typeof sbUpsertRow === 'function') await sbUpsertRow('resultados_xpert_xdr', arr); 
-}
+/* ── Escritores síncronos (sólo actualizan _store)
+      Los llamadores se encargan de la sincronización con Supabase
+      usando sbUpsertRow / sbDeleteRow directamente. ─────── */
+function _saveRecepciones(arr)   { window._store.recepciones     = arr; }
+function _saveResBaci(arr)       { window._store.res_baci        = arr; }
+function _saveResCultivo(arr)    { window._store.res_cultivo     = arr; }
+function _saveResXpertUltra(arr) { window._store.res_xpert_ultra = arr; }
+function _saveResXpertXDR(arr)   { window._store.res_xpert_xdr   = arr; }
 
-/* ── Catálogos y Aliases ────────────────────────────────── */
+/* ── Catálogos ──────────────────────────────────────────── */
 const _MICRO_DEFAULTS = [
     { id: 1, nombre: 'Mycobacterium tuberculosis',         sistema: true, activo: true },
     { id: 2, nombre: 'MNTB (Micobacteria No Tuberculosa)', sistema: true, activo: true },
@@ -77,7 +65,7 @@ const _EXAMENES_CAT = [
 ];
 const _SOPORTADOS = new Set([1, 2, 3, 5]);
 
-/* ── Resolutores de Nombres y Lógicas de Negocio ────────── */
+/* ── Resolutores de nombres / lógicas de negocio ────────── */
 function _labsConPermiso(userId, campo = 'puede_emitir') {
     return (window._store.permisos_lab || [])
         .filter(p => p.usuario_id === userId && p[campo] && p.activo)
@@ -117,7 +105,9 @@ function _indicacionesPendientes(userId) {
 }
 
 function _labNombre(id) {
-    const all = (window._store.geo_labs && window._store.geo_labs.length) ? window._store.geo_labs : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
+    const all = (window._store.geo_labs && window._store.geo_labs.length)
+        ? window._store.geo_labs
+        : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
     return all.find(l => l.id === Number(id))?.nombre || `Lab #${id}`;
 }
 
@@ -140,7 +130,9 @@ function _tipoMuestraNombreById(id) {
         const f = _getTMCat().find(m => m.id === Number(id));
         if (f) return f.nombre;
     }
-    const cat = (window._store.tipos_muestra && window._store.tipos_muestra.length) ? window._store.tipos_muestra : (typeof _TM_DEFAULTS !== 'undefined' ? _TM_DEFAULTS : []);
+    const cat = (window._store.tipos_muestra && window._store.tipos_muestra.length)
+        ? window._store.tipos_muestra
+        : (typeof _TM_DEFAULTS !== 'undefined' ? _TM_DEFAULTS : []);
     return cat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`;
 }
 
@@ -160,7 +152,10 @@ function _resultadoXpertCls(resultado) {
 function _tieneResultadoFinal(recId, exId) {
     const n = Number(exId);
     if (n === 1) return _getResBaci().some(r => r.recepcion_id === recId);
-    if (n === 2) { const r = _getResCultivo().find(r => r.recepcion_id === recId); return r ? r.resultado !== 'en_estudio' : false; }
+    if (n === 2) {
+        const r = _getResCultivo().find(r => r.recepcion_id === recId);
+        return r ? r.resultado !== 'en_estudio' : false;
+    }
     if (n === 3) return _getResXpertUltra().some(r => r.recepcion_id === recId);
     if (n === 5) return _getResXpertXDR().some(r => r.recepcion_id === recId);
     return false;
