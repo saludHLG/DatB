@@ -154,7 +154,12 @@ function buildSummary() {
 }
 
 /* ── Inicialización de la página ─────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    /* Cargar todos los datos desde Supabase antes de montar la UI */
+    if (typeof sbInitAll === 'function') {
+        try { await sbInitAll(); } catch (e) { console.error('sbInitAll:', e); }
+    }
 
     /* --- Poblar selects y construir grids PIN --- */
     populateProvincias();
