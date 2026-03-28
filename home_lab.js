@@ -206,13 +206,13 @@ function _hl_computeData(user, dateFrom, dateTo) {
     ])];
 
     /* Fuentes de datos */
-    const allInds   = JSON.parse(localStorage.getItem('sr_indicaciones') || '[]');
+    const allInds   = JSON.parse(localStorage.getItem('_store.indicaciones') || '[]');
     const recs      = _getRecepciones();
     const baci      = _getResBaci();
     const cult      = _getResCultivo();
     const xpertU    = _getResXpertUltra();
     const xpertXDR  = _getResXpertXDR();
-    const pacs      = JSON.parse(localStorage.getItem('sr_pacientes') || '[]');
+    const pacs      = JSON.parse(localStorage.getItem('_store.pacientes') || '[]');
 
     /* Filtrar indicaciones por laboratorio y fechas */
     const inds = allInds.filter(ind => {
@@ -394,12 +394,12 @@ function _hl_edad(fechaNac) {
 
 function _hl_getGVCat() {
     if (typeof _getGVCat === 'function') return _getGVCat();
-    return JSON.parse(localStorage.getItem('sr_grupos_vulnerables') || '[]') || [];
+    return JSON.parse(localStorage.getItem('_store.grupos_vulnerables') || '[]') || [];
 }
 
 function _hl_getTMCat() {
     if (typeof _getTMCat === 'function') return _getTMCat();
-    return JSON.parse(localStorage.getItem('sr_tipos_muestra') || '[]') || [];
+    return JSON.parse(localStorage.getItem('_store.tipos_muestra') || '[]') || [];
 }
 
 function _hl_pill(label, value, color, icon) {
