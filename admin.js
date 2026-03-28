@@ -5,17 +5,18 @@ window._store = window._store || {
 };
 const $a = id => document.getElementById(id);
 
-/* ── Lectura desde _store (cargado por sbInitAll) ──────── */
-const getUsers   = () => window._store?.usuarios     || [];
-const getPerms   = () => window._store?.permisos_lab || [];
-const getAccesos = () => window._store?.accesos_temp || [];
+// Lee desde _store (cargado por sbInitAll en supabase_client.js)
+const getUsers   = () => window._store.usuarios     || [];
+const getPerms   = () => window._store.permisos_lab || [];
+const getAccesos = () => window._store.accesos_temp || [];
 
-/* ── Saves en memoria con sync a Supabase (async) ──────── */
+/* ── Saves con sync a Supabase (best-effort, async) ──────── */
 const saveUsers = u => {
     window._store.usuarios = u;
     // Evitar upsert masivo — usar sbUpdateRow / sbDeleteRow por operación individual
 };
 const savePerms = p => {
+    // Permisos: se maneja con sbReplaceUserPerms por usuario en btn-save-user.
     window._store.permisos_lab = p;
 };
 const saveAccesos = a => {
@@ -34,11 +35,18 @@ const ROL_SIS_HINTS = {
     6:'Acceso total. Gestión de usuarios y configuración.'
 };
 
-/* Mapeo clave interna -> tabla Supabase para catálogos */
+/* Mapeo clave store → tabla Supabase para catálogos */
 const _SB_CAT_TABLA = {
-    'sr_grupos_vulnerables': 'grupos_vulnerables',
-    'sr_tipos_muestra'     : 'tipos_muestra',
-    'sr_microorganismos'   : 'microorganismos',
+    'grupos_vulnerables': 'grupos_vulnerables',
+    'tipos_muestra'     : 'tipos_muestra',
+    'microorganismos'   : 'microorganismos',
+};
+
+// Mapeo para la función sbSyncCatalogo
+const _SYNC_KEYS = {
+    'grupos_vulnerables': 'sr_grupos_vulnerables',
+    'tipos_muestra':      'sr_tipos_muestra',
+    'microorganismos':    'sr_microorganismos'
 };
 
 function toast(msg, type='success') {
@@ -54,16 +62,16 @@ function toast(msg, type='success') {
 function geoName(type, id) {
     if (!id) return '—';
     const m = {
-        provincia: GEO.getProvs(),
-        municipio: GEO.getMuns(),
-        centro:    GEO.getCentros()
+        provincia: GEO.getProvs()   || DATOS_GEO.provincias,
+        municipio: GEO.getMuns()    || DATOS_GEO.municipios,
+        centro:    GEO.getCentros() || DATOS_GEO.centros_salud
     };
     return m[type]?.find(x => x.id === Number(id))?.nombre || '—';
 }
 
 const fmt = iso => iso ? new Date(iso).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' }) : '—';
 const ini = u => ((u.nombres?.[0]||'')+(u.apellidos?.[0]||'')).toUpperCase();
-const rolProfName = u => u.rol_profesional_nom || (typeof ROLES_PROFESIONALES !== 'undefined' ? ROLES_PROFESIONALES[u.rol_profesional_id]?.nombre : '—');
+const rolProfName = u => u.rol_profesional_nom || ROLES_PROFESIONALES[u.rol_profesional_id]?.nombre || '—';
 
 let _adminUser = null;
 
@@ -73,19 +81,19 @@ function checkAccess() {
     const hasAdmin = users.some(u => u.rol_sistema_id === 6 && u.activo);
 
     if (!hasAdmin) {
-        $a('bootstrap-bar')?.classList.remove('d-none');
-        $a('admin-app')?.classList.remove('d-none');
-        if($a('sidebar-admin-name')) $a('sidebar-admin-name').textContent = 'Modo bootstrap';
+        $a('bootstrap-bar').classList.remove('d-none');
+        $a('admin-app').classList.remove('d-none');
+        $a('sidebar-admin-name').textContent = 'Modo bootstrap';
         return;
     }
     const me = users.find(u => u.id === uid);
     if (!me || me.rol_sistema_id !== 6 || !me.activo) {
-        $a('access-denied')?.classList.remove('d-none');
+        $a('access-denied').classList.remove('d-none');
         return;
     }
     _adminUser = me;
-    if($a('sidebar-admin-name')) $a('sidebar-admin-name').textContent = `${me.nombres} ${me.apellidos}`;
-    $a('admin-app')?.classList.remove('d-none');
+    $a('sidebar-admin-name').textContent = `${me.nombres} ${me.apellidos}`;
+    $a('admin-app').classList.remove('d-none');
 }
 
 $a('btn-make-admin')?.addEventListener('click', () => {
@@ -96,13 +104,12 @@ $a('btn-make-admin')?.addEventListener('click', () => {
     users[idx].rol_sistema_id = 6;
     users[idx].aprobado = users[idx].activo = true;
     saveUsers(users);
-    
-    if (typeof sbUpdateRow === 'function')
-        sbUpdateRow('usuarios', uid, { rol_sistema_id: 6, aprobado: true, activo: true });
-
     _adminUser = users[idx];
-    $a('bootstrap-bar')?.classList.add('d-none');
-    if($a('sidebar-admin-name')) $a('sidebar-admin-name').textContent = `${users[idx].nombres} ${users[idx].apellidos}`;
+    $a('bootstrap-bar').classList.add('d-none');
+    $a('sidebar-admin-name').textContent = `${users[idx].nombres} ${users[idx].apellidos}`;
+    if (typeof sbUpdateRow === 'function') {
+        sbUpdateRow('usuarios', uid, { rol_sistema_id: 6, aprobado: true, activo: true });
+    }
     toast('Cuenta promovida a Administrador.', 'success');
     renderAll();
 });
@@ -123,8 +130,8 @@ document.querySelectorAll('.snav-btn[data-tab]').forEach(btn => {
         const id = btn.dataset.tab;
         $a(id)?.classList.remove('d-none');
         const meta = TAB_META[id] || { title: id, sub: '' };
-        if($a('admin-page-title')) $a('admin-page-title').textContent = meta.title;
-        if($a('admin-page-sub'))   $a('admin-page-sub').textContent   = meta.sub;
+        $a('admin-page-title').textContent = meta.title;
+        $a('admin-page-sub').textContent   = meta.sub;
         if (id === 'tab-locations') {
             initGeoData();
             renderLocPanel('provincias');
@@ -140,22 +147,19 @@ document.querySelectorAll('.snav-btn[data-tab]').forEach(btn => {
 function renderStats() {
     const u = getUsers();
     const total = u.length, pending = u.filter(x => x.activo && !x.aprobado).length, active = u.filter(x => x.aprobado && x.activo).length;
-    if($a('header-stats')) {
-        $a('header-stats').innerHTML = `
-            <div class="stat-pill"><span class="stat-pill-num">${total}</span><span class="stat-pill-label">Total</span></div>
-            <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-warning)">${pending}</span><span class="stat-pill-label">Pendientes</span></div>
-            <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-success)">${active}</span><span class="stat-pill-label">Activos</span></div>`;
-    }
+    $a('header-stats').innerHTML = `
+        <div class="stat-pill"><span class="stat-pill-num">${total}</span><span class="stat-pill-label">Total</span></div>
+        <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-warning)">${pending}</span><span class="stat-pill-label">Pendientes</span></div>
+        <div class="stat-pill"><span class="stat-pill-num" style="color:var(--a-success)">${active}</span><span class="stat-pill-label">Activos</span></div>`;
     const bp = $a('badge-pending'), ba = $a('badge-access');
-    if(bp) { bp.textContent = pending; bp.style.display = pending > 0 ? '' : 'none'; }
+    bp.textContent = pending; bp.style.display = pending > 0 ? '' : 'none';
     const ap = getAccesos().filter(a => a.estado === 'pendiente').length;
-    if(ba) { ba.textContent = ap; ba.style.display = ap > 0 ? '' : 'none'; }
+    ba.textContent = ap; ba.style.display = ap > 0 ? '' : 'none';
 }
 
 function renderPending() {
     const users = getUsers().filter(u => u.activo && !u.aprobado);
     const tbody = $a('pending-tbody'), wrap = $a('pending-table-wrap'), empty = $a('pending-empty');
-    if(!tbody || !wrap || !empty) return;
     if (!users.length) { wrap.classList.add('d-none'); empty.classList.remove('d-none'); return; }
     wrap.classList.remove('d-none'); empty.classList.add('d-none');
     tbody.innerHTML = users.map(u => `
@@ -191,7 +195,6 @@ function renderUsers() {
     if (est === 'inactivo')  users = users.filter(u => !u.activo);
 
     const tbody = $a('users-tbody'), empty = $a('users-empty');
-    if(!tbody || !empty) return;
     if (!users.length) { tbody.innerHTML=''; empty.classList.remove('d-none'); return; }
     empty.classList.add('d-none');
 
@@ -227,7 +230,6 @@ function renderUsers() {
 function renderAccesos() {
     const accesos = getAccesos(), users = getUsers();
     const tbody = $a('access-tbody'), wrap = $a('access-table-wrap'), empty = $a('access-empty');
-    if(!tbody || !wrap || !empty) return;
     if (!accesos.length) { wrap.classList.add('d-none'); empty.classList.remove('d-none'); return; }
     wrap.classList.remove('d-none'); empty.classList.add('d-none');
     tbody.innerHTML = accesos.map(a => {
@@ -308,7 +310,7 @@ let _editUid = null, _editPerms = [];
 function populateLabSelect(provId) {
     const sel = $a('modal-lab-select');
     sel.innerHTML = '<option value="">— Seleccione laboratorio —</option>';
-    const labs = GEO.getLabs() || [];
+    const labs = GEO.getLabs() || DATOS_GEO.laboratorios || [];
     [...labs]
         .filter(lab => lab.activo !== false)
         .sort((a,b) => (a.provincia_id===provId?-1:b.provincia_id===provId?1:0))
@@ -322,11 +324,10 @@ function populateLabSelect(provId) {
 
 function renderLabList() {
     const container = $a('lab-perms-list'), emptyMsg = $a('empty-lab-msg');
-    if (!container || !emptyMsg) return;
     if (!_editPerms.length) { container.innerHTML=''; emptyMsg.classList.remove('d-none'); return; }
     emptyMsg.classList.add('d-none');
     container.innerHTML = _editPerms.map((p, i) => {
-        const lab = (GEO.getLabs() || []).find(l => l.id === Number(p.laboratorio_id));
+        const lab = (GEO.getLabs() || DATOS_GEO.laboratorios || []).find(l => l.id === Number(p.laboratorio_id));
         return `
         <div class="lab-perm-row">
             <span class="lab-perm-name">${lab?.nombre||'Lab #'+p.laboratorio_id}</span>
@@ -355,7 +356,7 @@ function openEditModal(uid) {
     $a('modal-edit-name').textContent  = `${u.nombres} ${u.apellidos}`;
     $a('modal-ci').textContent         = `CI: ${u.ci}`;
     $a('modal-prof-badge').textContent = rolProfName(u);
-    $a('modal-rol-sistema').value      = String(u.rol_sistema_id||1);
+    $a('modal-rol-sistema').value = String(u.rol_sistema_id||1);
     $a('modal-rol-hint').textContent   = ROL_SIS_HINTS[u.rol_sistema_id]||'';
 
     const btn = $a('btn-toggle-active');
@@ -421,7 +422,7 @@ $a('btn-save-user')?.addEventListener('click', () => {
     users[idx].apellidos           = apVal;
     const rpId = Number($a('modal-rol-prof-edit').value);
     users[idx].rol_profesional_id  = rpId;
-    users[idx].rol_profesional_nom = typeof ROLES_PROFESIONALES !== 'undefined' ? ROLES_PROFESIONALES[rpId]?.nombre : '';
+    users[idx].rol_profesional_nom = ROLES_PROFESIONALES[rpId]?.nombre || '';
     users[idx].registro_profesional = $a('modal-registro').value.trim() || null;
     users[idx].provincia_id        = Number($a('modal-prov-edit').value)  || null;
     users[idx].municipio_id        = Number($a('modal-mun-edit').value)   || null;
@@ -438,6 +439,7 @@ $a('btn-save-user')?.addEventListener('click', () => {
 
     saveUsers(users);
 
+    // Actualizar fila del usuario en Supabase de forma dirigida
     if (typeof sbUpdateRow === 'function')
         sbUpdateRow('usuarios', _editUid, {
             nombres:              users[idx].nombres,
@@ -452,6 +454,7 @@ $a('btn-save-user')?.addEventListener('click', () => {
             rol_sistema_id:       users[idx].rol_sistema_id,
         });
 
+    // Actualizar permisos de lab
     const allPerms = getPerms().filter(p => p.usuario_id !== _editUid).concat(_editPerms);
     savePerms(allPerms);
     if (typeof sbReplaceUserPerms === 'function')
@@ -514,27 +517,27 @@ $a('btn-reject-access')?.addEventListener('click', () => {
     $a(id)?.addEventListener('change', renderUsers);
 });
 
-/* ── Módulo GEO 100% Memoria / Supabase ── */
+
 const GEO = {
-    getProvs  : () => window._store?.geo_provincias || [],
-    getMuns   : () => window._store?.geo_municipios || [],
-    getCentros: () => window._store?.geo_centros || [],
-    getLabs   : () => window._store?.geo_labs || [],
-    saveProvs  : v => { window._store.geo_provincias = v; if (typeof sbUpsertRows === 'function') sbUpsertRows('provincias',   v).catch(console.error); },
-    saveMuns   : v => { window._store.geo_municipios = v; if (typeof sbUpsertRows === 'function') sbUpsertRows('municipios',    v).catch(console.error); },
+    getProvs  : () => window._store.geo_provincias || [],
+    getMuns   : () => window._store.geo_municipios || [],
+    getCentros: () => window._store.geo_centros || [],
+    getLabs   : () => window._store.geo_labs || [],
+    saveProvs  : v => { window._store.geo_provincias = v; if (typeof sbUpsertRows === 'function') sbUpsertRows('provincias', v).catch(console.error); },
+    saveMuns   : v => { window._store.geo_municipios = v; if (typeof sbUpsertRows === 'function') sbUpsertRows('municipios', v).catch(console.error); },
     saveCentros: v => { window._store.geo_centros = v;    if (typeof sbUpsertRows === 'function') sbUpsertRows('centros_salud', v).catch(console.error); },
-    saveLabs   : v => { window._store.geo_labs = v;       if (typeof sbUpsertRows === 'function') sbUpsertRows('laboratorios',  v).catch(console.error); },
+    saveLabs   : v => { window._store.geo_labs = v;       if (typeof sbUpsertRows === 'function') sbUpsertRows('laboratorios', v).catch(console.error); },
 };
 
 function initGeoData() {
-    if (!GEO.getProvs().length && typeof DATOS_GEO !== 'undefined')   GEO.saveProvs(DATOS_GEO.provincias.map(p => ({...p})));
-    if (!GEO.getMuns().length && typeof DATOS_GEO !== 'undefined')    GEO.saveMuns(DATOS_GEO.municipios.map(m => ({...m})));
-    if (!GEO.getCentros().length && typeof DATOS_GEO !== 'undefined') GEO.saveCentros(DATOS_GEO.centros_salud.map(c => ({...c})));
-    if (!GEO.getLabs().length && typeof DATOS_GEO !== 'undefined')    GEO.saveLabs((DATOS_GEO.laboratorios||[]).map(l => ({...l, activo: l.activo ?? true})));
+    if (!GEO.getProvs().length)   GEO.saveProvs(DATOS_GEO.provincias.map(p => ({...p})));
+    if (!GEO.getMuns().length)    GEO.saveMuns(DATOS_GEO.municipios.map(m => ({...m})));
+    if (!GEO.getCentros().length) GEO.saveCentros(DATOS_GEO.centros_salud.map(c => ({...c})));
+    if (!GEO.getLabs().length)    GEO.saveLabs((DATOS_GEO.laboratorios||[]).map(l => ({...l, activo: l.activo ?? true})));
 }
 
-const geoProvName   = id => GEO.getProvs()?.find(p => p.id === Number(id))?.nombre   || '—';
-const geoMunName    = id => GEO.getMuns()?.find(m => m.id === Number(id))?.nombre    || '—';
+const geoProvName   = id => GEO.getProvs().find(p => p.id === Number(id))?.nombre   || '—';
+const geoMunName    = id => GEO.getMuns().find(m => m.id === Number(id))?.nombre    || '—';
 const nextGeoId     = arr => arr.length ? Math.max(...arr.map(x => Number(x.id))) + 1 : 1;
 
 function levelBadge(nivel) {
@@ -558,12 +561,11 @@ function renderLocPanel(panel) {
 }
 
 function renderProvs() {
-    const provs    = GEO.getProvs() || [];
-    const muns     = GEO.getMuns()  || [];
-    const centros  = GEO.getCentros() || [];
-    const labs     = GEO.getLabs() || [];
+    const provs    = GEO.getProvs();
+    const muns     = GEO.getMuns();
+    const centros  = GEO.getCentros();
+    const labs     = GEO.getLabs();
     const tbody    = $a('tbody-provincias');
-    if(!tbody) return;
     $a('count-provincias').textContent = `${provs.length} provincia(s)`;
     tbody.innerHTML = '';
 
@@ -602,7 +604,7 @@ $a('btn-new-provincia')?.addEventListener('click', () => {
 });
 
 function openProvModal(id) {
-    const p = (GEO.getProvs() || []).find(x => x.id === id);
+    const p = GEO.getProvs().find(x => x.id === id);
     if (!p) return;
     $a('modal-provincia-title').innerHTML = '<i class="bi bi-pencil"></i> Editar provincia';
     $a('prov-edit-id').value = p.id;
@@ -620,7 +622,7 @@ $a('btn-save-provincia')?.addEventListener('click', () => {
     if (!nombre || !codigo) return showLocErr('prov-err', 'Nombre y código son obligatorios.');
     if (!/^[A-Z]{2,3}$/.test(codigo)) return showLocErr('prov-err', 'El código debe tener 2–3 letras mayúsculas.');
 
-    const provs  = GEO.getProvs() || [];
+    const provs  = GEO.getProvs();
     const editId = Number($a('prov-edit-id').value);
 
     const dup = provs.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== editId);
@@ -644,16 +646,15 @@ $a('btn-save-provincia')?.addEventListener('click', () => {
 function renderMuns() {
     const search   = ($a('filter-mun')?.value || '').toLowerCase();
     const provFilt = $a('filter-mun-prov')?.value;
-    let muns = GEO.getMuns() || [];
-    const centros = GEO.getCentros() || [];
-    const labs    = GEO.getLabs()    || [];
+    let muns = GEO.getMuns();
+    const centros = GEO.getCentros();
+    const labs    = GEO.getLabs();
 
     if (search)   muns = muns.filter(m => m.nombre.toLowerCase().includes(search));
     if (provFilt) muns = muns.filter(m => String(m.provincia_id) === provFilt);
 
     $a('count-municipios').textContent = `${muns.length} municipio(s)`;
     const tbody = $a('tbody-municipios');
-    if(!tbody) return;
     tbody.innerHTML = '';
 
     muns.forEach(m => {
@@ -692,7 +693,7 @@ $a('btn-new-municipio')?.addEventListener('click', () => {
 });
 
 function openMunModal(id) {
-    const m = (GEO.getMuns() || []).find(x => x.id === id);
+    const m = GEO.getMuns().find(x => x.id === id);
     if (!m) return;
     $a('modal-municipio-title').innerHTML = '<i class="bi bi-pencil"></i> Editar municipio';
     $a('mun-edit-id').value = m.id;
@@ -710,7 +711,7 @@ $a('btn-save-municipio')?.addEventListener('click', () => {
     if (!nombre)  return showLocErr('mun-err', 'El nombre es obligatorio.');
     if (!provId)  return showLocErr('mun-err', 'Seleccione una provincia.');
 
-    const muns   = GEO.getMuns() || [];
+    const muns   = GEO.getMuns();
     const editId = Number($a('mun-edit-id').value);
     const dup    = muns.find(m => m.nombre.toLowerCase() === nombre.toLowerCase() && m.provincia_id === provId && m.id !== editId);
     if (dup) return showLocErr('mun-err', 'Ya existe ese municipio en esa provincia.');
@@ -735,8 +736,8 @@ function renderCentros() {
     const search   = ($a('filter-centro')?.value || '').toLowerCase();
     const provFilt = $a('filter-centro-prov')?.value;
     const munFilt  = $a('filter-centro-mun')?.value;
-    let centros = GEO.getCentros() || [];
-    const muns  = GEO.getMuns()    || [];
+    let centros = GEO.getCentros();
+    const muns  = GEO.getMuns();
 
     if (search)   centros = centros.filter(c => c.nombre.toLowerCase().includes(search));
     if (provFilt) {
@@ -747,7 +748,6 @@ function renderCentros() {
 
     $a('count-centros').textContent = `${centros.length} centro(s)`;
     const tbody = $a('tbody-centros');
-    if(!tbody) return;
     tbody.innerHTML = '';
 
     centros.forEach(c => {
@@ -789,9 +789,9 @@ $a('btn-new-centro')?.addEventListener('click', () => {
 });
 
 function openCentroModal(id) {
-    const c = (GEO.getCentros() || []).find(x => x.id === id);
+    const c = GEO.getCentros().find(x => x.id === id);
     if (!c) return;
-    const mun = (GEO.getMuns() || []).find(m => m.id === c.municipio_id);
+    const mun = GEO.getMuns().find(m => m.id === c.municipio_id);
     $a('modal-centro-title').innerHTML = '<i class="bi bi-pencil"></i> Editar centro de salud';
     $a('centro-edit-id').value = c.id;
     $a('centro-nombre').value  = c.nombre;
@@ -818,7 +818,7 @@ $a('btn-save-centro')?.addEventListener('click', () => {
     if (!tipo)   return showLocErr('centro-err', 'Seleccione el tipo de centro.');
     if (!munId)  return showLocErr('centro-err', 'Seleccione el municipio.');
 
-    const centros = GEO.getCentros() || [];
+    const centros = GEO.getCentros();
     const editId  = Number($a('centro-edit-id').value);
 
     if (editId) {
@@ -839,7 +839,7 @@ $a('filter-centro-prov')?.addEventListener('change', function () {
     const sel = $a('filter-centro-mun');
     sel.innerHTML = '<option value="">Todos los municipios</option>';
     if (this.value) {
-        (GEO.getMuns() || []).filter(m => String(m.provincia_id) === this.value).forEach(m => {
+        GEO.getMuns().filter(m => String(m.provincia_id) === this.value).forEach(m => {
             sel.appendChild(new Option(m.nombre, m.id));
         });
     }
@@ -851,7 +851,7 @@ function renderLabs() {
     const search    = ($a('filter-lab')?.value || '').toLowerCase();
     const provFilt  = $a('filter-lab-prov')?.value;
     const nivelFilt = $a('filter-lab-nivel')?.value;
-    let labs = GEO.getLabs() || [];
+    let labs = GEO.getLabs();
 
     if (search)    labs = labs.filter(l => l.nombre.toLowerCase().includes(search));
     if (provFilt)  labs = labs.filter(l => String(l.provincia_id) === provFilt);
@@ -859,7 +859,6 @@ function renderLabs() {
 
     $a('count-laboratorios').textContent = `${labs.length} laboratorio(s)`;
     const tbody = $a('tbody-laboratorios');
-    if(!tbody) return;
     tbody.innerHTML = '';
 
     labs.forEach(l => {
@@ -901,7 +900,7 @@ $a('btn-new-lab')?.addEventListener('click', () => {
 });
 
 function openLabModal(id) {
-    const l = (GEO.getLabs() || []).find(x => x.id === id);
+    const l = GEO.getLabs().find(x => x.id === id);
     if (!l) return;
     $a('modal-lab-title').innerHTML = '<i class="bi bi-pencil"></i> Editar laboratorio';
     $a('lab-edit-id').value = l.id;
@@ -932,7 +931,7 @@ $a('btn-save-lab')?.addEventListener('click', () => {
     if (!provId) return showLocErr('lab-err', 'Seleccione la provincia.');
     if (!munId)  return showLocErr('lab-err', 'Seleccione el municipio.');
 
-    const labs   = GEO.getLabs() || [];
+    const labs   = GEO.getLabs();
     const editId = Number($a('lab-edit-id').value);
 
     if (editId) {
@@ -964,9 +963,9 @@ document.addEventListener('click', e => {
 
     const nombre = _getNombreGeo(tipo, id);
 
-    const muns    = GEO.getMuns()    || [];
-    const centros = GEO.getCentros() || [];
-    const labs    = GEO.getLabs()    || [];
+    const muns    = GEO.getMuns();
+    const centros = GEO.getCentros();
+    const labs    = GEO.getLabs();
     let extra = '';
 
     if (tipo === 'provincia') {
@@ -998,10 +997,10 @@ document.addEventListener('click', e => {
 
 function _getNombreGeo(tipo, id) {
     const maps = {
-        provincia:   () => (GEO.getProvs()    || []).find(x => x.id === id)?.nombre,
-        municipio:   () => (GEO.getMuns()     || []).find(x => x.id === id)?.nombre,
-        centro:      () => (GEO.getCentros()  || []).find(x => x.id === id)?.nombre,
-        laboratorio: () => (GEO.getLabs()     || []).find(x => x.id === id)?.nombre,
+        provincia:   () => GEO.getProvs().find(x => x.id === id)?.nombre,
+        municipio:   () => GEO.getMuns().find(x => x.id === id)?.nombre,
+        centro:      () => GEO.getCentros().find(x => x.id === id)?.nombre,
+        laboratorio: () => GEO.getLabs().find(x => x.id === id)?.nombre,
     };
     return (maps[tipo]?.() || `#${id}`);
 }
@@ -1011,19 +1010,20 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
     const { tipo, id } = _pendingDelete;
 
     if (tipo === 'provincia') {
-        const allMuns    = GEO.getMuns()    || [];
-        const allCentros = GEO.getCentros() || [];
-        const allLabs    = GEO.getLabs()    || [];
+        const allMuns    = GEO.getMuns();
+        const allCentros = GEO.getCentros();
+        const allLabs    = GEO.getLabs();
         const munIds     = allMuns.filter(m => m.provincia_id === id).map(m => m.id);
         const centroIds  = allCentros.filter(c => munIds.includes(c.municipio_id)).map(c => c.id);
         const labIds     = allLabs.filter(l => l.provincia_id === id || munIds.includes(l.municipio_id)).map(l => l.id);
 
-        GEO.saveProvs((GEO.getProvs()   || []).filter(p => p.id !== id));
+        GEO.saveProvs(GEO.getProvs().filter(p => p.id !== id));
         GEO.saveMuns(allMuns.filter(m => !munIds.includes(m.id)));
         GEO.saveCentros(allCentros.filter(c => !munIds.includes(c.municipio_id)));
         GEO.saveLabs(allLabs.filter(l => !labIds.includes(l.id)));
         savePerms(getPerms().filter(p => !labIds.includes(p.laboratorio_id)));
 
+        // Supabase: orden correcto por FK (labs cascade-borra permisos)
         if (typeof sbDeleteRow === 'function') {
             labIds.forEach(lid  => sbDeleteRow('laboratorios',  lid));
             centroIds.forEach(cid => sbDeleteRow('centros_salud', cid));
@@ -1033,12 +1033,12 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
         renderProvs();
 
     } else if (tipo === 'municipio') {
-        const allLabs    = GEO.getLabs()    || [];
-        const allCentros = GEO.getCentros() || [];
+        const allLabs    = GEO.getLabs();
+        const allCentros = GEO.getCentros();
         const labIds     = allLabs.filter(l => l.municipio_id === id).map(l => l.id);
         const centroIds  = allCentros.filter(c => c.municipio_id === id).map(c => c.id);
 
-        GEO.saveMuns((GEO.getMuns()     || []).filter(m => m.id !== id));
+        GEO.saveMuns(GEO.getMuns().filter(m => m.id !== id));
         GEO.saveCentros(allCentros.filter(c => c.municipio_id !== id));
         GEO.saveLabs(allLabs.filter(l => l.municipio_id !== id));
         savePerms(getPerms().filter(p => !labIds.includes(p.laboratorio_id)));
@@ -1051,12 +1051,12 @@ $a('btn-confirm-delete')?.addEventListener('click', () => {
         renderMuns();
 
     } else if (tipo === 'centro') {
-        GEO.saveCentros((GEO.getCentros() || []).filter(c => c.id !== id));
+        GEO.saveCentros(GEO.getCentros().filter(c => c.id !== id));
         if (typeof sbDeleteRow === 'function') sbDeleteRow('centros_salud', id);
         renderCentros();
 
     } else if (tipo === 'laboratorio') {
-        GEO.saveLabs((GEO.getLabs() || []).filter(l => l.id !== id));
+        GEO.saveLabs(GEO.getLabs().filter(l => l.id !== id));
         savePerms(getPerms().filter(p => p.laboratorio_id !== id));
         if (typeof sbDeleteRow === 'function') sbDeleteRow('laboratorios', id);
         renderLabs();
@@ -1099,10 +1099,10 @@ document.addEventListener('click', e => {
     _modalDel().show();
 });
 
+
 function fillProvSelect(sel, selectedId) {
-    if(!sel) return;
     sel.innerHTML = '<option value="">— Seleccione —</option>';
-    (GEO.getProvs() || []).forEach(p => {
+    GEO.getProvs().forEach(p => {
         const opt = new Option(p.nombre, p.id);
         if (p.id === Number(selectedId)) opt.selected = true;
         sel.appendChild(opt);
@@ -1110,9 +1110,8 @@ function fillProvSelect(sel, selectedId) {
 }
 
 function fillMunSelect(sel, provId, selectedId) {
-    if(!sel) return;
     sel.innerHTML = '<option value="">— Seleccione —</option>';
-    (GEO.getMuns() || []).filter(m => m.provincia_id === Number(provId)).forEach(m => {
+    GEO.getMuns().filter(m => m.provincia_id === Number(provId)).forEach(m => {
         const opt = new Option(m.nombre, m.id);
         if (m.id === Number(selectedId)) opt.selected = true;
         sel.appendChild(opt);
@@ -1120,9 +1119,8 @@ function fillMunSelect(sel, provId, selectedId) {
 }
 
 function fillCentroSelect(sel, munId, selectedId) {
-    if(!sel) return;
     sel.innerHTML = '<option value="">— Seleccione —</option>';
-    const centros = (GEO.getCentros() || []).filter(c => c.municipio_id === Number(munId));
+    const centros = GEO.getCentros().filter(c => c.municipio_id === Number(munId));
     centros.forEach(c => {
         const opt = new Option(`${c.nombre}${c.tipo ? ' ('+c.tipo+')' : ''}`, c.id);
         if (c.id === Number(selectedId)) opt.selected = true;
@@ -1136,14 +1134,12 @@ function fillCentroSelect(sel, munId, selectedId) {
 
 function showLocErr(errId, msg) {
     const el = $a(errId);
-    if(el) {
-        el.textContent = msg;
-        el.classList.remove('d-none');
-    }
+    el.textContent = msg;
+    el.classList.remove('d-none');
 }
 
 function seedDemo() {
-    if (typeof window.IS_ONLINE === 'function' && window.IS_ONLINE()) return;
+    if (typeof IS_ONLINE === 'function' && IS_ONLINE()) return;
     if (getUsers().length) return;
     saveUsers([
         { id:'demo_001', ci:'8501025678', nombres:'Ana María', apellidos:'Rodríguez Pérez', rol_profesional_id:1, rol_profesional_nom:'Médico/a', registro_profesional:'RM-12345', provincia_id:1, municipio_id:101, centro_texto:'Hospital Hermanos Ameijeiras', pin_hash:'x', rol_sistema_id:1, activo:true, aprobado:false, creado_en:new Date(Date.now()-172800000).toISOString() },
@@ -1152,10 +1148,6 @@ function seedDemo() {
     ]);
     saveAccesos([{ id:'ac_001', usuario_id:'demo_003', justificacion:'Tesis de maestría en epidemiología de infecciones respiratorias', alcance_solicitado:'Resultados de cultivos respiratorios provincia Santiago de Cuba 2023-2024', estado:'pendiente', creado_en:new Date(Date.now()-18000000).toISOString() }]);
 }
-
-/* ── Catálogos 100% Memoria / Supabase ── */
-const LS_GV = 'sr_grupos_vulnerables';
-const LS_TM = 'sr_tipos_muestra';
 
 const GV_DEFAULTS = [
     'Antiguo caso de TB','Contacto TB','Cubano viviendo en países de alta carga de TB',
@@ -1179,29 +1171,26 @@ const TM_DEFAULTS = [
     'Orina','Pus de lesión','Secreción'
 ];
 
-const CAT_STORE_MAP = {
-    'sr_grupos_vulnerables': 'grupos_vulnerables',
-    'sr_tipos_muestra': 'tipos_muestra',
-    'sr_microorganismos': 'microorganismos'
-};
+const MICRO_DEFAULTS = [
+    { id: 1, nombre: 'Mycobacterium tuberculosis',         sistema: true, activo: true },
+    { id: 2, nombre: 'MNTB (Micobacteria No Tuberculosa)', sistema: true, activo: true },
+];
 
-function _getCat(lsKey) { 
-    const key = CAT_STORE_MAP[lsKey];
-    return window._store?.[key] || []; 
+function _getCat(storeKey) { return window._store[storeKey] || []; }
+
+function _saveCat(storeKey, arr) {
+    window._store[storeKey] = arr;
+    if (typeof sbSyncCatalogo === 'function') {
+        const syncKey = _SYNC_KEYS[storeKey] || storeKey;
+        sbSyncCatalogo(syncKey, arr).catch(e => console.error('_saveCat sync:', e.message));
+    }
 }
 
-function _saveCat(lsKey, arr) {
-    const key = CAT_STORE_MAP[lsKey];
-    window._store[key] = arr;
-    if (typeof sbSyncCatalogo === 'function')
-        sbSyncCatalogo(lsKey, arr).catch(e => console.error('_saveCat sync:', e.message));
-}
-
-function _initCatIfNeeded(lsKey, defaults) {
-    const arr = _getCat(lsKey);
-    if (arr && arr.length > 0) return;
-    const initialArr = defaults.map((nombre, i) => ({ id: i + 1, nombre, activo: true }));
-    _saveCat(lsKey, initialArr);
+function _initCatIfNeeded(storeKey, defaults) {
+    if (_getCat(storeKey).length > 0) return;
+    const isMicro = storeKey === 'microorganismos';
+    const arr = isMicro ? defaults : defaults.map((nombre, i) => ({ id: i + 1, nombre, activo: true }));
+    _saveCat(storeKey, arr);
 }
 
 function _nextCatId(arr) {
@@ -1209,22 +1198,22 @@ function _nextCatId(arr) {
 }
 
 function renderCatGV() {
-    _initCatIfNeeded(LS_GV, GV_DEFAULTS);
-    const items = _getCat(LS_GV);
+    _initCatIfNeeded('grupos_vulnerables', GV_DEFAULTS);
+    const items = _getCat('grupos_vulnerables');
     const el = $a('gv-admin-list');
     if (!el) return;
     el.innerHTML = items.map(item => _catItemHtml(item, 'gv')).join('');
-    _bindCatEvents('gv', LS_GV, renderCatGV);
+    _bindCatEvents('gv', 'grupos_vulnerables', renderCatGV);
     $a('btn-nuevo-gv').onclick = () => _openCatModal('gv', null);
 }
 
 function renderCatTM() {
-    _initCatIfNeeded(LS_TM, TM_DEFAULTS);
-    const items = _getCat(LS_TM);
+    _initCatIfNeeded('tipos_muestra', TM_DEFAULTS);
+    const items = _getCat('tipos_muestra');
     const el = $a('tm-admin-list');
     if (!el) return;
     el.innerHTML = items.map(item => _catItemHtml(item, 'tm')).join('');
-    _bindCatEvents('tm', LS_TM, renderCatTM);
+    _bindCatEvents('tm', 'tipos_muestra', renderCatTM);
     $a('btn-nuevo-tm').onclick = () => _openCatModal('tm', null);
 }
 
@@ -1246,10 +1235,10 @@ function _catItemHtml(item, type) {
     </div>`;
 }
 
-function _bindCatEvents(type, lsKey, renderFn) {
+function _bindCatEvents(type, storeKey, renderFn) {
     document.querySelectorAll(`.cat-edit-btn[data-type="${type}"]`).forEach(btn => {
         btn.onclick = () => {
-            const arr = _getCat(lsKey);
+            const arr = _getCat(storeKey);
             const item = arr.find(x => x.id === parseInt(btn.dataset.id));
             if (item) _openCatModal(type, item);
         };
@@ -1257,7 +1246,7 @@ function _bindCatEvents(type, lsKey, renderFn) {
     document.querySelectorAll(`.cat-del-btn[data-type="${type}"]`).forEach(btn => {
         btn.onclick = () => {
             const id = parseInt(btn.dataset.id);
-            const arr = _getCat(lsKey);
+            const arr = _getCat(storeKey);
             const item = arr.find(x => x.id === id);
             if (!item) return;
             const modalEl = document.getElementById('modal-delete');
@@ -1265,8 +1254,8 @@ function _bindCatEvents(type, lsKey, renderFn) {
             $a('delete-confirm-msg').textContent = `¿Eliminar "${item.nombre}"? Esta acción no se puede deshacer.`;
             $a('btn-confirm-delete').onclick = () => {
                 const updated = arr.filter(x => x.id !== id);
-                _saveCat(lsKey, updated);
-                const sbTabla = _SB_CAT_TABLA[lsKey];
+                _saveCat(storeKey, updated);
+                const sbTabla = _SB_CAT_TABLA[storeKey];
                 if (sbTabla && typeof sbDeleteRow === 'function') sbDeleteRow(sbTabla, id);
                 bsModal.hide();
                 renderFn();
@@ -1278,7 +1267,8 @@ function _bindCatEvents(type, lsKey, renderFn) {
 }
 
 function _openCatModal(type, item) {
-    $a('modal-cat-title').innerHTML = `<i class="bi bi-tag"></i> ${item ? 'Editar' : 'Nuevo'} — ${type === 'gv' ? 'Grupo de vulnerabilidad' : 'Tipo de muestra'}`;
+    const isGV = type === 'gv';
+    $a('modal-cat-title').innerHTML = `<i class="bi bi-tag"></i> ${item ? 'Editar' : 'Nuevo'} — ${isGV ? 'Grupo de vulnerabilidad' : 'Tipo de muestra'}`;
     $a('cat-edit-id').value   = item ? item.id : '';
     $a('cat-edit-type').value = type;
     $a('cat-nombre').value    = item ? item.nombre : '';
@@ -1290,10 +1280,10 @@ function _openCatModal(type, item) {
 }
 
 $a('btn-save-cat')?.addEventListener('click', () => {
-    const type = $a('cat-edit-type').value;
-    if (type === 'micro') return; 
+    const type   = $a('cat-edit-type').value;
+    if (type === 'micro') return;
 
-    const lsKey    = type === 'gv' ? LS_GV : LS_TM;
+    const storeKey = type === 'gv' ? 'grupos_vulnerables' : 'tipos_muestra';
     const renderFn = type === 'gv' ? renderCatGV : renderCatTM;
     const nombre   = $a('cat-nombre').value.trim();
     const activo   = document.querySelector('input[name="cat-activo"]:checked')?.value === 'true';
@@ -1304,7 +1294,7 @@ $a('btn-save-cat')?.addEventListener('click', () => {
         errEl.classList.remove('d-none'); return;
     }
 
-    const arr    = _getCat(lsKey);
+    const arr    = _getCat(storeKey);
     const editId = $a('cat-edit-id').value ? parseInt($a('cat-edit-id').value) : null;
 
     const existe = arr.some(x => x.nombre.toLowerCase() === nombre.toLowerCase() && x.id !== editId);
@@ -1320,32 +1310,15 @@ $a('btn-save-cat')?.addEventListener('click', () => {
         arr.push({ id: _nextCatId(arr), nombre, activo });
     }
 
-    _saveCat(lsKey, arr);
+    _saveCat(storeKey, arr);
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-cat-item')).hide();
     renderFn();
     toast(editId ? 'Ítem actualizado.' : 'Ítem creado.', 'success');
 });
 
-const LS_MICRO_ADMIN = 'sr_microorganismos';
-const MICRO_DEFAULTS = [
-    { id: 1, nombre: 'Mycobacterium tuberculosis',         sistema: true, activo: true },
-    { id: 2, nombre: 'MNTB (Micobacteria No Tuberculosa)', sistema: true, activo: true },
-];
-
-function _getMicroAdmin() {
-    const stored = window._store?.microorganismos;
-    if (!stored || !stored.length) { _saveMicro(MICRO_DEFAULTS); return MICRO_DEFAULTS; }
-    return stored;
-}
-
-function _saveMicro(arr) {
-    window._store.microorganismos = arr;
-    if (typeof sbSyncCatalogo === 'function')
-        sbSyncCatalogo(LS_MICRO_ADMIN, arr).catch(e => console.error('_saveMicro sync:', e.message));
-}
-
 function renderCatMicro() {
-    const items = _getMicroAdmin();
+    _initCatIfNeeded('microorganismos', MICRO_DEFAULTS);
+    const items = _getCat('microorganismos');
     const el = $a('micro-admin-list');
     if (!el) return;
     el.innerHTML = items.map(item => {
@@ -1373,20 +1346,20 @@ function renderCatMicro() {
 
     document.querySelectorAll('.micro-edit-btn').forEach(btn => {
         btn.onclick = () => {
-            const item = _getMicroAdmin().find(x => x.id === parseInt(btn.dataset.id));
+            const item = _getCat('microorganismos').find(x => x.id === parseInt(btn.dataset.id));
             if (item) _openMicroModal(item);
         };
     });
     document.querySelectorAll('.micro-del-btn').forEach(btn => {
         btn.onclick = () => {
             const id = parseInt(btn.dataset.id);
-            const item = _getMicroAdmin().find(x => x.id === id);
+            const item = _getCat('microorganismos').find(x => x.id === id);
             if (!item || item.sistema) return;
             const modalEl = document.getElementById('modal-delete');
             const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
             $a('delete-confirm-msg').textContent = `¿Eliminar "${item.nombre}"?`;
             $a('btn-confirm-delete').onclick = () => {
-                _saveMicro(_getMicroAdmin().filter(x => x.id !== id));
+                _saveCat('microorganismos', _getCat('microorganismos').filter(x => x.id !== id));
                 if (typeof sbDeleteRow === 'function') sbDeleteRow('microorganismos', id);
                 bsModal.hide(); renderCatMicro(); toast('Microorganismo eliminado.', 'info');
             };
@@ -1414,7 +1387,7 @@ $a('btn-save-cat')?.addEventListener('click', () => {
 
     if (!nombre) { errEl.textContent = 'El nombre es obligatorio.'; errEl.classList.remove('d-none'); return; }
 
-    const arr = _getMicroAdmin();
+    const arr = _getCat('microorganismos');
     const existe = arr.some(x => x.nombre.toLowerCase() === nombre.toLowerCase() && x.id !== editId);
     if (existe) { errEl.textContent = 'Ya existe un microorganismo con ese nombre.'; errEl.classList.remove('d-none'); return; }
 
@@ -1424,8 +1397,8 @@ $a('btn-save-cat')?.addEventListener('click', () => {
     } else {
         arr.push({ id: Math.max(...arr.map(x => x.id)) + 1, nombre, sistema: false, activo });
     }
-    _saveMicro(arr);
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-cat-item')).hide();
+    _saveCat('microorganismos', arr);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-cat-item')).show();
     renderCatMicro();
     toast(editId ? 'Microorganismo actualizado.' : 'Microorganismo agregado.', 'success');
 });
