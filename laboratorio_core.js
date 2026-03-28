@@ -166,4 +166,6 @@ function _recalcIndEstado(indId) {
         : (hasAccepted && allFinal) ? 'completada'
         : 'recibida';
     localStorage.setItem('sr_indicaciones', JSON.stringify(inds));
+    if (typeof sbUpdateRow === 'function')
+        sbUpdateRow('indicaciones_examen', indId, { estado: inds[idx].estado }).catch(console.error);
 }
