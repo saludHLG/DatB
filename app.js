@@ -10,7 +10,7 @@
    ============================================================ */
 function loadDashboard(user) {
 
-    if (typeof sbInitGeo === 'function') sbInitGeo().catch(() => {});
+    if (typeof sbInitAll === 'function') sbInitAll().catch(() => {});
  
     sessionStorage.setItem('sr_active_user', user.id);
 
