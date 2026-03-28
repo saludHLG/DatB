@@ -1,10 +1,23 @@
 const $a = id => document.getElementById(id);
 const getUsers  = () => JSON.parse(localStorage.getItem('sr_usuarios')     || '[]');
-const saveUsers = u  => localStorage.setItem('sr_usuarios', JSON.stringify(u));
 const getPerms  = () => JSON.parse(localStorage.getItem('sr_permisos_lab') || '[]');
-const savePerms = p  => localStorage.setItem('sr_permisos_lab', JSON.stringify(p));
 const getAccesos  = () => JSON.parse(localStorage.getItem('sr_accesos_temp') || '[]');
-const saveAccesos = a  => localStorage.setItem('sr_accesos_temp', JSON.stringify(a));
+
+const saveUsers = u => {
+    localStorage.setItem('sr_usuarios', JSON.stringify(u));
+    if (typeof sbUpsertRows === 'function')
+        sbUpsertRows('usuarios', u).catch(console.error);
+};
+const savePerms = p => {
+    localStorage.setItem('sr_permisos_lab', JSON.stringify(p));
+    if (typeof sbUpsertRows === 'function')
+        sbUpsertRows('permisos_lab', p).catch(console.error);
+};
+const saveAccesos = a => {
+    localStorage.setItem('sr_accesos_temp', JSON.stringify(a));
+    if (typeof sbUpsertRows === 'function')
+        sbUpsertRows('accesos_temporales', a).catch(console.error);
+};
 
 const ROL_SIS_NAMES = { 1:'Usuario común', 2:'Mod. institucional', 3:'Mod. municipal', 4:'Mod. provincial', 5:'Mod. nacional', 6:'Administrador' };
 const ROL_SIS_HINTS = {
