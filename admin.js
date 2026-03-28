@@ -1411,19 +1411,12 @@ $a('btn-save-cat')?.addEventListener('click', () => {
 });
 
 /* ── Inicialización ─────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-    const init = () => { seedDemo(); checkAccess(); renderAll(); };
-
-    if (typeof IS_ONLINE === 'function' && IS_ONLINE()) {
-        // Cargar desde Supabase primero; initGeoData solo rellena lo que falte
-        Promise.all([
-            typeof sbInitGeo  === 'function' ? sbInitGeo()  : Promise.resolve(),
-            typeof sbGetUsers === 'function' ? sbGetUsers() : Promise.resolve(),
-        ])
-        .catch(e => console.error('Admin init Supabase:', e))
-        .finally(() => { initGeoData(); init(); });
-    } else {
-        initGeoData();
-        init();
+document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof sbInitAll === 'function') {
+        try { await sbInitAll(); } catch (e) { console.error('Admin sbInitAll:', e); }
     }
+    initGeoData();
+    seedDemo();
+    checkAccess();
+    renderAll();
 });
