@@ -50,7 +50,7 @@
 
         // Modo online (Supabase)
         const { data, error } = await sb.auth.signInWithPassword({
-            email   : `${ci.toLowerCase()}@datb.local`,
+            email   : `${ci.toLowerCase()}@datb.app`,
             password: _buildPassword(pin),
         });
         if (error) return { user: null, error: error.message };
@@ -82,7 +82,7 @@
 
         // 1 — Crear usuario en Supabase Auth
         const { data: authData, error: authErr } = await sb.auth.signUp({
-            email   : `${perfil.ci.toLowerCase()}@datb.local`,
+            email   : `${perfil.ci.toLowerCase()}@datb.app`,
             password: _buildPassword(pin),
         });
         console.log('Auth signUp error:', authErr);
