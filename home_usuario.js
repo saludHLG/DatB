@@ -4,7 +4,8 @@
    por especie/género y resistencia antimicrobiana.
 
    Requiere: utils.js, data.js, home_lab.js (_hl_charts, _hl_ensureChartJS,
-             _hl_destroyCharts), indicacion.js (_getGVCat, _getTMCat)
+             _hl_destroyCharts), indicacion.js (_getGVCat, _getTMCat),
+             laboratorio_core.js (_getResBaci, _getResCultivo, etc.)
    ========================================================= */
 
 /* ── Catálogo local de exámenes ─────────────────────────── */
@@ -236,16 +237,19 @@ function _hu_render(user, el, dateFrom, dateTo) {
    CÓMPUTO DE ESTADÍSTICAS
    ══════════════════════════════════════════════════════════ */
 function _hu_computeStats(user, dateFrom, dateTo) {
-    const allInds   = JSON.parse(localStorage.getItem('_store.indicaciones')         || '[]');
-    const recs      = JSON.parse(localStorage.getItem('_store.recepciones')           || '[]');
-    const baci      = JSON.parse(localStorage.getItem('_store.res_baci')              || '[]');
-    const cult      = JSON.parse(localStorage.getItem('_store.res_cultivo')           || '[]');
-    const xpertU    = JSON.parse(localStorage.getItem('_store.res_xpert_ultra')       || '[]');
-    const xpertXDR  = JSON.parse(localStorage.getItem('_store.res_xpert_xdr')         || '[]');
-    const pacs      = JSON.parse(localStorage.getItem('_store.pacientes')             || '[]');
-    const gvCat     = typeof _getGVCat  === 'function' ? _getGVCat()  : [];
-    const tmCat     = typeof _getTMCat  === 'function' ? _getTMCat()  : [];
-    const microCat  = typeof _getMicroCat === 'function' ? _getMicroCat() : [];
+    /* ── CORREGIDO: todas las fuentes desde window._store ──
+       Se usan los mismos accesores que laboratorio_core.js
+       para garantizar coherencia con la capa Supabase.       */
+    const allInds  = window._store.indicaciones    || [];
+    const recs     = _getRecepciones();           // laboratorio_core.js
+    const baci     = _getResBaci();
+    const cult     = _getResCultivo();
+    const xpertU   = _getResXpertUltra();
+    const xpertXDR = _getResXpertXDR();
+    const pacs     = window._store.pacientes       || [];
+    const gvCat    = typeof _getGVCat   === 'function' ? _getGVCat()   : [];
+    const tmCat    = typeof _getTMCat   === 'function' ? _getTMCat()   : [];
+    const microCat = typeof _getMicroCat === 'function' ? _getMicroCat() : [];
 
     /* ── Filtrar indicaciones propias y por fecha ── */
     const inds = allInds.filter(ind => {
@@ -263,7 +267,6 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         recMap[r.indicacion_id].push(r);
     });
 
-    /* Obtiene recepción para una indicación y examen específico */
     const getRec = (indId, eid) => {
         const indRecs = recMap[indId] || [];
         return indRecs.find(r => Number(r.examen_id) === eid)
@@ -279,7 +282,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
             const eid = Number(eidRaw);
             const rec = getRec(ind.id, eid);
             let est;
-            if (!rec)                        est = 'pendiente';
+            if (!rec)                           est = 'pendiente';
             else if (rec.estado === 'rechazada') est = 'rechazada';
             else est = _hu_hasResult(rec.id, eid, baci, cult, xpertU, xpertXDR) ? 'completada' : 'recibida';
             counts[est]++;
@@ -340,13 +343,10 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         if (hasNeg) byTMResult[tmId].neg++;
     });
 
-    /* ── Casos positivos: taxonomía del microorganismo ────────────────── */
+    /* ── Casos positivos: taxonomía del microorganismo ── */
     const microorganisms = { total: 0, data: {} };
-
     inds.forEach(ind => {
         let species = null;
-
-        /* 1 — Xpert MTB/RIF (Ultra) */
         if (!species) {
             const rec = getRec(ind.id, 3);
             if (rec && rec.estado !== 'rechazada') {
@@ -354,7 +354,6 @@ function _hu_computeStats(user, dateFrom, dateTo) {
                 if (xu && xu.resultado === 'MTB DETECTADO') species = 'M. tuberculosis';
             }
         }
-        /* 2 — Xpert MTB/XDR (implica M. tuberculosis) */
         if (!species) {
             const rec = getRec(ind.id, 5);
             if (rec && rec.estado !== 'rechazada') {
@@ -362,7 +361,6 @@ function _hu_computeStats(user, dateFrom, dateTo) {
                 if (xdr && xdr.resultado === 'MTB DETECTADO') species = 'M. tuberculosis';
             }
         }
-        /* 3 — Cultivo con crecimiento */
         if (!species) {
             const rec = getRec(ind.id, 2);
             if (rec && rec.estado !== 'rechazada') {
@@ -377,7 +375,6 @@ function _hu_computeStats(user, dateFrom, dateTo) {
                 }
             }
         }
-        /* 4 — Baciloscopia positiva sin confirmación de especie */
         if (!species) {
             const rec = getRec(ind.id, 1);
             if (rec && rec.estado !== 'rechazada') {
@@ -385,91 +382,68 @@ function _hu_computeStats(user, dateFrom, dateTo) {
                 if (br && br.codificacion > 0) species = 'BAAR+ (Indeterminado)';
             }
         }
-
         if (!species) return;
         microorganisms.data[species] = (microorganisms.data[species] || 0) + 1;
         microorganisms.total++;
     });
 
-    /* ── Clasificación TB Resistente ───────────────────────── */
+    /* ── Clasificación TB Resistente ── */
     const tbClass = { 'Sensible': 0, 'Monoresistente': 0, 'Polirresistente': 0, 'TB-MDR': 0, 'TB pre-XDR': 0, 'TB-XDR': 0 };
-    
     inds.forEach(ind => {
         const uRec = getRec(ind.id, 3);
         const xRec = getRec(ind.id, 5);
-
         const uRes = uRec ? xpertU.find(r => r.recepcion_id === uRec.id) : null;
         const xRes = xRec ? xpertXDR.find(r => r.recepcion_id === xRec.id) : null;
 
         if ((uRes && uRes.resultado === 'MTB DETECTADO') || (xRes && xRes.resultado === 'MTB DETECTADO')) {
             let rR = false, rH = false, rFq = false, rSli = false;
-            let tested = false;
-            let resistCount = 0;
-
+            let tested = false, resistCount = 0;
             const check = (val) => {
                 if (!val || val === 'NO PROCEDE' || val === 'INDETERMINADO') return false;
                 tested = true;
-                if (val.includes('DETECTADO') && !val.includes('NO DETECTADO')) {
-                    resistCount++;
-                    return true;
-                }
+                if (val.includes('DETECTADO') && !val.includes('NO DETECTADO')) { resistCount++; return true; }
                 return false;
             };
-
             if (uRes) rR = check(uRes.resistencia_rifampicina);
             if (xRes) {
-                rH = check(xRes.resistencia_isoniazida);
-                rFq = check(xRes.resistencia_fluorquinolona);
+                rH   = check(xRes.resistencia_isoniazida);
+                rFq  = check(xRes.resistencia_fluorquinolona);
                 const amk = check(xRes.resistencia_amikacina);
                 const kan = check(xRes.resistencia_kanamicina);
                 const cap = check(xRes.resistencia_capreomicina);
                 rSli = amk || kan || cap;
             }
-
             if (!tested) return;
-
-            const isMDR = rR && rH;
-            const isPreXDR = isMDR && (rFq || rSli);
-            const isXDR = isMDR && rFq && rSli;
-
-            if (isXDR) {
-                tbClass['TB-XDR']++;
-            } else if (isPreXDR) {
-                tbClass['TB pre-XDR']++;
-            } else if (isMDR) {
-                tbClass['TB-MDR']++;
-            } else if (resistCount >= 2) {
-                tbClass['Polirresistente']++;
-            } else if (resistCount === 1) {
-                tbClass['Monoresistente']++;
-            } else {
-                tbClass['Sensible']++;
-            }
+            const isMDR = rR && rH, isPreXDR = isMDR && (rFq || rSli), isXDR = isMDR && rFq && rSli;
+            if      (isXDR)            tbClass['TB-XDR']++;
+            else if (isPreXDR)         tbClass['TB pre-XDR']++;
+            else if (isMDR)            tbClass['TB-MDR']++;
+            else if (resistCount >= 2) tbClass['Polirresistente']++;
+            else if (resistCount === 1) tbClass['Monoresistente']++;
+            else                        tbClass['Sensible']++;
         }
     });
 
-    /* ── Resistencia antimicrobiana (Marcadores) ───────────────────────── */
+    /* ── Resistencia antimicrobiana (Marcadores) ── */
     const amr = {
         total: 0,
         markers: {
-            'Rifampicina':   { detected: 0, not_detected: 0, indeterminate: 0, source: 'Ultra'  },
-            'Isoniazida':    { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'    },
-            'Fluorquinolona':{ detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'    },
-            'Amikacina':     { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'    },
-            'Kanamicina':    { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'    },
-            'Capreomicina':  { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'    },
-            'Etionamida':    { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'    },
+            'Rifampicina':    { detected:0, not_detected:0, indeterminate:0, source:'Ultra' },
+            'Isoniazida':     { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
+            'Fluorquinolona': { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
+            'Amikacina':      { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
+            'Kanamicina':     { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
+            'Capreomicina':   { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
+            'Etionamida':     { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
         }
     };
-
     const classifyAMR = (marker, val) => {
         if (!val || val === 'NO PROCEDE') return;
         const m = amr.markers[marker];
-        if (val.includes('NO DETECTADO')) { m.not_detected++; return; }
+        if (val.includes('NO DETECTADO')) { m.not_detected++;  return; }
         if (val.includes('INDETERMINADO')){ m.indeterminate++; return; }
         if (val.includes('DETECTADO'))    { m.detected++;      return; }
     };
-
     xpertUF.forEach(r => { if (r.resultado === 'MTB DETECTADO') classifyAMR('Rifampicina', r.resistencia_rifampicina); });
     xpertXDRF.forEach(r => {
         if (r.resultado !== 'MTB DETECTADO') return;
@@ -483,14 +457,13 @@ function _hu_computeStats(user, dateFrom, dateTo) {
     amr.total = Object.values(amr.markers).reduce((s, v) => s + v.detected + v.not_detected + v.indeterminate, 0);
 
     /* ── Pirámide poblacional (Pos/Neg) ── */
-    const pacIds   = new Set(inds.map(i => i.paciente_id));
+    const pacIds    = new Set(inds.map(i => i.paciente_id));
     const ageGroups = ['< 14', '15–29', '30–44', '45–59', '≥ 60'];
-    const pyramid   = { total: 0, M_pos: [0,0,0,0,0], M_neg: [0,0,0,0,0], F_pos: [0,0,0,0,0], F_neg: [0,0,0,0,0], ageGroups };
-    
+    const pyramid   = { total:0, M_pos:[0,0,0,0,0], M_neg:[0,0,0,0,0], F_pos:[0,0,0,0,0], F_neg:[0,0,0,0,0], ageGroups };
+
     pacIds.forEach(pid => {
         const p = pacs.find(x => x.id === pid);
         if (!p || !p.fecha_nacimiento) return;
-
         let pPos = false, pNeg = false;
         inds.filter(i => i.paciente_id === pid).forEach(ind => {
             (ind.examenes_ids || []).forEach(eidRaw => {
@@ -501,18 +474,12 @@ function _hu_computeStats(user, dateFrom, dateTo) {
                 if (_hu_isNegative(rec.id, eid, baci, cult, xpertU, xpertXDR)) pNeg = true;
             });
         });
-
-        if (!pPos && !pNeg) return; // Solo incluir pacientes con resultado
-        let cat = pPos ? 'pos' : 'neg'; // Positivo tiene prioridad
-
-        const e = _hu_edad(p.fecha_nacimiento);
-        const g = e < 14 ? 0 : e <= 29 ? 1 : e <= 44 ? 2 : e <= 59 ? 3 : 4;
-        
-        if (p.sexo === 'M') {
-            if (cat === 'pos') pyramid.M_pos[g]++; else pyramid.M_neg[g]++;
-        } else if (p.sexo === 'F') {
-            if (cat === 'pos') pyramid.F_pos[g]++; else pyramid.F_neg[g]++;
-        }
+        if (!pPos && !pNeg) return;
+        const cat = pPos ? 'pos' : 'neg';
+        const e   = _hu_edad(p.fecha_nacimiento);
+        const g   = e < 14 ? 0 : e <= 29 ? 1 : e <= 44 ? 2 : e <= 59 ? 3 : 4;
+        if      (p.sexo === 'M') { if (cat === 'pos') pyramid.M_pos[g]++; else pyramid.M_neg[g]++; }
+        else if (p.sexo === 'F') { if (cat === 'pos') pyramid.F_pos[g]++; else pyramid.F_neg[g]++; }
         pyramid.total++;
     });
 
@@ -593,10 +560,9 @@ function _hu_empty(msg) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   GRÁFICOS (Chart.js — almacenados en _hl_charts para gestión unificada)
+   GRÁFICOS (Chart.js — almacenados en _hl_charts)
    ══════════════════════════════════════════════════════════ */
 
-/* Doughnut — estados */
 function _hu_chartEstados(d) {
     const c = document.getElementById('hu-c-estados'); if (!c) return;
     _hl_charts['hu-estados'] = new Chart(c, {
@@ -604,150 +570,110 @@ function _hu_chartEstados(d) {
         data: {
             labels: ['Pendientes', 'Recibidas', 'Rechazadas', 'Completadas'],
             datasets: [{ data: [d.counts.pendiente, d.counts.recibida, d.counts.rechazada, d.counts.completada],
-                backgroundColor: ['#f0a500','#1a56db','#e0435a','#00b87a'], borderWidth: 2, borderColor: '#fff' }]
+                backgroundColor: ['#f0a500','#1a56db','#e0435a','#00b87a'], borderWidth:2, borderColor:'#fff' }]
         },
-        options: { responsive: true,
-            plugins: { legend: { position: 'bottom', labels: { font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } } }
+        options: { responsive:true,
+            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } } }
     });
 }
 
-/* Bar apilada horizontal — por tipo de examen */
 function _hu_chartExamenes(d) {
     const c = document.getElementById('hu-c-examenes'); if (!c) return;
     const examIds = Object.keys(d.byExamen).map(Number).filter(id => Object.values(d.byExamen[id]).some(v => v > 0));
     const labels  = examIds.map(id => _HU_EXAMENES.find(e => e.id === id)?.nombre || `Examen ${id}`);
-    const mk = (label, key, bg) => ({ label, backgroundColor: bg, borderRadius: 3, maxBarThickness: 32, // <--- Límite
+    const mk = (label, key, bg) => ({ label, backgroundColor:bg, borderRadius:3, maxBarThickness:32,
         data: examIds.map(id => d.byExamen[id][key] || 0) });
-    
     _hl_charts['hu-examenes'] = new Chart(c, {
         type: 'bar',
         data: { labels, datasets: [mk('Pendientes','pendiente','#f0a500'), mk('Recibidas','recibida','#1a56db'),
             mk('Rechazadas','rechazada','#e0435a'), mk('Completadas','completada','#00b87a')] },
-        options: { 
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false, //
+        options: {
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
             scales: {
-                x: { stacked: true, ticks:{precision:0, color:'#64748b'}, grid:{color:'rgba(0,0,0,.05)'} },
-                y: { stacked: true, grid:{display:false}, ticks:{font:{size:10}, color:'#334155'} }
+                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
+                y:{ stacked:true, grid:{ display:false }, ticks:{ font:{size:10}, color:'#334155' } }
             },
-            plugins: { legend: { position:'bottom', labels:{font:{size:11}, padding:6, boxWidth:12, color:'#334155'} } }
+            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:6, boxWidth:12, color:'#334155' } } }
         }
     });
 }
 
-/* Bar horizontal AGRUPADA (stacked) — tipos de muestra × positivos/negativos */
 function _hu_chartTM(d) {
     const c = document.getElementById('hu-c-tm'); if (!c) return;
     const entries = Object.entries(d.byTMResult)
-        .map(([id, v]) => ({ label: d.tmCat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`, pos: v.pos, neg: v.neg }))
+        .map(([id, v]) => ({ label: d.tmCat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`, pos:v.pos, neg:v.neg }))
         .filter(e => e.pos + e.neg > 0)
         .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg))
         .slice(0, 12);
     _hl_charts['hu-tm'] = new Chart(c, {
         type: 'bar',
         data: { labels: entries.map(e => e.label), datasets: [
-            { label:'Positivos', data: entries.map(e => e.pos), backgroundColor:'rgba(224,67,90,.85)',  borderRadius:3 },
-            { label:'Negativos', data: entries.map(e => e.neg), backgroundColor:'rgba(0,184,122,.85)',  borderRadius:3 }
+            { label:'Positivos', data:entries.map(e=>e.pos), backgroundColor:'rgba(224,67,90,.85)', borderRadius:3 },
+            { label:'Negativos', data:entries.map(e=>e.neg), backgroundColor:'rgba(0,184,122,.85)', borderRadius:3 }
         ]},
-        options: { 
-            indexAxis:'y', 
-            responsive:true,
+        options: {
+            indexAxis:'y', responsive:true,
             scales: {
-                x: { stacked:true, ticks:{precision:0,color:'#64748b'}, grid:{color:'rgba(0,0,0,.05)'} },
-                y: { stacked:true, ticks:{font:{size:10},color:'#334155'}, grid:{display:false} }
+                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
+                y:{ stacked:true, ticks:{ font:{size:10}, color:'#334155' }, grid:{ display:false } }
             },
-            plugins: { legend:{position:'bottom', labels:{font:{size:11},padding:8,boxWidth:12,color:'#334155'}} }
+            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } }
         }
     });
 }
 
-/* Bar horizontal — casos positivos por género y especie del microorganismo */
 function _hu_chartSpecies(d) {
     const c = document.getElementById('hu-c-species'); if (!c) return;
     const entries = Object.entries(d.microorganisms.data).sort((a,b)=>b[1]-a[1]);
     _hl_charts['hu-species'] = new Chart(c, {
         type: 'bar',
         data: {
-            labels: entries.map(e => e[0].length > 38 ? e[0].slice(0, 35) + '…' : e[0]),
-            datasets: [
-                { label:'Casos aislados', data: entries.map(e => e[1]), backgroundColor:'rgba(26,86,219,.75)',  borderRadius:3 }
-            ]
+            labels: entries.map(e => e[0].length > 38 ? e[0].slice(0,35)+'…' : e[0]),
+            datasets: [{ label:'Casos aislados', data:entries.map(e=>e[1]), backgroundColor:'rgba(26,86,219,.75)', borderRadius:3 }]
         },
         options: { indexAxis:'y', responsive:true,
             scales: {
-                x: { ticks:{precision:0,color:'#64748b'}, grid:{color:'rgba(0,0,0,.05)'} },
-                y: { ticks:{font:{size:10,style:'italic'},color:'#334155'}, grid:{display:false} }
+                x:{ ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
+                y:{ ticks:{ font:{ size:10, style:'italic' }, color:'#334155' }, grid:{ display:false } }
             },
-            plugins: { legend:{display:false} }
+            plugins:{ legend:{ display:false } }
         }
     });
 }
 
-/* Bar horizontal apilada — resistencia antimicrobiana */
 function _hu_chartAMR(d) {
     const c = document.getElementById('hu-c-amr'); if (!c) return;
     const markers = Object.entries(d.amr.markers)
         .filter(([, v]) => v.detected + v.not_detected + v.indeterminate > 0);
     const labels = markers.map(([k, v]) => `${k}${v.source === 'Ultra' ? ' ★' : ''}`);
- 
-    /* Altura dinámica: 52 px por marcador, mínimo 220 px.
-       Garantiza que las etiquetas del eje Y sean visibles en
-       cualquier ancho de pantalla, incluido teléfono vertical. */
-    /* Altura dinámica: 52 px por marcador, mínimo 220 px. ... */
-	const h = Math.max(220, markers.length * 52); // <-- ¡Corregido de 5.2 a 52!
-	const wrapper = document.getElementById('hu-amr-wrapper');
-	if (wrapper) {
-    wrapper.style.height = h + 'px';
-}
-// Ya no modificamos 'c.style' directamente
- 
+
+    const h = Math.max(220, markers.length * 52);
+    const wrapper = document.getElementById('hu-amr-wrapper');
+    if (wrapper) wrapper.style.height = h + 'px';
+
     _hl_charts['hu-amr'] = new Chart(c, {
         type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                { label: 'Resistencia detectada', data: markers.map(([, v]) => v.detected),      backgroundColor: 'rgba(224,67,90,.85)', borderRadius: 3 },
-                { label: 'Indeterminado',          data: markers.map(([, v]) => v.indeterminate), backgroundColor: 'rgba(240,165,0,.80)', borderRadius: 3 },
-                { label: 'No detectada',           data: markers.map(([, v]) => v.not_detected),  backgroundColor: 'rgba(0,184,122,.80)', borderRadius: 3 },
-            ]
-        },
+        data: { labels, datasets: [
+            { label:'Resistencia detectada', data:markers.map(([,v])=>v.detected),      backgroundColor:'rgba(224,67,90,.85)', borderRadius:3 },
+            { label:'Indeterminado',          data:markers.map(([,v])=>v.indeterminate), backgroundColor:'rgba(240,165,0,.80)', borderRadius:3 },
+            { label:'No detectada',           data:markers.map(([,v])=>v.not_detected),  backgroundColor:'rgba(0,184,122,.80)', borderRadius:3 },
+        ]},
         options: {
-            indexAxis          : 'y',
-            responsive         : true,
-            maintainAspectRatio: false,   // permite controlar la altura manualmente
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
             scales: {
-                x: {
-                    stacked: true,
-                    ticks  : { precision: 0, color: '#64748b' },
-                    grid   : { color: 'rgba(0,0,0,.05)' },
-                },
-                y: {
-                    stacked: true,
-                    ticks  : { font: { size: 11 }, color: '#334155' },
-                    grid   : { display: false },
-                    /* Reservar anchura mínima para las etiquetas de fármaco */
-                    afterFit(scale) {
-                        scale.width = Math.max(scale.width, 128);
-                    },
-                },
+                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
+                y:{ stacked:true, ticks:{ font:{size:11}, color:'#334155' }, grid:{ display:false },
+                    afterFit(scale) { scale.width = Math.max(scale.width, 128); } }
             },
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels  : { font: { size: 11 }, padding: 8, boxWidth: 12, color: '#334155' },
-                },
-                tooltip: {
-                    callbacks: {
-                        title: ctx => {
-                            const lbl = ctx[0].label.replace(' ★', '');
-                            const src = d.amr.markers[lbl]?.source;
-                            return `${lbl}${src ? ' (' + src + ')' : ''}`;
-                        },
-                    },
-                },
-            },
-        },
+                legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } },
+                tooltip:{ callbacks:{ title: ctx => {
+                    const lbl = ctx[0].label.replace(' ★','');
+                    const src = d.amr.markers[lbl]?.source;
+                    return `${lbl}${src ? ' (' + src + ')' : ''}`;
+                }}}
+            }
+        }
     });
 }
 
@@ -755,7 +681,6 @@ function _hu_chartAMR(d) {
    RENDERIZADOS NO-CHART
    ══════════════════════════════════════════════════════════ */
 
-/* Barras de progreso — resultados por examen y Clasificación de Resistencia */
 function _hu_renderResultados(d, el) {
     if (!el) return;
     const exIds = Object.keys(d.resultados).map(Number);
@@ -792,53 +717,46 @@ function _hu_renderResultados(d, el) {
         </div>`;
     }).join('');
 
-    /* Añadir Perfil de Farmacorresistencia TB al final */
+    /* Perfil de Farmacorresistencia TB */
     const tc = d.tbClass;
-    const totalRes = Object.values(tc).reduce((a,b)=>a+b, 0);
+    const totalRes = Object.values(tc).reduce((a,b)=>a+b,0);
     if (totalRes > 0) {
         const mapColors = {
-            'Sensible': '#00b87a',
-            'Monoresistente': '#f0a500',
-            'Polirresistente': '#f97316',
-            'TB-MDR': '#e0435a',
-            'TB pre-XDR': '#be123c',
-            'TB-XDR': '#881337'
+            'Sensible':'#00b87a','Monoresistente':'#f0a500','Polirresistente':'#f97316',
+            'TB-MDR':'#e0435a','TB pre-XDR':'#be123c','TB-XDR':'#881337'
         };
         let resHtml = `<div style="margin-top:1.2rem;padding-top:1rem;border-top:1.5px dashed #cbd5e1">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <span style="font-size:.82rem;font-weight:700;color:#0b1e3d"><i class="bi bi-shield-virus me-1"></i>Perfil de Farmacorresistencia (TB)</span>
                 <span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${totalRes}</span>
             </div>`;
-
         Object.entries(tc).forEach(([label, cnt]) => {
             if (cnt === 0) return;
             const pct = Math.round(cnt / totalRes * 100);
-            const col = mapColors[label];
             resHtml += `<div class="mb-2">
                 <div class="d-flex justify-content-between" style="font-size:.77rem;margin-bottom:3px">
                     <span style="color:#475569;font-weight:600">${label}</span>
                     <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span>
                 </div>
                 <div style="height:6px;background:#f1f5f9;border-radius:3px">
-                    <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .4s ease"></div>
+                    <div style="height:100%;width:${pct}%;background:${mapColors[label]};border-radius:3px;transition:width .4s ease"></div>
                 </div>
             </div>`;
         });
         resHtml += `</div>`;
         html += resHtml;
     }
-
     el.innerHTML = html;
 }
 
-/* Pirámide poblacional agrupada por Pos/Neg — CSS puro */
 function _hu_renderPyramid(pyramid, el) {
     if (!el) return;
     if (pyramid.total === 0) { el.innerHTML = _hu_empty('Sin pacientes c/resultados en el período.'); return; }
-    
-    // Calcular max basado en la suma de pos+neg en ambos géneros
-    const max = Math.max(...pyramid.ageGroups.map((g,i) => Math.max(pyramid.M_pos[i]+pyramid.M_neg[i], pyramid.F_pos[i]+pyramid.F_neg[i])), 1);
-    
+
+    const max = Math.max(...pyramid.ageGroups.map((g,i) =>
+        Math.max(pyramid.M_pos[i]+pyramid.M_neg[i], pyramid.F_pos[i]+pyramid.F_neg[i])
+    ), 1);
+
     el.innerHTML = `
     <div>
         <div class="d-flex justify-content-between mb-3" style="font-size:.72rem;font-weight:700">
@@ -851,24 +769,19 @@ function _hu_renderPyramid(pyramid, el) {
         ${pyramid.ageGroups.map((g, i) => {
             const mP = pyramid.M_pos[i], mN = pyramid.M_neg[i];
             const fP = pyramid.F_pos[i], fN = pyramid.F_neg[i];
-            const mTotal = mP + mN, fTotal = fP + fN;
-            const mPPct = mTotal > 0 ? (mP / max * 100) : 0;
-            const mNPct = mTotal > 0 ? (mN / max * 100) : 0;
-            const fPPct = fTotal > 0 ? (fP / max * 100) : 0;
-            const fNPct = fTotal > 0 ? (fN / max * 100) : 0;
-
+            const mTotal = mP+mN, fTotal = fP+fN;
+            const mPPct = mTotal > 0 ? (mP/max*100) : 0, mNPct = mTotal > 0 ? (mN/max*100) : 0;
+            const fPPct = fTotal > 0 ? (fP/max*100) : 0, fNPct = fTotal > 0 ? (fN/max*100) : 0;
             return `<div class="d-flex align-items-center" style="gap:6px;margin-bottom:6px">
                 <div style="flex:1;display:flex;justify-content:flex-end;align-items:center;gap:2px">
                     <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-right:4px">${mTotal > 0 ? mTotal : ''}</span>
-                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);border-radius:3px 0 0 3px;min-width:${mP > 0 ? 3 : 0}px" title="Hombres Positivos: ${mP}"></div>
-                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);border-radius:${mP > 0 ? 0 : 3}px 0 0 ${mP > 0 ? 0 : 3}px;min-width:${mN > 0 ? 3 : 0}px" title="Hombres Negativos: ${mN}"></div>
+                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);border-radius:3px 0 0 3px;min-width:${mP>0?3:0}px" title="H Pos: ${mP}"></div>
+                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);border-radius:${mP>0?0:3}px 0 0 ${mP>0?0:3}px;min-width:${mN>0?3:0}px" title="H Neg: ${mN}"></div>
                 </div>
-                
                 <div style="min-width:68px;text-align:center;font-size:.77rem;font-weight:600;color:#475569;white-space:nowrap">${g}</div>
-                
                 <div style="flex:1;display:flex;align-items:center;gap:2px">
-                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);border-radius:0 ${fP > 0 ? 0 : 3}px ${fP > 0 ? 0 : 3}px 0;min-width:${fN > 0 ? 3 : 0}px" title="Mujeres Negativas: ${fN}"></div>
-                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);border-radius:0 3px 3px 0;min-width:${fP > 0 ? 3 : 0}px" title="Mujeres Positivas: ${fP}"></div>
+                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);border-radius:0 ${fP>0?0:3}px ${fP>0?0:3}px 0;min-width:${fN>0?3:0}px" title="M Neg: ${fN}"></div>
+                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);border-radius:0 3px 3px 0;min-width:${fP>0?3:0}px" title="M Pos: ${fP}"></div>
                     <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-left:4px">${fTotal > 0 ? fTotal : ''}</span>
                 </div>
             </div>`;
@@ -876,7 +789,6 @@ function _hu_renderPyramid(pyramid, el) {
     </div>`;
 }
 
-/* Grupos de vulnerabilidad — barras CSS */
 function _hu_renderGV(d, el) {
     if (!el) return;
     const entries = Object.entries(d.gvStats)
@@ -903,8 +815,8 @@ function _hu_renderGV(d, el) {
                 </span>
             </div>
             <div style="height:6px;background:#f1f5f9;border-radius:3px;display:flex;overflow:hidden">
-                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;border-radius:${e.neg ? '3px 0 0 3px':'3px'}"></div>` : ''}
-                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;border-radius:${e.pos ? '0 3px 3px 0':'3px'}"></div>` : ''}
+                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;border-radius:${e.neg?'3px 0 0 3px':'3px'}"></div>` : ''}
+                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;border-radius:${e.pos?'0 3px 3px 0':'3px'}"></div>` : ''}
             </div>
         </div>`;
     }).join('');
