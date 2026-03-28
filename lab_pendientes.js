@@ -185,6 +185,7 @@ function _renderFormRecepcion(ind, user, rootEl) {
             },
         };
         const recs = _getRecepciones(); recs.push(nueva); _saveRecepciones(recs);
+        if (typeof sbUpsertRow === 'function') sbUpsertRow('recepciones_muestra', nueva).catch(console.error);
         _recalcIndEstado(ind.id);
 
         const alertEl = document.getElementById('rec-alert');
