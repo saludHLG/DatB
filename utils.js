@@ -117,7 +117,11 @@ function showView(viewId) {
 
 /* ── Almacenamiento de usuarios ─────────────────────────── */
 function getUsers()       { return JSON.parse(localStorage.getItem('sr_usuarios') || '[]'); }
-function saveUsers(users) { localStorage.setItem('sr_usuarios', JSON.stringify(users)); }
+function saveUsers(users) {
+    localStorage.setItem('sr_usuarios', JSON.stringify(users));
+    if (typeof sbUpsertRows === 'function')
+        sbUpsertRows('usuarios', users).catch(console.error);
+}
 
 /* ── Helpers compartidos (evitan duplicación entre módulos) ─ */
 
