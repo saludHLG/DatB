@@ -2,7 +2,7 @@
    lab_pendientes.js — Tab "Pendientes" del módulo de Lab.
    Gestiona la lista de indicaciones por recepcionar y el
    formulario de recepción / rechazo de muestra.
-   Requiere: laboratorio_core.js
+   Sin localStorage. Requiere: laboratorio_core.js
    ========================================================= */
 
 function _renderPendientes(inds, content, user, rootEl, emitirIds) {
@@ -28,7 +28,6 @@ function _renderPendientes(inds, content, user, rootEl, emitirIds) {
 
     const _filtrar = q => {
         if (!q) return inds;
-        // Cambio realizado: Leer directamente desde _store en lugar de localStorage
         const pacs = window._store.pacientes || [];
         return inds.filter(ind => {
             const pac = pacs.find(p => p.id === ind.paciente_id);
@@ -64,8 +63,7 @@ function _renderPendientes(inds, content, user, rootEl, emitirIds) {
 }
 
 function _cardPendiente(ind, emitirIds) {
-    // Cambio realizado: Leer directamente desde _store
-    const pac    = (_store.pacientes || []).find(p => p.id === ind.paciente_id);
+    const pac    = (window._store.pacientes || []).find(p => p.id === ind.paciente_id);
     const centro = _centroNombreDeIndicador(ind.indicado_por);
     const ex     = _examenNombre(ind._examen_id);
     const medNom = ind.medico ? `Dr./Dra. ${ind.medico.nombres} ${ind.medico.apellidos}` : '—';
@@ -94,8 +92,7 @@ function _cardPendiente(ind, emitirIds) {
 }
 
 function _renderFormRecepcion(ind, user, rootEl) {
-    // Cambio realizado: Leer directamente desde _store
-    const pac   = (_store.pacientes || []).find(p => p.id === ind.paciente_id);
+    const pac   = (window._store.pacientes || []).find(p => p.id === ind.paciente_id);
     const lab   = _labNombre(ind.laboratorio_id);
     const tmAll = window._store.tipos_muestra || [];
     const tm    = tmAll.find(m => m.id === ind.tipo_muestra_id)?.nombre || `Muestra #${ind.tipo_muestra_id}`;
@@ -166,30 +163,46 @@ function _renderFormRecepcion(ind, user, rootEl) {
         document.getElementById('rec-motivo').classList.remove('is-invalid');
         errEl.classList.remove('show');
 
-        // Cambio realizado: Leer directamente desde _store
-        const _pacSnap   = (_store.pacientes || []).find(p => p.id === ind.paciente_id) || null;
-        const _indUsers  = window._store.usuarios || [];
+        const _indUsers  = window._store.usuarios  || [];
+        const _pacSnap   = (window._store.pacientes || []).find(p => p.id === ind.paciente_id) || null;
         const _indicador = _indUsers.find(u => u.id === ind.indicado_por) || null;
 
         const nueva = {
-            id: _genId(), indicacion_id: ind.id, examen_id: ind._examen_id,
-            laboratorio_id: ind.laboratorio_id, estado: decision,
+            id: _genId(),
+            indicacion_id:  ind.id,
+            examen_id:      ind._examen_id,
+            laboratorio_id: ind.laboratorio_id,
+            estado:         decision,
             motivo_rechazo: decision === 'rechazada' ? motivo : null,
-            recibida_por: user.id, fecha_recepcion: new Date().toISOString(),
+            recibida_por:   user.id,
+            fecha_recepcion: new Date().toISOString(),
             snap: {
-                fecha_indicacion: ind.fecha_indicacion, tipo_muestra_id: ind.tipo_muestra_id,
-                examen_id: ind._examen_id, examenes_ids: [ind._examen_id],
+                fecha_indicacion: ind.fecha_indicacion,
+                tipo_muestra_id:  ind.tipo_muestra_id,
+                examen_id:        ind._examen_id,
+                examenes_ids:     [ind._examen_id],
                 paciente: _pacSnap ? {
-                    nombres: _pacSnap.nombres, apellidos: _pacSnap.apellidos,
-                    carnet_identidad: _pacSnap.carnet_identidad, municipio_id: _pacSnap.municipio_id,
+                    nombres:          _pacSnap.nombres,
+                    apellidos:        _pacSnap.apellidos,
+                    carnet_identidad: _pacSnap.carnet_identidad,
+                    municipio_id:     _pacSnap.municipio_id,
                 } : null,
                 centro_nombre: _indicador?.centro_texto ||
                     getGeoCentros().find(c => c.id === Number(_indicador?.centro_salud_id))?.nombre || null,
                 indicador_nombre: _indicador ? `${_indicador.nombres} ${_indicador.apellidos}` : null,
             },
         };
-        const recs = _getRecepciones(); recs.push(nueva); await _saveRecepciones(recs);
-      
+
+        /* ── Actualizar store ── */
+        const recs = _getRecepciones();
+        recs.push(nueva);
+        _saveRecepciones(recs);
+
+        /* ── Sincronizar con Supabase ── */
+        if (typeof sbUpsertRow === 'function') {
+            sbUpsertRow('recepciones_muestra', nueva).catch(e => console.error('rec sync:', e.message));
+        }
+
         const alertEl = document.getElementById('rec-alert');
         alertEl.className = `alert-custom alert-${decision === 'recibida' ? 'success' : 'warning'}`;
         alertEl.innerHTML = decision === 'recibida'
