@@ -209,8 +209,10 @@ window.sbUpsertRows = async function (tabla, rows) {
 
 window.sbUpdateRow = async function (tabla, id, changes, campo = 'id') {
     const sb = _client(); if (!sb) return;
+    console.log('[UPDATE]', tabla, id, Object.keys(changes));
     const { error } = await sb.from(tabla).update(changes).eq(campo, id);
-    if (error) console.error('sbUpdateRow:', tabla, error.message);
+    if (error) console.error('[UPDATE ERROR]', tabla, error.message, error.code);
+    else console.log('[UPDATE OK]', tabla);
 };
 
 window.sbDeleteRow = async function (tabla, id, campo = 'id') {
