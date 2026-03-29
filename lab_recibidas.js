@@ -81,11 +81,45 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
         btn.addEventListener('click', () => {
             const recId = btn.dataset.recId;
             _appConfirm(
-                'Se eliminará este registro de rechazo. Esta acción no se puede deshacer.',
+                'Se eliminará este registro de rechazo y el examen de la indicación. Esta acción no se puede deshacer.',
                 () => {
+                    /* 1 — Localizar recepción antes de borrarla */
+                    const rec   = _getRecepciones().find(r => r.id === recId);
+                    const indId = rec?.indicacion_id || null;
+                    const exId  = Number(rec?.examen_id || rec?.snap?.examen_id || 0);
+
+                    /* 2 — Borrar recepción */
                     _saveRecepciones(_getRecepciones().filter(r => r.id !== recId));
                     if (typeof sbDeleteRow === 'function')
                         sbDeleteRow('recepciones_muestra', recId).catch(console.error);
+
+                    /* 3 — Quitar el examen de la indicación (evita que vuelva a pendiente) */
+                    if (indId && exId) {
+                        const indArr = window._store.indicaciones || [];
+                        const idx    = indArr.findIndex(i => i.id === indId);
+                        if (idx !== -1) {
+                            indArr[idx].examenes_ids = (indArr[idx].examenes_ids || [])
+                                .filter(e => Number(e) !== exId);
+
+                            /* Sincronizar columna jsonb */
+                            if (typeof sbUpdateRow === 'function')
+                                sbUpdateRow('indicaciones_examen', indId,
+                                    { examenes_ids: indArr[idx].examenes_ids }).catch(console.error);
+
+                            /* Sincronizar tabla junction */
+                            const sb = typeof _client === 'function' ? _client() : null;
+                            if (sb)
+                                sb.from('indicacion_examenes')
+                                  .delete()
+                                  .eq('indicacion_id', indId)
+                                  .eq('examen_id', exId)
+                                  .catch(console.error);
+
+                            /* Recalcular estado de la indicación */
+                            _recalcIndEstado(indId).catch(console.error);
+                        }
+                    }
+
                     renderLaboratorio(user, rootEl);
                 }
             );
