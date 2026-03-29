@@ -7,11 +7,50 @@
 let _labUser = null;
 let _labView = null;
 
-function renderLaboratorio(user, el) {
+async function renderLaboratorio(user, el) {
     /* Destruir gráficos del módulo anterior (p.ej. Home) */
     if (typeof _hl_destroyCharts === 'function') _hl_destroyCharts();
 
     _labUser = user;
+
+    /* ── Re-fetch datos críticos desde Supabase ──────────────
+       Garantiza que otro dispositivo vea las indicaciones y
+       recepciones más recientes sin necesidad de recargar.   */
+    const sb = typeof _client === 'function' ? _client() : null;
+    if (sb) {
+        try {
+            const [rInds, rIndEx, rRecs, rBaci, rCult, rXU, rXDR] = await Promise.allSettled([
+                sb.from('indicaciones_examen').select('*'),
+                sb.from('indicacion_examenes').select('*'),
+                sb.from('recepciones_muestra').select('*'),
+                sb.from('resultados_baciloscopia').select('*'),
+                sb.from('resultados_cultivo').select('*'),
+                sb.from('resultados_xpert_ultra').select('*'),
+                sb.from('resultados_xpert_xdr').select('*'),
+            ]);
+            const d = r => (r.status === 'fulfilled' && r.value.data) ? r.value.data : null;
+            const inds  = d(rInds);
+            const indEx = d(rIndEx) || [];
+            if (inds) {
+                window._store.indicaciones = inds.map(ind => ({
+                    ...ind,
+                    examenes_ids: (ind.examenes_ids && ind.examenes_ids.length)
+                        ? ind.examenes_ids
+                        : indEx
+                            .filter(ie => ie.indicacion_id === ind.id)
+                            .map(ie => ie.examen_id),
+                }));
+            }
+            if (d(rRecs)) window._store.recepciones     = d(rRecs);
+            if (d(rBaci)) window._store.res_baci         = d(rBaci);
+            if (d(rCult)) window._store.res_cultivo      = d(rCult);
+            if (d(rXU))   window._store.res_xpert_ultra  = d(rXU);
+            if (d(rXDR))  window._store.res_xpert_xdr    = d(rXDR);
+        } catch (e) {
+            console.warn('renderLaboratorio: refresco Supabase falló —', e);
+        }
+    }
+    /* ───────────────────────────────────────────────────────── */
 
     const emitirIds        = _labsConPermiso(user.id, 'puede_emitir');
     const editarIds        = _labsConPermiso(user.id, 'puede_editar');
@@ -30,7 +69,7 @@ function renderLaboratorio(user, el) {
     if (esLabStaff) {
         validViews.add('recibidas');
         validViews.add('rechazadas');
-        validViews.add('resumen');     /* ← nuevo */
+        validViews.add('resumen');
     }
 
     if (!_labView || !validViews.has(_labView)) {
