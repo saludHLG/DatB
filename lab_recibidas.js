@@ -364,14 +364,50 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
     wrap.querySelectorAll('.btn-del-resultado').forEach(btn =>
         btn.addEventListener('click', () => {
             const recId = btn.dataset.recId;
-            _appConfirm('Se eliminará la recepción y sus resultados asociados. Esta acción no se puede deshacer.', () => {
+            _appConfirm('Se eliminará la recepción, sus resultados y el examen de la indicación. Esta acción no se puede deshacer.', () => {
+                /* 1 — Localizar recepción antes de borrarla */
+                const rec   = _getRecepciones().find(r => r.id === recId);
+                const indId = rec?.indicacion_id || null;
+                const exId  = Number(rec?.examen_id || rec?.snap?.examen_id || 0);
+
+                /* 2 — Borrar resultados de todos los tipos */
                 _saveResBaci(_getResBaci().filter(r => r.recepcion_id !== recId));
                 _saveResCultivo(_getResCultivo().filter(r => r.recepcion_id !== recId));
                 _saveResXpertUltra(_getResXpertUltra().filter(r => r.recepcion_id !== recId));
                 _saveResXpertXDR(_getResXpertXDR().filter(r => r.recepcion_id !== recId));
+
+                /* 3 — Borrar recepción (Supabase la elimina en cascada con FK) */
                 _saveRecepciones(_getRecepciones().filter(r => r.id !== recId));
-                /* Resultados se eliminan en cascada (FK) al borrar la recepción */
-                if (typeof sbDeleteRow === 'function') sbDeleteRow('recepciones_muestra', recId).catch(console.error);
+                if (typeof sbDeleteRow === 'function')
+                    sbDeleteRow('recepciones_muestra', recId).catch(console.error);
+
+                /* 4 — Quitar el examen de la indicación (evita que vuelva a pendiente) */
+                if (indId && exId) {
+                    const inds = window._store.indicaciones || [];
+                    const idx  = inds.findIndex(i => i.id === indId);
+                    if (idx !== -1) {
+                        inds[idx].examenes_ids = (inds[idx].examenes_ids || [])
+                            .filter(e => Number(e) !== exId);
+
+                        /* Sincronizar columna jsonb en indicaciones_examen */
+                        if (typeof sbUpdateRow === 'function')
+                            sbUpdateRow('indicaciones_examen', indId,
+                                { examenes_ids: inds[idx].examenes_ids }).catch(console.error);
+
+                        /* Sincronizar tabla junction indicacion_examenes */
+                        const sb = typeof _client === 'function' ? _client() : null;
+                        if (sb)
+                            sb.from('indicacion_examenes')
+                              .delete()
+                              .eq('indicacion_id', indId)
+                              .eq('examen_id', exId)
+                              .catch(console.error);
+
+                        /* Recalcular estado de la indicación */
+                        _recalcIndEstado(indId).catch(console.error);
+                    }
+                }
+
                 renderLaboratorio(user, rootEl);
             });
         })
