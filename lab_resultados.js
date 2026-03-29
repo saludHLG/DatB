@@ -139,7 +139,6 @@ function _showModalSuccess(alertId) {
    ══════════════════════════════════════════════════════════════ */
 
 function _abrirModalResultados(rec, ind, user, rootEl, emitirIds, editarIds) {
-    /* ── Buscar paciente en _store (sin localStorage) ── */
     const pac     = (window._store.pacientes || []).find(p => p.id === ind.paciente_id) || null;
     const snap    = rec.snap || {};
     const pacSnap = snap.paciente || null;
@@ -249,7 +248,7 @@ function _formBaciloscopia(rec, user, body, onSuccess) {
     </div>
     <div id="baci-alert" class="alert-custom d-none"></div>`;
 
-    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', () => {
+    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', async () => {
         const nMuestra = parseInt(document.getElementById('baci-nmuestra').value);
         const fecha    = document.getElementById('baci-fecha').value;
         const cod      = document.getElementById('baci-cod').value;
@@ -263,19 +262,23 @@ function _formBaciloscopia(rec, user, body, onSuccess) {
             else      { inp.classList.remove('is-invalid'); err.classList.remove('show'); }
         });
         if (!ok) return;
+
         const arr = _getResBaci(), idx = arr.findIndex(r => r.recepcion_id === rec.id);
         const entry = {
             id: existing?.id || _genId(), recepcion_id: rec.id,
             numero_muestra: nMuestra, fecha_analisis: fecha, codificacion: parseInt(cod),
             registrado_por: user.id, registrado_en: existing?.registrado_en || new Date().toISOString(),
-            editado_en: existing ? new Date().toISOString() : undefined
+            ...(existing && { editado_en: new Date().toISOString() })
         };
         if (idx !== -1) arr[idx] = entry; else arr.push(entry);
         _saveResBaci(arr);
-        if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_baciloscopia', entry).catch(console.error);
-        _recalcIndEstado(rec.indicacion_id);
-        _showModalSuccess('baci-alert');
+
         document.getElementById('lab-modal-save-btn').disabled = true;
+        if (typeof sbUpsertRow === 'function')
+            await sbUpsertRow('resultados_baciloscopia', entry).catch(e => console.error('baci upsert:', e));
+
+        await _recalcIndEstado(rec.indicacion_id);
+        _showModalSuccess('baci-alert');
         setTimeout(() => onSuccess(), 1400);
     });
 }
@@ -392,7 +395,7 @@ function _formCultivo(rec, user, body, onSuccess) {
         () => _guardarCultivo(rec, user, existing, onSuccess));
 }
 
-function _guardarCultivo(rec, user, existing, onSuccess) {
+async function _guardarCultivo(rec, user, existing, onSuccess) {
     const nMuestra = parseInt(document.getElementById('cult-nmuestra').value);
     const fCult    = document.getElementById('cult-fecha-cult').value;
     const fRes     = document.getElementById('cult-fecha-res').value;
@@ -428,14 +431,17 @@ function _guardarCultivo(rec, user, existing, onSuccess) {
         fecha_resultado: fRes || _addDays(fCult, 56), resultado, antigeno_mtp94: antigeno,
         microorganismo_id: (tipoRes === 'codificacion' && parseInt(codVal) > 0) ? parseInt(microId) : null,
         registrado_por: user.id, registrado_en: existing?.registrado_en || new Date().toISOString(),
-        editado_en: existing ? new Date().toISOString() : undefined
+        ...(existing && { editado_en: new Date().toISOString() })
     };
     if (idx !== -1) arr[idx] = entry; else arr.push(entry);
     _saveResCultivo(arr);
-    if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_cultivo', entry).catch(console.error);
-    _recalcIndEstado(rec.indicacion_id);
-    _showModalSuccess('cult-alert');
+
     document.getElementById('lab-modal-save-btn').disabled = true;
+    if (typeof sbUpsertRow === 'function')
+        await sbUpsertRow('resultados_cultivo', entry).catch(e => console.error('cultivo upsert:', e));
+
+    await _recalcIndEstado(rec.indicacion_id);
+    _showModalSuccess('cult-alert');
     setTimeout(() => onSuccess(), 1400);
 }
 
@@ -510,7 +516,7 @@ function _formXpertUltra(rec, user, body, onSuccess) {
         }
     });
 
-    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', () => {
+    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', async () => {
         const nMuestra  = parseInt(document.getElementById('xu-nmuestra').value);
         const fecha     = document.getElementById('xu-fecha').value;
         const resultado = document.getElementById('xu-resultado').value;
@@ -524,6 +530,7 @@ function _formXpertUltra(rec, user, body, onSuccess) {
             else      { inp.classList.remove('is-invalid'); err.classList.remove('show'); }
         });
         if (!ok) return;
+
         const arr = _getResXpertUltra(), idx = arr.findIndex(r => r.recepcion_id === rec.id);
         const entry = {
             id: existing?.id || _genId(), recepcion_id: rec.id,
@@ -533,14 +540,17 @@ function _formXpertUltra(rec, user, body, onSuccess) {
             tipo_error:              document.getElementById('xu-error').value,
             modulo:                  document.getElementById('xu-modulo').value.trim(),
             registrado_por: user.id, registrado_en: existing?.registrado_en || new Date().toISOString(),
-            editado_en: existing ? new Date().toISOString() : undefined
+            ...(existing && { editado_en: new Date().toISOString() })
         };
         if (idx !== -1) arr[idx] = entry; else arr.push(entry);
         _saveResXpertUltra(arr);
-        if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_xpert_ultra', entry).catch(console.error);
-        _recalcIndEstado(rec.indicacion_id);
-        _showModalSuccess('xu-alert');
+
         document.getElementById('lab-modal-save-btn').disabled = true;
+        if (typeof sbUpsertRow === 'function')
+            await sbUpsertRow('resultados_xpert_ultra', entry).catch(e => console.error('xpert_ultra upsert:', e));
+
+        await _recalcIndEstado(rec.indicacion_id);
+        _showModalSuccess('xu-alert');
         setTimeout(() => onSuccess(), 1400);
     });
 }
@@ -626,7 +636,7 @@ function _formXpertXDR(rec, user, body, onSuccess) {
         }
     });
 
-    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', () => {
+    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', async () => {
         const nMuestra  = parseInt(document.getElementById('xdr-nmuestra').value);
         const fecha     = document.getElementById('xdr-fecha').value;
         const resultado = document.getElementById('xdr-resultado').value;
@@ -640,6 +650,7 @@ function _formXpertXDR(rec, user, body, onSuccess) {
             else      { inp.classList.remove('is-invalid'); err.classList.remove('show'); }
         });
         if (!ok) return;
+
         const get = id => document.getElementById(id)?.value || '';
         const arr = _getResXpertXDR(), idx = arr.findIndex(r => r.recepcion_id === rec.id);
         const entry = {
@@ -654,14 +665,17 @@ function _formXpertXDR(rec, user, body, onSuccess) {
             tipo_error: get('xdr-error'),
             modulo: document.getElementById('xdr-modulo').value.trim(),
             registrado_por: user.id, registrado_en: existing?.registrado_en || new Date().toISOString(),
-            editado_en: existing ? new Date().toISOString() : undefined
+            ...(existing && { editado_en: new Date().toISOString() })
         };
         if (idx !== -1) arr[idx] = entry; else arr.push(entry);
         _saveResXpertXDR(arr);
-        if (typeof sbUpsertRow === 'function') sbUpsertRow('resultados_xpert_xdr', entry).catch(console.error);
-        _recalcIndEstado(rec.indicacion_id);
-        _showModalSuccess('xdr-alert');
+
         document.getElementById('lab-modal-save-btn').disabled = true;
+        if (typeof sbUpsertRow === 'function')
+            await sbUpsertRow('resultados_xpert_xdr', entry).catch(e => console.error('xpert_xdr upsert:', e));
+
+        await _recalcIndEstado(rec.indicacion_id);
+        _showModalSuccess('xdr-alert');
         setTimeout(() => onSuccess(), 1400);
     });
 }
