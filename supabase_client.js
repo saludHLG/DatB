@@ -130,6 +130,9 @@ window.sbLogin = async function (ci, pin) {
 
     const idx = _store.usuarios.findIndex(u => u.id === data.id);
     if (idx !== -1) _store.usuarios[idx] = data; else _store.usuarios.push(data);
+    /* Restaurar firma en memoria */
+    if (!_store.firmas) _store.firmas = {};
+    if (data.firma_perfil) _store.firmas[`sr_firma_${data.id}`] = data.firma_perfil;
     sessionStorage.setItem('sr_active_user', data.id);
     return { user: data, error: null };
 };
@@ -171,6 +174,9 @@ window.sbGetSession = async function () {
     if (data && data.activo) {
         const idx = _store.usuarios.findIndex(u => u.id === uid);
         if (idx !== -1) _store.usuarios[idx] = data; else _store.usuarios.push(data);
+        /* Restaurar firma en memoria */
+        if (!_store.firmas) _store.firmas = {};
+        if (data.firma_perfil) _store.firmas[`sr_firma_${data.id}`] = data.firma_perfil;
         return data;
     }
     return null;

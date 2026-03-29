@@ -477,12 +477,23 @@ function initFirmaCanvas(user) {
         if (!hasMark) return;
         const data = canvas.toDataURL('image/png');
         window._store.firmas[`sr_firma_${user.id}`] = data;
+        /* Persistir en la fila del usuario en Supabase */
+        const idx = (window._store.usuarios || []).findIndex(u => u.id === user.id);
+        if (idx !== -1) window._store.usuarios[idx].firma_perfil = data;
+        if (typeof sbUpdateRow === 'function')
+            sbUpdateRow('usuarios', user.id, { firma_perfil: data })
+                .catch(e => console.error('firma save:', e));
         $('firma-saved-img').src = data;
         $('firma-saved-wrap').classList.remove('d-none');
         showToastApp('Firma guardada.', 'success');
     };
     $('btn-firma-delete').onclick = () => {
         delete window._store.firmas[`sr_firma_${user.id}`];
+        const idx = (window._store.usuarios || []).findIndex(u => u.id === user.id);
+        if (idx !== -1) window._store.usuarios[idx].firma_perfil = null;
+        if (typeof sbUpdateRow === 'function')
+            sbUpdateRow('usuarios', user.id, { firma_perfil: null })
+                .catch(e => console.error('firma delete:', e));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         $('canvas-placeholder').classList.remove('d-none');
         $('firma-saved-wrap').classList.add('d-none');

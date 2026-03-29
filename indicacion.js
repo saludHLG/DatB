@@ -885,7 +885,8 @@ function _initPaso4() {
 
 function _renderFirmaBlock() {
     const wrapper    = document.getElementById('firma-block-wrapper'); if (!wrapper) return;
-    const savedFirma = localStorage.getItem(`sr_firma_${_st.user.id}`);
+    if (!window._store.firmas) window._store.firmas = {};
+    const savedFirma = window._store.firmas[`sr_firma_${_st.user.id}`] || null;
     if (savedFirma) {
         _st.firma = savedFirma; _sigHasContent = true;
         wrapper.innerHTML = `<label class="form-label fw-semibold"><i class="bi bi-pen"></i> Firma de quien indica</label>
