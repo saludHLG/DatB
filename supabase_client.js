@@ -164,9 +164,12 @@ window.sbGetSession = async function () {
     const uid = sessionStorage.getItem('sr_active_user');
     if (!uid) return null;
 
-    // Intentar desde store (ya cargado por sbInitAll)
-    let user = _store.usuarios.find(u => u.id === uid && u.activo);
-    if (user) return user;
+   let user = _store.usuarios.find(u => u.id === uid && u.activo);
+if (user) {
+    if (!_store.firmas) _store.firmas = {};
+    if (user.firma_perfil) _store.firmas[`sr_firma_${user.id}`] = user.firma_perfil;
+    return user;
+}
 
     // Fallback: consulta directa
     if (!sb) return null;
