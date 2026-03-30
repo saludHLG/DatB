@@ -519,7 +519,16 @@ function initGeoData() {
 
 const geoProvName   = id => GEO.getProvs().find(p => p.id === Number(id))?.nombre   || '—';
 const geoMunName    = id => GEO.getMuns().find(m => m.id === Number(id))?.nombre    || '—';
-const nextGeoId     = arr => arr.length ? Math.max(...arr.map(x => Number(x.id))) + 1 : 1;
+const nextGeoId = arr => arr.length ? Math.max(...arr.map(x => Number(x.id))) + 1 : 1;
+
+const nextMunId = (muns, provinciaId) => {
+    const base = Number(provinciaId) * 100;
+    const existing = muns
+        .filter(m => m.provincia_id === Number(provinciaId))
+        .map(m => Number(m.id));
+    if (!existing.length) return base + 1;
+    return Math.max(...existing) + 1;
+};
 
 function levelBadge(nivel) {
     const map = { local:'#8fa3bf:#eef3fb', municipal:'#1a56db:#e8f0fe', provincial:'#7c3aed:#f0e8fe', nacional:'#b91c1c:#fee4e2' };
@@ -701,7 +710,7 @@ $a('btn-save-municipio')?.addEventListener('click', () => {
         const idx = muns.findIndex(m => m.id === editId);
         muns[idx] = { ...muns[idx], nombre, provincia_id: provId };
     } else {
-        muns.push({ id: nextGeoId(muns), nombre, provincia_id: provId });
+        muns.push({ id: nextMunId(muns, provId), nombre, provincia_id: provId });
     }
 
     GEO.saveMuns(muns);
