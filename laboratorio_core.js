@@ -69,7 +69,7 @@ const _SOPORTADOS = new Set([1, 2, 3, 5]);
 function _labsConPermiso(userId, campo = 'puede_emitir') {
     return (window._store.permisos_lab || [])
         .filter(p => p.usuario_id === userId && p[campo] && p.activo)
-        .map(p => p.laboratorio_id);
+        .map(p => Number(p.laboratorio_id));   /* ← normalizar a Number */
 }
 
 function _recepcionesDelLab(userId) {
@@ -78,7 +78,7 @@ function _recepcionesDelLab(userId) {
         ..._labsConPermiso(userId, 'puede_editar'),
         ..._labsConPermiso(userId, 'puede_eliminar'),
     ])];
-    return _getRecepciones().filter(r => labIds.includes(r.laboratorio_id));
+    return _getRecepciones().filter(r => labIds.includes(Number(r.laboratorio_id)));
 }
 
 function _userName(userId) {
@@ -91,7 +91,8 @@ function _indicacionesPendientes(userId) {
     const labIds = _labsConPermiso(userId, 'puede_emitir');
     if (!labIds.length) return [];
     const recepciones = _getRecepciones();
-    const inds = (window._store.indicaciones || []).filter(i => labIds.includes(i.laboratorio_id));
+    const inds = (window._store.indicaciones || [])
+        .filter(i => labIds.includes(Number(i.laboratorio_id)));
     const result = [];
     inds.forEach(ind => {
         (ind.examenes_ids || []).forEach(eid => {

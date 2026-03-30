@@ -1,25 +1,25 @@
 /* =========================================================
    laboratorio.js — Módulo de Laboratorio
    Tabs: Pendientes · Muestras recibidas · Muestras rechazadas
-         · Resumen de laboratorio (nuevo)
+         · Resumen de laboratorio
    ========================================================= */
 
 let _labUser = null;
 let _labView = null;
 
 async function renderLaboratorio(user, el) {
-    /* Destruir gráficos del módulo anterior (p.ej. Home) */
     if (typeof _hl_destroyCharts === 'function') _hl_destroyCharts();
 
     _labUser = user;
 
-    /* ── Re-fetch datos críticos desde Supabase ──────────────
-       Garantiza que otro dispositivo vea las indicaciones y
-       recepciones más recientes sin necesidad de recargar.   */
+    /* ── Re-fetch completo desde Supabase ────────────────────
+       Incluye permisos_lab para que otro dispositivo vea los
+       permisos asignados sin necesidad de recargar la página. */
     const sb = typeof _client === 'function' ? _client() : null;
     if (sb) {
         try {
-            const [rInds, rIndEx, rRecs, rBaci, rCult, rXU, rXDR] = await Promise.allSettled([
+            const [rPerms, rInds, rIndEx, rRecs, rBaci, rCult, rXU, rXDR] = await Promise.allSettled([
+                sb.from('permisos_lab').select('*'),
                 sb.from('indicaciones_examen').select('*'),
                 sb.from('indicacion_examenes').select('*'),
                 sb.from('recepciones_muestra').select('*'),
@@ -29,6 +29,9 @@ async function renderLaboratorio(user, el) {
                 sb.from('resultados_xpert_xdr').select('*'),
             ]);
             const d = r => (r.status === 'fulfilled' && r.value.data) ? r.value.data : null;
+
+            if (d(rPerms)) window._store.permisos_lab = d(rPerms);   /* ← clave */
+
             const inds  = d(rInds);
             const indEx = d(rIndEx) || [];
             if (inds) {
@@ -41,11 +44,11 @@ async function renderLaboratorio(user, el) {
                             .map(ie => ie.examen_id),
                 }));
             }
-            if (d(rRecs)) window._store.recepciones     = d(rRecs);
-            if (d(rBaci)) window._store.res_baci         = d(rBaci);
-            if (d(rCult)) window._store.res_cultivo      = d(rCult);
-            if (d(rXU))   window._store.res_xpert_ultra  = d(rXU);
-            if (d(rXDR))  window._store.res_xpert_xdr    = d(rXDR);
+            if (d(rRecs)) window._store.recepciones    = d(rRecs);
+            if (d(rBaci)) window._store.res_baci        = d(rBaci);
+            if (d(rCult)) window._store.res_cultivo     = d(rCult);
+            if (d(rXU))   window._store.res_xpert_ultra = d(rXU);
+            if (d(rXDR))  window._store.res_xpert_xdr   = d(rXDR);
         } catch (e) {
             console.warn('renderLaboratorio: refresco Supabase falló —', e);
         }
@@ -63,7 +66,6 @@ async function renderLaboratorio(user, el) {
     const recepciones    = allRecepciones.filter(r => r.estado === 'recibida');
     const rechazadas     = allRecepciones.filter(r => r.estado === 'rechazada');
 
-    /* Determinar vistas disponibles */
     const validViews = new Set();
     if (puedeRecibirAlgo) validViews.add('pendientes');
     if (esLabStaff) {
@@ -78,7 +80,6 @@ async function renderLaboratorio(user, el) {
                  : null;
     }
 
-    /* Usuarios observadores (moderadores/admins sin permisos de lab) */
     if (!_labView) {
         el.innerHTML = `
         <div class="modulo-header">
@@ -121,12 +122,21 @@ async function renderLaboratorio(user, el) {
         </button>`);
     }
 
+    /* Botón de refresco manual */
+    const btnRefresh = `<button class="lab-tab-btn" id="tab-refresh"
+            title="Actualizar datos desde el servidor"
+            style="margin-left:auto;opacity:.7">
+        <i class="bi bi-arrow-clockwise"></i><span class="tab-label"> Actualizar</span>
+    </button>`;
+
     el.innerHTML = `
     <div class="modulo-header">
         <h2 class="modulo-title">Laboratorio</h2>
         <p class="modulo-sub">Gestión de muestras y consulta de resultados.</p>
     </div>
-    <div class="lab-tabs">${tabs.join('')}</div>
+    <div class="lab-tabs" style="justify-content:flex-start;flex-wrap:wrap">
+        ${tabs.join('')}${btnRefresh}
+    </div>
     <div id="lab-tab-content"></div>`;
 
     /* Listeners de tabs */
@@ -144,6 +154,13 @@ async function renderLaboratorio(user, el) {
         document.getElementById('tab-resumen')?.addEventListener('click',
             () => { _labView = 'resumen'; renderLaboratorio(user, el); });
     }
+
+    /* Refresco manual: re-ejecuta todo el módulo */
+    document.getElementById('tab-refresh')?.addEventListener('click', async () => {
+        const btn = document.getElementById('tab-refresh');
+        if (btn) { btn.disabled = true; btn.querySelector('i').className = 'bi bi-hourglass-split'; }
+        await renderLaboratorio(user, el);
+    });
 
     /* Routing de contenido */
     const content = document.getElementById('lab-tab-content');
