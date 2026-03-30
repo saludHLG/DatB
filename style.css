@@ -1475,3 +1475,92 @@ body {
         padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
     }
 }
+
+/* ── Normalización tipográfica global ── */
+button, input, select, textarea {
+    font-family: var(--font-body);
+}
+
+/* ── Sistema de botones unificado ── */
+
+/* Primary: acción principal */
+.btn-primary-custom,
+.btn-add-lab, .btn-add-loc,
+.btn-firma-save, .btn-buscar {
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.btn-primary-custom:hover,
+.btn-add-lab:hover, .btn-add-loc:hover,
+.btn-firma-save:hover, .btn-buscar:hover {
+    background: var(--navy-light);
+}
+
+/* Secondary: acción neutral/cancelar */
+.btn-secondary-custom,
+.btn-firma-clear, .btn-back-mod {
+    background: transparent;
+    color: var(--navy-mid);
+    border: 1.5px solid var(--silver-pale);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.btn-secondary-custom:hover,
+.btn-firma-clear:hover, .btn-back-mod:hover {
+    background: var(--silver-pale);
+    border-color: var(--silver);
+}
+
+/* Danger: acción destructiva — solo outline */
+.btn-danger-custom {
+    background: transparent;
+    color: var(--danger);
+    border: 1.5px solid var(--danger);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.btn-danger-custom:hover {
+    background: #ffeef1;
+}
+
+/* Confirmatorio: solo para aprobar/confirmar resultados positivos */
+.btn-success-custom {
+    background: #1a5c40; /* verde oscuro, no estridente */
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.btn-success-custom:hover { background: #134d35; }
+
+/* Icono dentro de cualquier botón primario */
+.btn-primary-custom i,
+.btn-primary-custom .bi,
+.btn-add-lab i, .btn-add-loc i { color: inherit; }
