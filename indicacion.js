@@ -1001,7 +1001,7 @@ async function _submitIndicacion() {
             sbUpsertRow('indicaciones_examen', nuevaInd)
                 .then(() => {
                     // Insertar en tabla junction (fire-and-forget)
-                    const sb = window._client ? _client() : null;
+                    const sb = typeof _client === 'function' ? _client() : null;
                     if (sb && _st.examenes_ids.length) {
                         sb.from('indicacion_examenes')
                           .insert(_st.examenes_ids.map(eid => ({ indicacion_id: nuevaInd.id, examen_id: eid })))
