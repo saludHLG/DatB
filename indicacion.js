@@ -968,7 +968,8 @@ async function _submitIndicacion() {
             pacientes.push(nuevo); 
             _savePacientes(pacientes);
             if (typeof sbUpsertRow === 'function') {
-                sbUpsertRow('pacientes', nuevo).catch(e => console.error('upsert paciente:', e));
+             await sbUpsertRow('pacientes', nuevo)
+              .catch(e => console.error('upsert paciente:', e));
             }
         }
 
