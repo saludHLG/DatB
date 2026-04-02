@@ -117,7 +117,10 @@ function renderModulo(id, user) {
         perfil:       'Mi perfil'
     };
     $('topbar-title').textContent = labels[id] || id;
-
+      if (window._labRefreshTimer) {
+    clearInterval(window._labRefreshTimer);
+    window._labRefreshTimer = null;
+}
     if (id === 'home') {
         renderHomeUsuario(user, el);
     } else if (id === 'perfil') {
