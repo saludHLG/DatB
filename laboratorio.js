@@ -168,4 +168,15 @@ async function renderLaboratorio(user, el) {
     else if (_labView === 'rechazadas')  _renderRechazadas(rechazadas, content, user, el, emitirIds, editarIds);
     else if (_labView === 'resumen')     renderLabResumen(user, content);
     else                                 _renderRecibidas(recepciones, content, user, el, emitirIds, editarIds);
+   // Al final de renderLaboratorio, tras montar el UI:
+if (window._labRefreshTimer) clearInterval(window._labRefreshTimer);
+window._labRefreshTimer = setInterval(async () => {
+    // Solo refrescar si el módulo laboratorio sigue visible
+    const tabContent = document.getElementById('lab-tab-content');
+    if (!tabContent || !document.body.contains(tabContent)) {
+        clearInterval(window._labRefreshTimer);
+        return;
+    }
+    await renderLaboratorio(user, el);
+}, 30000); // cada 30 segundos
 }
