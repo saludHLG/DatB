@@ -105,7 +105,7 @@ function _hu_render(user, el, dateFrom, dateTo) {
                 <div class="card-body d-flex flex-column">
                     <p class="hu-card-title mb-3">Estatus de las muestras</p>
                     ${total === 0
-                        ? _hu_empty('Sin indicaciones.')
+                        ? _hu_empty('Sin resultados.')
                         : '<div style="position:relative; flex:1; min-height:220px; display:flex; align-items:center; justify-content:center;"><canvas id="hu-c-estados"></canvas></div>'}
                 </div>
             </div>
@@ -113,9 +113,9 @@ function _hu_render(user, el, dateFrom, dateTo) {
         <div class="col-12 col-lg-7">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body d-flex flex-column">
-                    <p class="hu-card-title mb-3">Por tipo de examen</p>
+                    <p class="hu-card-title mb-3">Estatus de las muestras según tipo de examen</p>
                     ${Object.keys(d.byExamen).length === 0
-                        ? _hu_empty('Sin exámenes en el período.')
+                        ? _hu_empty('Sin resultados.')
                         : '<div style="position:relative; flex:1; min-height:220px; width:100%;"><canvas id="hu-c-examenes"></canvas></div>'}
                 </div>
             </div>
@@ -126,10 +126,9 @@ function _hu_render(user, el, dateFrom, dateTo) {
         <div class="col-12 col-lg-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
-                    <p class="hu-card-title mb-1">Tipos de muestra</p>
-                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">Positivos y negativos por tipo de muestra (resultados definitivos).</p>
+                    <p class="hu-card-title mb-1">Tipos de muestra y resultados</p>
                     ${Object.keys(d.byTMResult).length === 0
-                        ? _hu_empty('Sin resultados definitivos por tipo de muestra.')
+                        ? _hu_empty('Sin resultados.')
                         : '<div style="position: relative; height: 300px; width: 100%;"><canvas id="hu-c-tm"></canvas></div>'}
                 </div>
             </div>
