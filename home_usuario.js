@@ -3,8 +3,9 @@
    Estadísticas propias: indicaciones, resultados, casos positivos
    por especie/género y resistencia antimicrobiana.
 
-   Requiere: utils.js, data.js, home_lab.js (_hl_charts, _hl_ensureChartJS,
-             _hl_destroyCharts), indicacion.js (_getGVCat, _getTMCat),
+   Requiere: utils.js, data.js,
+             home_lab.js  (_hl_charts, _hl_ensureChartJS, _hl_destroyCharts),
+             indicacion.js (_getGVCat, _getTMCat),
              laboratorio_core.js (_getResBaci, _getResCultivo, etc.)
    ========================================================= */
 
@@ -46,7 +47,8 @@ function renderHomeUsuario(user, el) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RENDER PRINCIPAL (contenido reemplazable por filtro)
+   SHELL — estructura HTML fija (sin lógica condicional de contenido)
+   Cada función de gráfico/render gestiona su propio estado vacío.
    ══════════════════════════════════════════════════════════ */
 function _hu_render(user, el, dateFrom, dateTo) {
     if (!el) return;
@@ -57,141 +59,146 @@ function _hu_render(user, el, dateFrom, dateTo) {
 
     el.innerHTML = `
 
-    <div class="row g-3 mb-4 align-items-stretch">
-        <div class="col-md-5 col-lg-4">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body d-flex flex-column justify-content-center gap-3 p-3">
-                    <p class="mb-0" style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#0b1e3d;text-transform:uppercase;letter-spacing:.06em">
-                        <i class="bi bi-funnel me-1" style="color:#00c6b8"></i>Filtrar por fecha
-                    </p>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#8fa3bf;display:block;margin-bottom:.2rem">Desde</label>
-                            <input type="date" id="hu-from" class="form-control form-control-sm" value="${dateFrom || ''}">
-                        </div>
-                        <div class="col-12">
-                            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#8fa3bf;display:block;margin-bottom:.2rem">Hasta</label>
-                            <input type="date" id="hu-to" class="form-control form-control-sm" value="${dateTo || ''}">
+        <!-- ── Filtros ──────────────────────────────────────── -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:12px">
+            <div class="card-body py-3">
+                <div class="d-flex gap-3 align-items-end flex-wrap">
+                    <div>
+                        <label class="hu-filter-label">Desde</label>
+                        <input type="date" id="hu-from" class="form-control form-control-sm"
+                               style="min-width:148px" value="${dateFrom || ''}">
+                    </div>
+                    <div>
+                        <label class="hu-filter-label">Hasta</label>
+                        <input type="date" id="hu-to" class="form-control form-control-sm"
+                               style="min-width:148px" value="${dateTo || ''}">
+                    </div>
+                    <button class="btn-primary-custom" id="hu-apply"
+                            style="padding:.42rem 1rem;font-size:.84rem">
+                        <i class="bi bi-funnel"></i> Aplicar
+                    </button>
+                    <button class="btn-secondary-custom" id="hu-clear"
+                            style="padding:.42rem 1rem;font-size:.84rem">
+                        <i class="bi bi-arrow-counterclockwise"></i> Todo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Resumen (pills) ──────────────────────────────── -->
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-2 mb-4">
+            ${_hu_pill('Total indicado',  total,               '#0b1e3d', 'bi-collection')}
+            ${_hu_pill('Pendientes',      d.counts.pendiente,  '#f0a500', 'bi-hourglass-split')}
+            ${_hu_pill('Recibidas',       d.counts.recibida,   '#1a56db', 'bi-flask')}
+            ${_hu_pill('Rechazadas',      d.counts.rechazada,  '#e0435a', 'bi-x-circle')}
+            ${_hu_pill('Completadas',     d.counts.completada, '#00b87a', 'bi-check-circle')}
+        </div>
+
+        <!-- ── Exámenes por estado | Resultados por examen ─── -->
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-lg-8">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                    <div class="card-body d-flex flex-column">
+                        <p class="hu-card-title mb-3">Tipo de examen según estado de la muestra</p>
+                        <div id="hu-examenes-wrap"
+                             style="position:relative;flex:1;min-height:220px;width:100%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                    <div class="card-body">
+                        <p class="hu-card-title mb-3">Resultados según tipo de examen</p>
+                        <div id="hu-resultados"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Tipos de muestra | Microorganismos ───────────── -->
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                    <div class="card-body d-flex flex-column">
+                        <p class="hu-card-title mb-3">Tipos de muestra y resultados</p>
+                        <div id="hu-tm-wrap"
+                             style="position:relative;flex:1;min-height:220px;width:100%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                    <div class="card-body d-flex flex-column">
+                        <p class="hu-card-title mb-1">Casos positivos según género y especie</p>
+                        <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">
+                            * BAAR+ (Indeterminado): positivos sin confirmar por cultivo o ensayo Xpert.
+                        </p>
+                        <div id="hu-species-wrap"
+                             style="position:relative;flex:1;min-height:220px;width:100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Pirámide poblacional | Grupos de vulnerabilidad ─ -->
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                    <div class="card-body">
+                        <p class="hu-card-title mb-3">Distribución según edad, sexo y resultado</p>
+                        <div id="hu-pyramid"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                    <div class="card-body">
+                        <p class="hu-card-title mb-3">Distribución según grupos de vulnerabilidad</p>
+                        <div id="hu-gv"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Resistencia antimicrobiana (ancho completo) ───── -->
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm" style="border-radius:12px">
+                    <div class="card-body">
+                        <p class="hu-card-title mb-1">Resistencia a los medicamentos para la tuberculosis</p>
+                        <div id="hu-amr-wrap" class="mb-3"></div>
+                        <div style="font-size:.75rem;color:#8fa3bf;line-height:1.7">
+                            <p class="mb-1">★ Resistencia a rifampicina: ensayo Xpert MTB/RIF (Ultra). Demás marcadores: Xpert MTB/XDR.</p>
+                            <p class="mb-1"><strong>Monorresistencia:</strong> Resistencia a un solo medicamento anti-TB de primera línea.</p>
+                            <p class="mb-1"><strong>Polirresistencia:</strong> Resistencia a más de un fármaco anti-TB de primera línea (excluyendo la combinación simultánea rifampicina–isoniazida).</p>
+                            <p class="mb-1"><strong>Multidrogorresistencia (MDR):</strong> Resistencia al menos a rifampicina e isoniazida.</p>
+                            <p class="mb-1"><strong>Resistencia a Rifampicina (RR):</strong> Detectada por métodos fenotípicos o genotípicos, con o sin resistencia a otros medicamentos anti-TB. Incluye cualquier resistencia a rifampicina, ya sea monorresistente, MDR, polirresistente o XDR.</p>
+                            <p class="mb-1"><strong>Pre-extensamente resistente (Pre-XDR):</strong> Cepas MDR o RR con resistencia adicional a cualquier fluorquinolona.</p>
+                            <p class="mb-0"><strong>Extensamente resistente (XDR):</strong> Cepas MDR o RR con resistencia a fluorquinolonas y al menos un medicamento adicional del grupo A.</p>
                         </div>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn-primary-custom w-100" id="hu-apply" style="padding:.45rem .5rem;font-size:.82rem;justify-content:center">
-                            <i class="bi bi-check-lg"></i> Aplicar
-                        </button>
-                        <button class="btn-secondary-custom w-100" id="hu-clear" style="padding:.45rem .5rem;font-size:.82rem;justify-content:center">
-                            <i class="bi bi-arrow-counterclockwise"></i> Todo
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-7 col-lg-8">
-            <div class="row g-2 h-100 align-content-between">
-                ${_hu_pill('Muestras indicadas (Total)', total,               '#0b1e3d', 'bi-collection')}
-                ${_hu_pill('Muestras pendientes',          d.counts.pendiente,  '#f0a500', 'bi-hourglass-split')}
-                ${_hu_pill('Muestras recibidas',           d.counts.recibida,   '#1a56db', 'bi-flask')}
-                ${_hu_pill('Muestras rechazadas',          d.counts.rechazada,  '#e0435a', 'bi-x-circle')}
-                ${_hu_pill('Muestras completadas',         d.counts.completada, '#00b87a', 'bi-check-circle')}
-                
-            </div>
-        </div>
-    </div>
-        <div class="col-12 col-lg-7">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body d-flex flex-column">
-                    <p class="hu-card-title mb-3">Tipo de examen según estatus de la muestra</p>
-                    ${Object.keys(d.byExamen).length === 0
-                        ? _hu_empty('Sin resultados.')
-                        : '<div style="position:relative; flex:1; min-height:220px; width:100%;"><canvas id="hu-c-examenes"></canvas></div>'}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-3">
-       <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="hu-card-title mb-3">Resultados según tipo de examen</p>
-                    <div id="hu-resultados"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="hu-card-title mb-1">Tipos de muestra y resultados</p>
-                    ${Object.keys(d.byTMResult).length === 0
-                        ? _hu_empty('Sin resultados.')
-                        : '<div style="position: relative; height: 300px; width: 100%;"><canvas id="hu-c-tm"></canvas></div>'}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="hu-card-title mb-1">Casos positivos según género y especie</p>
-                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">
-                        * BAAR+ (Indeterminado): Casos positivos sin determinar por cultivo o ensayo Xpert
-                    </p>
-                    ${d.microorganisms.total === 0
-                        ? _hu_empty('Sin resultado.')
-                        : '<div style="position: relative; height: 300px; width: 100%;"><canvas id="hu-c-species"></canvas></div>'}
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="hu-card-title mb-1">Resistencia a los medicamentos para la tuberculosis</p>
-                    
-                    ${d.amr.total === 0
-                    ? _hu_empty('Sin resultados.')
-                    : '<div id="hu-amr-wrapper" style="position: relative; width: 100%;"><canvas id="hu-c-amr"></canvas></div>'}
-                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">
-                        * Resistencia a rifampicina determinado mediante ensayo Xpert MTB/RIF (Ultra). <br>
-                        * El resto de los marcadores, con ensayo Xpert MTB/XDR. <br>
-                        <b>Monorresistencia:</b> Resistencia a un solo medicamento anti-TB de primera línea.<br>
-                        <b>Polirresistencia:</b> Resistencia a más de un fármaco anti-TB de primera línea (que no sea simultáneamente rifampicina e isoniazida).<br>
-                        <b>Multidrogorresistencia (MRD):</b> Resistencia al menos a rifampicina e isoniazida.<br>
-                        <b>Resistencia a Rifampicina (RR):</b> Detectada utilizando métodos fenotípicos o genotíppicos, con o sin resistencia a otros medicamentos anti-TB. Incluye cualquier resistencia a rifampicina, ya sea monorresistente, MDR, polirresistente o XDR.<br>
-                        <b>Pre-extensamente resistente (Pre-XDR):</b> Tuberculosis causada por cepas de <i>M. tuberculosis</i> que cumplen con la definición de RR o MDR, y son resistentes a cualquier fluorquinolona<br>
-                        <b>Extensamente resistente (XDR):</b> Tuberculosis causadas por cepas de <i>M. tuberculosis</i> que cumplen con la definición de MDR o RR y también son resistentes a cualquier fluorquinolona y al menos a un medicamento adicional del grupo A.<br>
-                        
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3">
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="hu-card-title mb-3">
-                        Distribución según edad, sexo y resultados                        
-                    </p>
-                    <div id="hu-pyramid"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="hu-card-title mb-1">Distribucción según grupos vulnerables y resultados</p>
-                    <div id="hu-gv"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <style>
-        .hu-card-title { font-family:'Syne',sans-serif; font-size:.88rem; font-weight:700; color:#0b1e3d; }
-    </style>`;
+        <style>
+            .hu-card-title {
+                font-family: 'Syne', sans-serif;
+                font-size: .88rem;
+                font-weight: 700;
+                color: #0b1e3d;
+                margin-bottom: 0;
+            }
+            .hu-filter-label {
+                display: block;
+                font-size: .7rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .07em;
+                color: #8fa3bf;
+                margin-bottom: .25rem;
+            }
+        </style>`;
 
     /* ── Listeners de filtro ── */
     document.getElementById('hu-apply')?.addEventListener('click', () => {
@@ -203,16 +210,20 @@ function _hu_render(user, el, dateFrom, dateTo) {
         _hu_render(user, el, null, null);
     });
 
-    /* ── Renderizado de gráficos ── */
+    /* ── Renderizados y gráficos ─────────────────────────────
+       Todos se llaman incondicionalmente. Cada función gestiona
+       internamente su estado vacío (un único lugar por widget). */
     requestAnimationFrame(() => {
-        if (total > 0 && window.Chart)                             _hu_chartEstados(d);
-        if (Object.keys(d.byExamen).length > 0 && window.Chart)   _hu_chartExamenes(d);
-        if (Object.keys(d.byTMResult).length > 0 && window.Chart) _hu_chartTM(d);
-        if (d.microorganisms.total > 0 && window.Chart)           _hu_chartSpecies(d);
-        if (d.amr.total > 0 && window.Chart)                      _hu_chartAMR(d);
         _hu_renderResultados(d, document.getElementById('hu-resultados'));
         _hu_renderPyramid(d.pyramid, document.getElementById('hu-pyramid'));
         _hu_renderGV(d, document.getElementById('hu-gv'));
+
+        if (window.Chart) {
+            _hu_chartExamenes(d);
+            _hu_chartTM(d);
+            _hu_chartSpecies(d);
+            _hu_chartAMR(d);
+        }
     });
 }
 
@@ -220,21 +231,18 @@ function _hu_render(user, el, dateFrom, dateTo) {
    CÓMPUTO DE ESTADÍSTICAS
    ══════════════════════════════════════════════════════════ */
 function _hu_computeStats(user, dateFrom, dateTo) {
-    /* ── CORREGIDO: todas las fuentes desde window._store ──
-       Se usan los mismos accesores que laboratorio_core.js
-       para garantizar coherencia con la capa Supabase.       */
     const allInds  = window._store.indicaciones    || [];
-    const recs     = _getRecepciones();           // laboratorio_core.js
+    const recs     = _getRecepciones();
     const baci     = _getResBaci();
     const cult     = _getResCultivo();
     const xpertU   = _getResXpertUltra();
     const xpertXDR = _getResXpertXDR();
     const pacs     = window._store.pacientes       || [];
-    const gvCat    = typeof _getGVCat   === 'function' ? _getGVCat()   : [];
-    const tmCat    = typeof _getTMCat   === 'function' ? _getTMCat()   : [];
+    const gvCat    = typeof _getGVCat    === 'function' ? _getGVCat()    : [];
+    const tmCat    = typeof _getTMCat    === 'function' ? _getTMCat()    : [];
     const microCat = typeof _getMicroCat === 'function' ? _getMicroCat() : [];
 
-    /* ── Filtrar indicaciones propias y por fecha ── */
+    /* Filtrar indicaciones propias y por fecha */
     const inds = allInds.filter(ind => {
         if (ind.indicado_por !== user.id && ind.medico?.usuario_id !== user.id) return false;
         const f = ind.fecha_indicacion || '';
@@ -243,7 +251,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         return true;
     });
 
-    /* ── Mapa de recepciones ── */
+    /* Mapa de recepciones por indicación */
     const recMap = {};
     recs.forEach(r => {
         if (!recMap[r.indicacion_id]) recMap[r.indicacion_id] = [];
@@ -256,7 +264,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
             || (indRecs.length === 1 && !indRecs[0].examen_id ? indRecs[0] : null);
     };
 
-    /* ── Conteo por estado y por examen ── */
+    /* Conteo por estado y por examen */
     const counts   = { pendiente: 0, recibida: 0, rechazada: 0, completada: 0 };
     const byExamen = {};
 
@@ -265,16 +273,16 @@ function _hu_computeStats(user, dateFrom, dateTo) {
             const eid = Number(eidRaw);
             const rec = getRec(ind.id, eid);
             let est;
-            if (!rec)                           est = 'pendiente';
+            if (!rec)                            est = 'pendiente';
             else if (rec.estado === 'rechazada') est = 'rechazada';
             else est = _hu_hasResult(rec.id, eid, baci, cult, xpertU, xpertXDR) ? 'completada' : 'recibida';
             counts[est]++;
-            if (!byExamen[eid]) byExamen[eid] = { pendiente:0, recibida:0, rechazada:0, completada:0 };
+            if (!byExamen[eid]) byExamen[eid] = { pendiente: 0, recibida: 0, rechazada: 0, completada: 0 };
             byExamen[eid][est]++;
         });
     });
 
-    /* ── IDs de recepciones para filtrar resultados ── */
+    /* IDs de recepciones para filtrar resultados */
     const recIdSet = new Set();
     inds.forEach(ind => (recMap[ind.id] || []).forEach(r => recIdSet.add(r.id)));
 
@@ -283,7 +291,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
     const xpertUF   = xpertU.filter(r => recIdSet.has(r.recepcion_id));
     const xpertXDRF = xpertXDR.filter(r => recIdSet.has(r.recepcion_id));
 
-    /* ── Resultados por examen (barras de progreso) ── */
+    /* Resultados por examen (barras de progreso) */
     const resultados = {};
     if (baciF.length) {
         resultados[1] = { 'Negativo': 0, 'Positivo': 0 };
@@ -307,7 +315,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         xpertXDRF.forEach(r => { resultados[5][r.resultado] = (resultados[5][r.resultado] || 0) + 1; });
     }
 
-    /* ── Tipos de muestra × positivos/negativos ── */
+    /* Tipos de muestra × positivos/negativos */
     const byTMResult = {};
     inds.forEach(ind => {
         if (!ind.tipo_muestra_id) return;
@@ -326,10 +334,11 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         if (hasNeg) byTMResult[tmId].neg++;
     });
 
-    /* ── Casos positivos: taxonomía del microorganismo ── */
+    /* Casos positivos: taxonomía del microorganismo */
     const microorganisms = { total: 0, data: {} };
     inds.forEach(ind => {
         let species = null;
+        // Prioridad: Xpert Ultra > Xpert XDR > Cultivo > Baciloscopia
         if (!species) {
             const rec = getRec(ind.id, 3);
             if (rec && rec.estado !== 'rechazada') {
@@ -370,8 +379,11 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         microorganisms.total++;
     });
 
-    /* ── Clasificación TB Resistente ── */
-    const tbClass = { 'Sensible': 0, 'Monoresistente': 0, 'Polirresistente': 0, 'TB-MDR': 0, 'TB pre-XDR': 0, 'TB-XDR': 0 };
+    /* Clasificación de farmacorresistencia TB */
+    const tbClass = {
+        'Sensible': 0, 'Monoresistente': 0, 'Polirresistente': 0,
+        'TB-MDR': 0, 'TB pre-XDR': 0, 'TB-XDR': 0,
+    };
     inds.forEach(ind => {
         const uRec = getRec(ind.id, 3);
         const xRec = getRec(ind.id, 5);
@@ -381,7 +393,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         if ((uRes && uRes.resultado === 'MTB DETECTADO') || (xRes && xRes.resultado === 'MTB DETECTADO')) {
             let rR = false, rH = false, rFq = false, rSli = false;
             let tested = false, resistCount = 0;
-            const check = (val) => {
+            const check = val => {
                 if (!val || val === 'NO PROCEDE' || val === 'INDETERMINADO') return false;
                 tested = true;
                 if (val.includes('DETECTADO') && !val.includes('NO DETECTADO')) { resistCount++; return true; }
@@ -398,36 +410,38 @@ function _hu_computeStats(user, dateFrom, dateTo) {
             }
             if (!tested) return;
             const isMDR = rR && rH, isPreXDR = isMDR && (rFq || rSli), isXDR = isMDR && rFq && rSli;
-            if      (isXDR)            tbClass['TB-XDR']++;
-            else if (isPreXDR)         tbClass['TB pre-XDR']++;
-            else if (isMDR)            tbClass['TB-MDR']++;
-            else if (resistCount >= 2) tbClass['Polirresistente']++;
+            if      (isXDR)             tbClass['TB-XDR']++;
+            else if (isPreXDR)          tbClass['TB pre-XDR']++;
+            else if (isMDR)             tbClass['TB-MDR']++;
+            else if (resistCount >= 2)  tbClass['Polirresistente']++;
             else if (resistCount === 1) tbClass['Monoresistente']++;
             else                        tbClass['Sensible']++;
         }
     });
 
-    /* ── Resistencia antimicrobiana (Marcadores) ── */
+    /* Resistencia antimicrobiana por marcador */
     const amr = {
         total: 0,
         markers: {
-            'Rifampicina':    { detected:0, not_detected:0, indeterminate:0, source:'Ultra' },
-            'Isoniazida':     { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
-            'Fluorquinolona': { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
-            'Amikacina':      { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
-            'Kanamicina':     { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
-            'Capreomicina':   { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
-            'Etionamida':     { detected:0, not_detected:0, indeterminate:0, source:'XDR'   },
-        }
+            'Rifampicina':    { detected: 0, not_detected: 0, indeterminate: 0, source: 'Ultra' },
+            'Isoniazida':     { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'   },
+            'Fluorquinolona': { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'   },
+            'Amikacina':      { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'   },
+            'Kanamicina':     { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'   },
+            'Capreomicina':   { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'   },
+            'Etionamida':     { detected: 0, not_detected: 0, indeterminate: 0, source: 'XDR'   },
+        },
     };
     const classifyAMR = (marker, val) => {
         if (!val || val === 'NO PROCEDE') return;
         const m = amr.markers[marker];
-        if (val.includes('NO DETECTADO')) { m.not_detected++;  return; }
-        if (val.includes('INDETERMINADO')){ m.indeterminate++; return; }
-        if (val.includes('DETECTADO'))    { m.detected++;      return; }
+        if (val.includes('NO DETECTADO'))  { m.not_detected++;  return; }
+        if (val.includes('INDETERMINADO')) { m.indeterminate++; return; }
+        if (val.includes('DETECTADO'))     { m.detected++;      return; }
     };
-    xpertUF.forEach(r => { if (r.resultado === 'MTB DETECTADO') classifyAMR('Rifampicina', r.resistencia_rifampicina); });
+    xpertUF.forEach(r => {
+        if (r.resultado === 'MTB DETECTADO') classifyAMR('Rifampicina', r.resistencia_rifampicina);
+    });
     xpertXDRF.forEach(r => {
         if (r.resultado !== 'MTB DETECTADO') return;
         classifyAMR('Isoniazida',     r.resistencia_isoniazida);
@@ -437,13 +451,18 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         classifyAMR('Capreomicina',   r.resistencia_capreomicina);
         classifyAMR('Etionamida',     r.resistencia_etionamida);
     });
-    amr.total = Object.values(amr.markers).reduce((s, v) => s + v.detected + v.not_detected + v.indeterminate, 0);
+    amr.total = Object.values(amr.markers)
+        .reduce((s, v) => s + v.detected + v.not_detected + v.indeterminate, 0);
 
-    /* ── Pirámide poblacional (Pos/Neg) ── */
+    /* Pirámide poblacional (positivos/negativos × sexo × edad) */
     const pacIds    = new Set(inds.map(i => i.paciente_id));
     const ageGroups = ['< 14', '15–29', '30–44', '45–59', '≥ 60'];
-    const pyramid   = { total:0, M_pos:[0,0,0,0,0], M_neg:[0,0,0,0,0], F_pos:[0,0,0,0,0], F_neg:[0,0,0,0,0], ageGroups };
-
+    const pyramid   = {
+        total: 0,
+        M_pos: [0,0,0,0,0], M_neg: [0,0,0,0,0],
+        F_pos: [0,0,0,0,0], F_neg: [0,0,0,0,0],
+        ageGroups,
+    };
     pacIds.forEach(pid => {
         const p = pacs.find(x => x.id === pid);
         if (!p || !p.fecha_nacimiento) return;
@@ -466,7 +485,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         pyramid.total++;
     });
 
-    /* ── Grupos de vulnerabilidad × pos/neg ── */
+    /* Grupos de vulnerabilidad × positivos/negativos */
     const gvStats = {};
     inds.forEach(ind => {
         const pac = pacs.find(p => p.id === ind.paciente_id);
@@ -491,7 +510,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   HELPERS
+   HELPERS DE RESULTADO
    ══════════════════════════════════════════════════════════ */
 
 function _hu_hasResult(recId, eid, baci, cult, xpertU, xpertXDR) {
@@ -525,12 +544,20 @@ function _hu_edad(fechaNac) {
     return e;
 }
 
+/* ══════════════════════════════════════════════════════════
+   COMPONENTES DE UI
+   ══════════════════════════════════════════════════════════ */
+
+/* Retorna <div class="col"> para uso con row-cols-* en el contenedor padre */
 function _hu_pill(label, value, color, icon) {
-    return `<div class="col-6">
-        <div class="card border-0 shadow-sm h-100" style="border-radius:10px;border-left:4px solid ${color}">
+    return `<div class="col">
+        <div class="card border-0 shadow-sm h-100"
+             style="border-radius:10px;border-left:4px solid ${color}">
             <div class="card-body py-2 px-3">
-                <div style="font-family:'IBM Plex Mono',monospace;font-size:1.3rem;font-weight:600;line-height:1;color:${color}">${value}</div>
-                <div style="font-size:.67rem;color:#8fa3bf;text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:1.3rem;
+                            font-weight:600;line-height:1;color:${color}">${value}</div>
+                <div style="font-size:.67rem;color:#8fa3bf;text-transform:uppercase;
+                            letter-spacing:.05em;margin-top:.25rem">
                     <i class="bi ${icon} me-1"></i>${label}
                 </div>
             </div>
@@ -539,142 +566,27 @@ function _hu_pill(label, value, color, icon) {
 }
 
 function _hu_empty(msg) {
-    return `<p class="text-center py-4 mb-0" style="font-size:.84rem;color:#8fa3bf"><i class="bi bi-inbox me-1"></i>${msg}</p>`;
+    return `<p class="text-center py-4 mb-0"
+               style="font-size:.84rem;color:#8fa3bf">
+        <i class="bi bi-inbox me-1"></i>${msg}
+    </p>`;
 }
 
 /* ══════════════════════════════════════════════════════════
-   GRÁFICOS (Chart.js — almacenados en _hl_charts)
-   ══════════════════════════════════════════════════════════ */
-
-function _hu_chartEstados(d) {
-    const c = document.getElementById('hu-c-estados'); if (!c) return;
-    _hl_charts['hu-estados'] = new Chart(c, {
-        type: 'doughnut',
-        data: {
-            labels: ['Pendientes', 'Recibidas', 'Rechazadas', 'Completadas'],
-            datasets: [{ data: [d.counts.pendiente, d.counts.recibida, d.counts.rechazada, d.counts.completada],
-                backgroundColor: ['#f0a500','#1a56db','#e0435a','#00b87a'], borderWidth:2, borderColor:'#fff' }]
-        },
-        options: { responsive:true,
-            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } } }
-    });
-}
-
-function _hu_chartExamenes(d) {
-    const c = document.getElementById('hu-c-examenes'); if (!c) return;
-    const examIds = Object.keys(d.byExamen).map(Number).filter(id => Object.values(d.byExamen[id]).some(v => v > 0));
-    const labels  = examIds.map(id => _HU_EXAMENES.find(e => e.id === id)?.nombre || `Examen ${id}`);
-    const mk = (label, key, bg) => ({ label, backgroundColor:bg, borderRadius:3, maxBarThickness:32,
-        data: examIds.map(id => d.byExamen[id][key] || 0) });
-    _hl_charts['hu-examenes'] = new Chart(c, {
-        type: 'bar',
-        data: { labels, datasets: [mk('Pendientes','pendiente','#f0a500'), mk('Recibidas','recibida','#1a56db'),
-            mk('Rechazadas','rechazada','#e0435a'), mk('Completadas','completada','#00b87a')] },
-        options: {
-            indexAxis:'y', responsive:true, maintainAspectRatio:false,
-            scales: {
-                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
-                y:{ stacked:true, grid:{ display:false }, ticks:{ font:{size:10}, color:'#334155' } }
-            },
-            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:6, boxWidth:12, color:'#334155' } } }
-        }
-    });
-}
-
-function _hu_chartTM(d) {
-    const c = document.getElementById('hu-c-tm'); if (!c) return;
-    const entries = Object.entries(d.byTMResult)
-        .map(([id, v]) => ({ label: d.tmCat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`, pos:v.pos, neg:v.neg }))
-        .filter(e => e.pos + e.neg > 0)
-        .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg))
-        .slice(0, 12);
-    _hl_charts['hu-tm'] = new Chart(c, {
-        type: 'bar',
-        data: { labels: entries.map(e => e.label), datasets: [
-            { label:'Positivos', data:entries.map(e=>e.pos), backgroundColor:'rgba(224,67,90,.85)', borderRadius:3 },
-            { label:'Negativos', data:entries.map(e=>e.neg), backgroundColor:'rgba(0,184,122,.85)', borderRadius:3 }
-        ]},
-        options: {
-            indexAxis:'y', responsive:true,
-            scales: {
-                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
-                y:{ stacked:true, ticks:{ font:{size:10}, color:'#334155' }, grid:{ display:false } }
-            },
-            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } }
-        }
-    });
-}
-
-function _hu_chartSpecies(d) {
-    const c = document.getElementById('hu-c-species'); if (!c) return;
-    const entries = Object.entries(d.microorganisms.data).sort((a,b)=>b[1]-a[1]);
-    _hl_charts['hu-species'] = new Chart(c, {
-        type: 'bar',
-        data: {
-            labels: entries.map(e => e[0].length > 38 ? e[0].slice(0,35)+'…' : e[0]),
-            datasets: [{ label:'Casos aislados', data:entries.map(e=>e[1]), backgroundColor:'rgba(26,86,219,.75)', borderRadius:3 }]
-        },
-        options: { indexAxis:'y', responsive:true,
-            scales: {
-                x:{ ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
-                y:{ ticks:{ font:{ size:10, style:'italic' }, color:'#334155' }, grid:{ display:false } }
-            },
-            plugins:{ legend:{ display:false } }
-        }
-    });
-}
-
-function _hu_chartAMR(d) {
-    const c = document.getElementById('hu-c-amr'); if (!c) return;
-    const markers = Object.entries(d.amr.markers)
-        .filter(([, v]) => v.detected + v.not_detected + v.indeterminate > 0);
-    const labels = markers.map(([k, v]) => `${k}${v.source === 'Ultra' ? ' ★' : ''}`);
-
-    const h = Math.max(220, markers.length * 52);
-    const wrapper = document.getElementById('hu-amr-wrapper');
-    if (wrapper) wrapper.style.height = h + 'px';
-
-    _hl_charts['hu-amr'] = new Chart(c, {
-        type: 'bar',
-        data: { labels, datasets: [
-            { label:'Resistencia detectada', data:markers.map(([,v])=>v.detected),      backgroundColor:'rgba(224,67,90,.85)', borderRadius:3 },
-            { label:'Indeterminado',          data:markers.map(([,v])=>v.indeterminate), backgroundColor:'rgba(240,165,0,.80)', borderRadius:3 },
-            { label:'No detectada',           data:markers.map(([,v])=>v.not_detected),  backgroundColor:'rgba(0,184,122,.80)', borderRadius:3 },
-        ]},
-        options: {
-            indexAxis:'y', responsive:true, maintainAspectRatio:false,
-            scales: {
-                x:{ stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
-                y:{ stacked:true, ticks:{ font:{size:11}, color:'#334155' }, grid:{ display:false },
-                    afterFit(scale) { scale.width = Math.max(scale.width, 128); } }
-            },
-            plugins: {
-                legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } },
-                tooltip:{ callbacks:{ title: ctx => {
-                    const lbl = ctx[0].label.replace(' ★','');
-                    const src = d.amr.markers[lbl]?.source;
-                    return `${lbl}${src ? ' (' + src + ')' : ''}`;
-                }}}
-            }
-        }
-    });
-}
-
-/* ══════════════════════════════════════════════════════════
-   RENDERIZADOS NO-CHART
+   RENDERIZADOS (gestionan su propio estado vacío)
    ══════════════════════════════════════════════════════════ */
 
 function _hu_renderResultados(d, el) {
     if (!el) return;
     const exIds = Object.keys(d.resultados).map(Number);
-    if (!exIds.length) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
+    if (!exIds.length) { el.innerHTML = _hu_empty('Sin resultados emitidos en el período.'); return; }
 
-    const posKeys = new Set(['Positivo','MTB DETECTADO']);
-    const negKeys = new Set(['Negativo','Sin crecimiento','MTB NO DETECTADO']);
+    const posKeys = new Set(['Positivo', 'MTB DETECTADO']);
+    const negKeys = new Set(['Negativo', 'Sin crecimiento', 'MTB NO DETECTADO']);
 
     let html = exIds.map((eid, i) => {
         const res   = d.resultados[eid];
-        const total = Object.values(res).reduce((s,v) => s+v, 0);
+        const total = Object.values(res).reduce((s, v) => s + v, 0);
         const ex    = _HU_EXAMENES.find(e => e.id === eid);
         const bars  = Object.entries(res).map(([label, cnt]) => {
             const pct = total > 0 ? Math.round(cnt / total * 100) : 0;
@@ -685,15 +597,21 @@ function _hu_renderResultados(d, el) {
                     <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span>
                 </div>
                 <div style="height:5px;background:#f1f5f9;border-radius:3px">
-                    <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .4s ease"></div>
+                    <div style="height:100%;width:${pct}%;background:${col};
+                                border-radius:3px;transition:width .4s ease"></div>
                 </div>
             </div>`;
         }).join('');
         const sep = i > 0 ? 'style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid #f1f5f9"' : '';
         return `<div ${sep}>
             <div class="d-flex align-items-center gap-2 mb-2">
-                <span style="padding:.12em .55em;border-radius:5px;background:#e0f2fe;color:#0369a1;font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:700">${ex?.codigo || eid}</span>
-                <span style="font-size:.82rem;font-weight:600;color:#0b1e3d">${ex?.nombre || `Examen ${eid}`}</span>
+                <span style="padding:.12em .55em;border-radius:5px;background:#e0f2fe;color:#0369a1;
+                             font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:700">
+                    ${ex?.codigo || eid}
+                </span>
+                <span style="font-size:.82rem;font-weight:600;color:#0b1e3d">
+                    ${ex?.nombre || `Examen ${eid}`}
+                </span>
                 <span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${total}</span>
             </div>
             ${bars}
@@ -701,18 +619,22 @@ function _hu_renderResultados(d, el) {
     }).join('');
 
     /* Perfil de Farmacorresistencia TB */
-    const tc = d.tbClass;
-    const totalRes = Object.values(tc).reduce((a,b)=>a+b,0);
+    const tc       = d.tbClass;
+    const totalRes = Object.values(tc).reduce((a, b) => a + b, 0);
     if (totalRes > 0) {
         const mapColors = {
-            'Sensible':'#00b87a','Monoresistente':'#f0a500','Polirresistente':'#f97316',
-            'TB-MDR':'#e0435a','TB pre-XDR':'#be123c','TB-XDR':'#881337'
+            'Sensible':       '#00b87a', 'Monoresistente': '#f0a500',
+            'Polirresistente':'#f97316', 'TB-MDR':         '#e0435a',
+            'TB pre-XDR':     '#be123c', 'TB-XDR':         '#881337',
         };
-        let resHtml = `<div style="margin-top:1.2rem;padding-top:1rem;border-top:1.5px dashed #cbd5e1">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span style="font-size:.82rem;font-weight:700;color:#0b1e3d"><i class="bi bi-shield-virus me-1"></i>Perfil de Farmacorresistencia (TB)</span>
-                <span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${totalRes}</span>
-            </div>`;
+        let resHtml = `
+            <div style="margin-top:1.2rem;padding-top:1rem;border-top:1.5px dashed #cbd5e1">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span style="font-size:.82rem;font-weight:700;color:#0b1e3d">
+                        <i class="bi bi-shield-virus me-1"></i>Perfil de Farmacorresistencia (TB)
+                    </span>
+                    <span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${totalRes}</span>
+                </div>`;
         Object.entries(tc).forEach(([label, cnt]) => {
             if (cnt === 0) return;
             const pct = Math.round(cnt / totalRes * 100);
@@ -722,7 +644,8 @@ function _hu_renderResultados(d, el) {
                     <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span>
                 </div>
                 <div style="height:6px;background:#f1f5f9;border-radius:3px">
-                    <div style="height:100%;width:${pct}%;background:${mapColors[label]};border-radius:3px;transition:width .4s ease"></div>
+                    <div style="height:100%;width:${pct}%;background:${mapColors[label]};
+                                border-radius:3px;transition:width .4s ease"></div>
                 </div>
             </div>`;
         });
@@ -734,38 +657,54 @@ function _hu_renderResultados(d, el) {
 
 function _hu_renderPyramid(pyramid, el) {
     if (!el) return;
-    if (pyramid.total === 0) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
+    if (pyramid.total === 0) { el.innerHTML = _hu_empty('Sin pacientes con resultados en el período.'); return; }
 
-    const max = Math.max(...pyramid.ageGroups.map((g,i) =>
-        Math.max(pyramid.M_pos[i]+pyramid.M_neg[i], pyramid.F_pos[i]+pyramid.F_neg[i])
-    ), 1);
+    const max = Math.max(
+        ...pyramid.ageGroups.map((g, i) =>
+            Math.max(pyramid.M_pos[i] + pyramid.M_neg[i], pyramid.F_pos[i] + pyramid.F_neg[i])
+        ), 1
+    );
 
     el.innerHTML = `
     <div>
         <div class="d-flex justify-content-between mb-3" style="font-size:.72rem;font-weight:700">
             <span style="color:#334155"><i class="bi bi-gender-male me-1"></i>Hombres</span>
-            <span style="font-size:.68rem;">
-                <span style="color:#e0435a;margin-right:2px">■ Pos</span> <span style="color:#00b87a;margin-left:4px">■ Neg</span>
+            <span style="font-size:.68rem">
+                <span style="color:#e0435a;margin-right:2px">■ Pos</span>
+                <span style="color:#00b87a;margin-left:4px">■ Neg</span>
             </span>
             <span style="color:#334155">Mujeres<i class="bi bi-gender-female ms-1"></i></span>
         </div>
         ${pyramid.ageGroups.map((g, i) => {
             const mP = pyramid.M_pos[i], mN = pyramid.M_neg[i];
             const fP = pyramid.F_pos[i], fN = pyramid.F_neg[i];
-            const mTotal = mP+mN, fTotal = fP+fN;
-            const mPPct = mTotal > 0 ? (mP/max*100) : 0, mNPct = mTotal > 0 ? (mN/max*100) : 0;
-            const fPPct = fTotal > 0 ? (fP/max*100) : 0, fNPct = fTotal > 0 ? (fN/max*100) : 0;
+            const mTotal = mP + mN, fTotal = fP + fN;
+            const mPPct = (mP / max * 100).toFixed(1), mNPct = (mN / max * 100).toFixed(1);
+            const fPPct = (fP / max * 100).toFixed(1), fNPct = (fN / max * 100).toFixed(1);
             return `<div class="d-flex align-items-center" style="gap:6px;margin-bottom:6px">
                 <div style="flex:1;display:flex;justify-content:flex-end;align-items:center;gap:2px">
-                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-right:4px">${mTotal > 0 ? mTotal : ''}</span>
-                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);border-radius:3px 0 0 3px;min-width:${mP>0?3:0}px" title="H Pos: ${mP}"></div>
-                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);border-radius:${mP>0?0:3}px 0 0 ${mP>0?0:3}px;min-width:${mN>0?3:0}px" title="H Neg: ${mN}"></div>
+                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;
+                                 margin-right:4px">${mTotal || ''}</span>
+                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);
+                                border-radius:3px 0 0 3px;min-width:${mP > 0 ? 3 : 0}px"
+                         title="H Pos: ${mP}"></div>
+                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);
+                                border-radius:${mP > 0 ? 0 : 3}px 0 0 ${mP > 0 ? 0 : 3}px;
+                                min-width:${mN > 0 ? 3 : 0}px"
+                         title="H Neg: ${mN}"></div>
                 </div>
-                <div style="min-width:68px;text-align:center;font-size:.77rem;font-weight:600;color:#475569;white-space:nowrap">${g}</div>
+                <div style="min-width:68px;text-align:center;font-size:.77rem;font-weight:600;
+                            color:#475569;white-space:nowrap">${g}</div>
                 <div style="flex:1;display:flex;align-items:center;gap:2px">
-                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);border-radius:0 ${fP>0?0:3}px ${fP>0?0:3}px 0;min-width:${fN>0?3:0}px" title="M Neg: ${fN}"></div>
-                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);border-radius:0 3px 3px 0;min-width:${fP>0?3:0}px" title="M Pos: ${fP}"></div>
-                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-left:4px">${fTotal > 0 ? fTotal : ''}</span>
+                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);
+                                border-radius:0 ${fP > 0 ? 0 : 3}px ${fP > 0 ? 0 : 3}px 0;
+                                min-width:${fN > 0 ? 3 : 0}px"
+                         title="M Neg: ${fN}"></div>
+                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);
+                                border-radius:0 3px 3px 0;min-width:${fP > 0 ? 3 : 0}px"
+                         title="M Pos: ${fP}"></div>
+                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;
+                                 margin-left:4px">${fTotal || ''}</span>
                 </div>
             </div>`;
         }).join('')}
@@ -777,12 +716,12 @@ function _hu_renderGV(d, el) {
     const entries = Object.entries(d.gvStats)
         .map(([id, v]) => ({
             label: d.gvCat.find(g => g.id === Number(id))?.nombre || `Grupo ${id}`,
-            pos: v.pos, neg: v.neg
+            pos: v.pos, neg: v.neg,
         }))
         .filter(e => e.pos + e.neg > 0)
         .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg));
 
-    if (!entries.length) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
+    if (!entries.length) { el.innerHTML = _hu_empty('Sin resultados definitivos registrados.'); return; }
 
     el.innerHTML = entries.slice(0, 12).map(e => {
         const total  = e.pos + e.neg;
@@ -791,16 +730,207 @@ function _hu_renderGV(d, el) {
         const lbl    = e.label.length > 40 ? e.label.slice(0, 37) + '…' : e.label;
         return `<div style="margin-bottom:.6rem">
             <div class="d-flex justify-content-between" style="font-size:.75rem;margin-bottom:3px">
-                <span style="color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%">${lbl}</span>
+                <span style="color:#334155;overflow:hidden;text-overflow:ellipsis;
+                             white-space:nowrap;max-width:72%">${lbl}</span>
                 <span style="font-family:'IBM Plex Mono',monospace;white-space:nowrap;margin-left:.4rem">
-                    <span style="color:#e0435a;font-weight:700">${e.pos}</span><span style="color:#ccc;font-size:.65rem">+</span>
-                    <span style="color:#00b87a;font-weight:700;margin-left:.2rem">${e.neg}</span><span style="color:#ccc;font-size:.65rem">−</span>
+                    <span style="color:#e0435a;font-weight:700">${e.pos}</span>
+                    <span style="color:#ccc;font-size:.65rem">+</span>
+                    <span style="color:#00b87a;font-weight:700;margin-left:.2rem">${e.neg}</span>
+                    <span style="color:#ccc;font-size:.65rem">−</span>
                 </span>
             </div>
             <div style="height:6px;background:#f1f5f9;border-radius:3px;display:flex;overflow:hidden">
-                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;border-radius:${e.neg?'3px 0 0 3px':'3px'}"></div>` : ''}
-                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;border-radius:${e.pos?'0 3px 3px 0':'3px'}"></div>` : ''}
+                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;
+                    border-radius:${e.neg ? '3px 0 0 3px' : '3px'}"></div>` : ''}
+                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;
+                    border-radius:${e.pos ? '0 3px 3px 0' : '3px'}"></div>` : ''}
             </div>
         </div>`;
     }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   GRÁFICOS (gestionan su propio estado vacío)
+   Cada función recibe `d`, localiza su wrapper, y decide si
+   renderiza el gráfico o el mensaje vacío.
+   ══════════════════════════════════════════════════════════ */
+
+function _hu_chartExamenes(d) {
+    const wrap = document.getElementById('hu-examenes-wrap');
+    if (!wrap) return;
+
+    const examIds = Object.keys(d.byExamen).map(Number)
+        .filter(id => Object.values(d.byExamen[id]).some(v => v > 0));
+
+    if (!examIds.length) {
+        wrap.innerHTML = _hu_empty('Sin exámenes registrados en el período.');
+        return;
+    }
+
+    wrap.innerHTML = '<canvas id="hu-c-examenes"></canvas>';
+    const c = document.getElementById('hu-c-examenes');
+
+    const labels = examIds.map(id => _HU_EXAMENES.find(e => e.id === id)?.nombre || `Examen ${id}`);
+    const mk = (label, key, bg) => ({
+        label, backgroundColor: bg, borderRadius: 3, maxBarThickness: 32,
+        data: examIds.map(id => d.byExamen[id][key] || 0),
+    });
+
+    _hl_charts['hu-examenes'] = new Chart(c, {
+        type: 'bar',
+        data: { labels, datasets: [
+            mk('Pendientes',  'pendiente', '#f0a500'),
+            mk('Recibidas',   'recibida',  '#1a56db'),
+            mk('Rechazadas',  'rechazada', '#e0435a'),
+            mk('Completadas', 'completada','#00b87a'),
+        ]},
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true, ticks: { precision: 0, color: '#64748b' }, grid: { color: 'rgba(0,0,0,.05)' } },
+                y: { stacked: true, ticks: { font: { size: 10 }, color: '#334155' }, grid: { display: false } },
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 6, boxWidth: 12, color: '#334155' } },
+            },
+        },
+    });
+}
+
+function _hu_chartTM(d) {
+    const wrap = document.getElementById('hu-tm-wrap');
+    if (!wrap) return;
+
+    const entries = Object.entries(d.byTMResult)
+        .map(([id, v]) => ({
+            label: d.tmCat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`,
+            pos: v.pos, neg: v.neg,
+        }))
+        .filter(e => e.pos + e.neg > 0)
+        .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg))
+        .slice(0, 12);
+
+    if (!entries.length) {
+        wrap.innerHTML = _hu_empty('Sin resultados por tipo de muestra en el período.');
+        return;
+    }
+
+    wrap.innerHTML = '<canvas id="hu-c-tm"></canvas>';
+    const c = document.getElementById('hu-c-tm');
+
+    _hl_charts['hu-tm'] = new Chart(c, {
+        type: 'bar',
+        data: { labels: entries.map(e => e.label), datasets: [
+            { label: 'Positivos', data: entries.map(e => e.pos), backgroundColor: 'rgba(224,67,90,.85)', borderRadius: 3 },
+            { label: 'Negativos', data: entries.map(e => e.neg), backgroundColor: 'rgba(0,184,122,.85)', borderRadius: 3 },
+        ]},
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true, ticks: { precision: 0, color: '#64748b' }, grid: { color: 'rgba(0,0,0,.05)' } },
+                y: { stacked: true, ticks: { font: { size: 10 }, color: '#334155' }, grid: { display: false } },
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8, boxWidth: 12, color: '#334155' } },
+            },
+        },
+    });
+}
+
+function _hu_chartSpecies(d) {
+    const wrap = document.getElementById('hu-species-wrap');
+    if (!wrap) return;
+
+    const entries = Object.entries(d.microorganisms.data)
+        .sort((a, b) => b[1] - a[1]);
+
+    if (!entries.length) {
+        wrap.innerHTML = _hu_empty('Sin microorganismos identificados en el período.');
+        return;
+    }
+
+    wrap.innerHTML = '<canvas id="hu-c-species"></canvas>';
+    const c = document.getElementById('hu-c-species');
+
+    _hl_charts['hu-species'] = new Chart(c, {
+        type: 'bar',
+        data: {
+            labels: entries.map(e => e[0].length > 38 ? e[0].slice(0, 35) + '…' : e[0]),
+            datasets: [{
+                label: 'Casos aislados',
+                data: entries.map(e => e[1]),
+                backgroundColor: 'rgba(26,86,219,.75)',
+                borderRadius: 3,
+            }],
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { ticks: { precision: 0, color: '#64748b' }, grid: { color: 'rgba(0,0,0,.05)' } },
+                y: { ticks: { font: { size: 10, style: 'italic' }, color: '#334155' }, grid: { display: false } },
+            },
+            plugins: { legend: { display: false } },
+        },
+    });
+}
+
+function _hu_chartAMR(d) {
+    const wrap = document.getElementById('hu-amr-wrap');
+    if (!wrap) return;
+
+    const markers = Object.entries(d.amr.markers)
+        .filter(([, v]) => v.detected + v.not_detected + v.indeterminate > 0);
+
+    if (!markers.length) {
+        wrap.innerHTML = _hu_empty('Sin datos de resistencia antimicrobiana en el período.');
+        return;
+    }
+
+    const h      = Math.max(220, markers.length * 52);
+    const labels = markers.map(([k, v]) => `${k}${v.source === 'Ultra' ? ' ★' : ''}`);
+
+    wrap.innerHTML = `<div style="position:relative;height:${h}px;width:100%">
+        <canvas id="hu-c-amr"></canvas>
+    </div>`;
+    const c = document.getElementById('hu-c-amr');
+
+    _hl_charts['hu-amr'] = new Chart(c, {
+        type: 'bar',
+        data: { labels, datasets: [
+            { label: 'Resistencia detectada', data: markers.map(([, v]) => v.detected),      backgroundColor: 'rgba(224,67,90,.85)', borderRadius: 3 },
+            { label: 'Indeterminado',          data: markers.map(([, v]) => v.indeterminate), backgroundColor: 'rgba(240,165,0,.80)', borderRadius: 3 },
+            { label: 'No detectada',           data: markers.map(([, v]) => v.not_detected),  backgroundColor: 'rgba(0,184,122,.80)', borderRadius: 3 },
+        ]},
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: { precision: 0, color: '#64748b' },
+                    grid:  { color: 'rgba(0,0,0,.05)' },
+                },
+                y: {
+                    stacked: true,
+                    ticks: { font: { size: 11 }, color: '#334155' },
+                    grid:  { display: false },
+                    afterFit(scale) { scale.width = Math.max(scale.width, 128); },
+                },
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { size: 11 }, padding: 8, boxWidth: 12, color: '#334155' },
+                },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const lbl = ctx[0].label.replace(' ★', '');
+                            const src = d.amr.markers[lbl]?.source;
+                            return `${lbl}${src ? ' (' + src + ')' : ''}`;
+                        },
+                    },
+                },
+            },
+        },
+    });
 }
