@@ -143,18 +143,17 @@ async function renderLaboratorio(user, el) {
 
     /* Listeners de tabs */
     if (puedeRecibirAlgo)
-        document.getElementById('tab-pend')?.addEventListener('click',
-            () => { _labView = 'pendientes'; renderLaboratorio(user, el); });
+        document.getElementById('tab-resumen')?.addEventListener('click',
+            () => { _labView = 'resumen'; renderLaboratorio(user, el); });
 
     if (esLabStaff) {
+       document.getElementById('tab-pend')?.addEventListener('click',
+            () => { _labView = 'pendientes'; renderLaboratorio(user, el); });
         document.getElementById('tab-rec')?.addEventListener('click',
             () => { _labView = 'recibidas'; renderLaboratorio(user, el); });
 
         document.getElementById('tab-rech')?.addEventListener('click',
-            () => { _labView = 'rechazadas'; renderLaboratorio(user, el); });
-
-        document.getElementById('tab-resumen')?.addEventListener('click',
-            () => { _labView = 'resumen'; renderLaboratorio(user, el); });
+            () => { _labView = 'rechazadas'; renderLaboratorio(user, el); });        
     }
 
     /* Refresco manual: re-ejecuta todo el módulo */
