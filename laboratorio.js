@@ -1,7 +1,6 @@
 /* =========================================================
    laboratorio.js — Módulo de Laboratorio
-   Tabs: Pendientes · Muestras recibidas · Muestras rechazadas
-         · Resumen de laboratorio
+   Tabs: Resumen · Pendientes · Muestras recibidas · Muestras rechazadas
    ========================================================= */
 
 let _labUser = null;
@@ -12,9 +11,6 @@ async function renderLaboratorio(user, el) {
 
     _labUser = user;
 
-    /* ── Re-fetch completo desde Supabase ────────────────────
-       Incluye permisos_lab para que otro dispositivo vea los
-       permisos asignados sin necesidad de recargar la página. */
     const sb = typeof _client === 'function' ? _client() : null;
     if (sb) {
         try {
@@ -30,7 +26,7 @@ async function renderLaboratorio(user, el) {
             ]);
             const d = r => (r.status === 'fulfilled' && r.value.data) ? r.value.data : null;
 
-            if (d(rPerms)) window._store.permisos_lab = d(rPerms);   /* ← clave */
+            if (d(rPerms)) window._store.permisos_lab = d(rPerms);
 
             const inds  = d(rInds);
             const indEx = d(rIndEx) || [];
@@ -53,7 +49,6 @@ async function renderLaboratorio(user, el) {
             console.warn('renderLaboratorio: refresco Supabase falló —', e);
         }
     }
-    /* ───────────────────────────────────────────────────────── */
 
     const emitirIds        = _labsConPermiso(user.id, 'puede_emitir');
     const editarIds        = _labsConPermiso(user.id, 'puede_editar');
@@ -67,16 +62,16 @@ async function renderLaboratorio(user, el) {
     const rechazadas     = allRecepciones.filter(r => r.estado === 'rechazada');
 
     const validViews = new Set();
-    if (puedeRecibirAlgo) validViews.add('pendientes');
+    if (esLabStaff)        validViews.add('resumen');
+    if (puedeRecibirAlgo)  validViews.add('pendientes');
     if (esLabStaff) {
         validViews.add('recibidas');
         validViews.add('rechazadas');
-        validViews.add('resumen');
     }
 
     if (!_labView || !validViews.has(_labView)) {
-        _labView = puedeRecibirAlgo ? 'pendientes'
-                 : esLabStaff       ? 'recibidas'
+        _labView = esLabStaff       ? 'resumen'
+                 : puedeRecibirAlgo ? 'pendientes'
                  : null;
     }
 
@@ -94,40 +89,34 @@ async function renderLaboratorio(user, el) {
         return;
     }
 
-    /* Construir tabs */
+    /* ── Construir tabs: Resumen → Pendientes → Recibidas → Rechazadas ── */
     const tabs = [];
 
-    if (puedeRecibirAlgo)
-       tabs.push(`<button class="lab-tab-btn${_labView === 'resumen' ? ' active' : ''}"
-                           id="tab-resumen">
+    if (esLabStaff)
+        tabs.push(`<button class="lab-tab-btn${_labView === 'resumen' ? ' active' : ''}" id="tab-resumen">
             <i class="bi bi-bar-chart-line"></i><span class="tab-label"> Resumen</span>
         </button>`);
-   
-        tabs.push(`<button class="lab-tab-btn${_labView === 'pendientes' ? ' active' : ''}"
-                           id="tab-pend">
+
+    if (puedeRecibirAlgo)
+        tabs.push(`<button class="lab-tab-btn${_labView === 'pendientes' ? ' active' : ''}" id="tab-pend">
             <i class="bi bi-inbox"></i><span class="tab-label"> Pendientes</span>
             ${pendientes.length ? `<span class="lab-tab-badge">${pendientes.length}</span>` : ''}
         </button>`);
 
     if (esLabStaff) {
-        tabs.push(`<button class="lab-tab-btn${_labView === 'recibidas' ? ' active' : ''}"
-                           id="tab-rec">
+        tabs.push(`<button class="lab-tab-btn${_labView === 'recibidas' ? ' active' : ''}" id="tab-rec">
             <i class="bi bi-flask"></i><span class="tab-label"> Muestras recibidas</span>
         </button>`);
-
-        tabs.push(`<button class="lab-tab-btn${_labView === 'rechazadas' ? ' active' : ''}"
-                           id="tab-rech">
+        tabs.push(`<button class="lab-tab-btn${_labView === 'rechazadas' ? ' active' : ''}" id="tab-rech">
             <i class="bi bi-x-circle"></i><span class="tab-label"> Muestras rechazadas</span>
             ${rechazadas.length ? `<span class="lab-tab-badge">${rechazadas.length}</span>` : ''}
         </button>`);
-
-        
     }
 
-    /* Botón de refresco manual */
+    /* ── Botón de refresco separado del grupo de tabs ── */
     const btnRefresh = `<button class="lab-tab-btn" id="tab-refresh"
             title="Actualizar datos desde el servidor"
-            style="margin-left:auto;opacity:.7">
+            style="opacity:.7;flex-shrink:0">
         <i class="bi bi-arrow-clockwise"></i><span class="tab-label"> Actualizar</span>
     </button>`;
 
@@ -136,48 +125,40 @@ async function renderLaboratorio(user, el) {
         <h2 class="modulo-title">Laboratorio</h2>
         <p class="modulo-sub">Gestión de muestras y consulta de resultados.</p>
     </div>
-    <div class="lab-tabs" style="justify-content:flex-start;flex-wrap:wrap">
-        ${tabs.join('')}${btnRefresh}
+    <div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
+        <div class="lab-tabs" style="flex:1;min-width:0;margin-bottom:0">
+            ${tabs.join('')}
+        </div>
+        ${btnRefresh}
     </div>
     <div id="lab-tab-content"></div>`;
 
-    /* Listeners de tabs */
-    if (puedeRecibirAlgo)
+    /* ── Listeners de tabs ── */
+    if (esLabStaff)
         document.getElementById('tab-resumen')?.addEventListener('click',
             () => { _labView = 'resumen'; renderLaboratorio(user, el); });
 
-    if (esLabStaff) {
-       document.getElementById('tab-pend')?.addEventListener('click',
+    if (puedeRecibirAlgo)
+        document.getElementById('tab-pend')?.addEventListener('click',
             () => { _labView = 'pendientes'; renderLaboratorio(user, el); });
+
+    if (esLabStaff) {
         document.getElementById('tab-rec')?.addEventListener('click',
             () => { _labView = 'recibidas'; renderLaboratorio(user, el); });
-
         document.getElementById('tab-rech')?.addEventListener('click',
-            () => { _labView = 'rechazadas'; renderLaboratorio(user, el); });        
+            () => { _labView = 'rechazadas'; renderLaboratorio(user, el); });
     }
 
-    /* Refresco manual: re-ejecuta todo el módulo */
     document.getElementById('tab-refresh')?.addEventListener('click', async () => {
         const btn = document.getElementById('tab-refresh');
         if (btn) { btn.disabled = true; btn.querySelector('i').className = 'bi bi-hourglass-split'; }
         await renderLaboratorio(user, el);
     });
 
-    /* Routing de contenido */
+    /* ── Routing de contenido ── */
     const content = document.getElementById('lab-tab-content');
-    if      (_labView === 'pendientes')  _renderPendientes(pendientes, content, user, el, emitirIds);
+    if      (_labView === 'resumen')     renderLabResumen(user, content);
+    else if (_labView === 'pendientes')  _renderPendientes(pendientes, content, user, el, emitirIds);
     else if (_labView === 'rechazadas')  _renderRechazadas(rechazadas, content, user, el, emitirIds, editarIds);
-    else if (_labView === 'resumen')     renderLabResumen(user, content);
     else                                 _renderRecibidas(recepciones, content, user, el, emitirIds, editarIds);
-   // Al final de renderLaboratorio, tras montar el UI:
-if (window._labRefreshTimer) clearInterval(window._labRefreshTimer);
-window._labRefreshTimer = setInterval(async () => {
-    // Solo refrescar si el módulo laboratorio sigue visible
-    const tabContent = document.getElementById('lab-tab-content');
-    if (!tabContent || !document.body.contains(tabContent)) {
-        clearInterval(window._labRefreshTimer);
-        return;
-    }
-    await renderLaboratorio(user, el);
-}, 30000); // cada 30 segundos
 }
