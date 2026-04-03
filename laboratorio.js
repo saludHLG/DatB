@@ -98,6 +98,11 @@ async function renderLaboratorio(user, el) {
     const tabs = [];
 
     if (puedeRecibirAlgo)
+       tabs.push(`<button class="lab-tab-btn${_labView === 'resumen' ? ' active' : ''}"
+                           id="tab-resumen">
+            <i class="bi bi-bar-chart-line"></i><span class="tab-label"> Resumen</span>
+        </button>`);
+   
         tabs.push(`<button class="lab-tab-btn${_labView === 'pendientes' ? ' active' : ''}"
                            id="tab-pend">
             <i class="bi bi-inbox"></i><span class="tab-label"> Pendientes</span>
@@ -116,10 +121,7 @@ async function renderLaboratorio(user, el) {
             ${rechazadas.length ? `<span class="lab-tab-badge">${rechazadas.length}</span>` : ''}
         </button>`);
 
-        tabs.push(`<button class="lab-tab-btn${_labView === 'resumen' ? ' active' : ''}"
-                           id="tab-resumen">
-            <i class="bi bi-bar-chart-line"></i><span class="tab-label"> Resumen</span>
-        </button>`);
+        
     }
 
     /* Botón de refresco manual */
