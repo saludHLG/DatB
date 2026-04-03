@@ -173,8 +173,7 @@ function _hu_render(user, el, dateFrom, dateTo) {
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
                     <p class="hu-card-title mb-3">
-                        Pacientes por edad y resultados
-                        <span style="font-size:.75rem;font-weight:400;color:#8fa3bf;margin-left:.4rem">${d.pyramid.total} paciente(s) c/resultados</span>
+                        Distribución según edad, sexo y resultados                        
                     </p>
                     <div id="hu-pyramid"></div>
                 </div>
@@ -183,11 +182,7 @@ function _hu_render(user, el, dateFrom, dateTo) {
         <div class="col-12 col-lg-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
-                    <p class="hu-card-title mb-1">Grupos de vulnerabilidad</p>
-                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">Solo indicaciones con resultado definitivo.
-                        <span style="color:#e0435a;font-weight:600">+</span> pos. /
-                        <span style="color:#00b87a;font-weight:600">−</span> neg.
-                    </p>
+                    <p class="hu-card-title mb-1">Distribucción según grupos vulnerables y resultados</p>
                     <div id="hu-gv"></div>
                 </div>
             </div>
@@ -739,7 +734,7 @@ function _hu_renderResultados(d, el) {
 
 function _hu_renderPyramid(pyramid, el) {
     if (!el) return;
-    if (pyramid.total === 0) { el.innerHTML = _hu_empty('Sin pacientes c/resultados en el período.'); return; }
+    if (pyramid.total === 0) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
 
     const max = Math.max(...pyramid.ageGroups.map((g,i) =>
         Math.max(pyramid.M_pos[i]+pyramid.M_neg[i], pyramid.F_pos[i]+pyramid.F_neg[i])
@@ -787,7 +782,7 @@ function _hu_renderGV(d, el) {
         .filter(e => e.pos + e.neg > 0)
         .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg));
 
-    if (!entries.length) { el.innerHTML = _hu_empty('Sin resultados definitivos registrados.'); return; }
+    if (!entries.length) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
 
     el.innerHTML = entries.slice(0, 12).map(e => {
         const total  = e.pos + e.neg;
