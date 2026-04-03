@@ -31,8 +31,7 @@ function renderHomeUsuario(user, el) {
                 <i class="bi bi-hourglass-split pending-big-icon"></i>
                 <p>Un administrador verificará sus datos y habilitará el acceso a los módulos.<br>
                 Puede cerrar esta ventana y volver más tarde.</p>
-            </div>
-            <div class="pilot-notice"><i class="bi bi-info-circle"></i> Estudio piloto — datos en almacenamiento local.</div>`;
+            </div>`;
         return;
     }
 
@@ -113,7 +112,7 @@ function _hu_render(user, el, dateFrom, dateTo) {
         <div class="col-12 col-lg-7">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body d-flex flex-column">
-                    <p class="hu-card-title mb-3">Estatus de las muestras según tipo de examen</p>
+                    <p class="hu-card-title mb-3">Tipo de examen según estatus de la muestra</p>
                     ${Object.keys(d.byExamen).length === 0
                         ? _hu_empty('Sin resultados.')
                         : '<div style="position:relative; flex:1; min-height:220px; width:100%;"><canvas id="hu-c-examenes"></canvas></div>'}
@@ -147,12 +146,12 @@ function _hu_render(user, el, dateFrom, dateTo) {
         <div class="col-12 col-lg-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
-                    <p class="hu-card-title mb-1">Casos positivos por microorganismo (género y especie)</p>
+                    <p class="hu-card-title mb-1">Casos positivos según género y especie</p>
                     <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">
-                        Baciloscopia positiva: BAAR+ (Indeterminado) hasta confirmación por Cultivo o Xpert.
+                        * BAAR+ (Indeterminado): Casos positivos sin determinar por cultivo o ensayo Xpert
                     </p>
                     ${d.microorganisms.total === 0
-                        ? _hu_empty('Sin microorganismos identificados.')
+                        ? _hu_empty('Sin resultado.')
                         : '<div style="position: relative; height: 300px; width: 100%;"><canvas id="hu-c-species"></canvas></div>'}
                 </div>
             </div>
