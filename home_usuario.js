@@ -122,6 +122,14 @@ function _hu_render(user, el, dateFrom, dateTo) {
     </div>
 
     <div class="row g-3 mb-3">
+       <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                <div class="card-body">
+                    <p class="hu-card-title mb-3">Resultados según tipo de examen</p>
+                    <div id="hu-resultados"></div>
+                </div>
+            </div>
+        </div>
         <div class="col-12 col-lg-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
@@ -129,14 +137,6 @@ function _hu_render(user, el, dateFrom, dateTo) {
                     ${Object.keys(d.byTMResult).length === 0
                         ? _hu_empty('Sin resultados.')
                         : '<div style="position: relative; height: 300px; width: 100%;"><canvas id="hu-c-tm"></canvas></div>'}
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="hu-card-title mb-3">Resultados recibidos</p>
-                    <div id="hu-resultados"></div>
                 </div>
             </div>
         </div>
@@ -675,7 +675,7 @@ function _hu_chartAMR(d) {
 function _hu_renderResultados(d, el) {
     if (!el) return;
     const exIds = Object.keys(d.resultados).map(Number);
-    if (!exIds.length) { el.innerHTML = _hu_empty('Sin resultados recibidos en el período.'); return; }
+    if (!exIds.length) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
 
     const posKeys = new Set(['Positivo','MTB DETECTADO']);
     const negKeys = new Set(['Negativo','Sin crecimiento','MTB NO DETECTADO']);
