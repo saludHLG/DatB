@@ -579,7 +579,7 @@ function _hu_empty(msg) {
 function _hu_renderResultados(d, el) {
     if (!el) return;
     const exIds = Object.keys(d.resultados).map(Number);
-    if (!exIds.length) { el.innerHTML = _hu_empty('Sin resultados emitidos en el período.'); return; }
+    if (!exIds.length) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
 
     const posKeys = new Set(['Positivo', 'MTB DETECTADO']);
     const negKeys = new Set(['Negativo', 'Sin crecimiento', 'MTB NO DETECTADO']);
@@ -657,7 +657,7 @@ function _hu_renderResultados(d, el) {
 
 function _hu_renderPyramid(pyramid, el) {
     if (!el) return;
-    if (pyramid.total === 0) { el.innerHTML = _hu_empty('Sin pacientes con resultados en el período.'); return; }
+    if (pyramid.total === 0) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
 
     const max = Math.max(
         ...pyramid.ageGroups.map((g, i) =>
@@ -721,7 +721,7 @@ function _hu_renderGV(d, el) {
         .filter(e => e.pos + e.neg > 0)
         .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg));
 
-    if (!entries.length) { el.innerHTML = _hu_empty('Sin resultados definitivos registrados.'); return; }
+    if (!entries.length) { el.innerHTML = _hu_empty('Sin resultados.'); return; }
 
     el.innerHTML = entries.slice(0, 12).map(e => {
         const total  = e.pos + e.neg;
@@ -763,7 +763,7 @@ function _hu_chartExamenes(d) {
         .filter(id => Object.values(d.byExamen[id]).some(v => v > 0));
 
     if (!examIds.length) {
-        wrap.innerHTML = _hu_empty('Sin exámenes registrados en el período.');
+        wrap.innerHTML = _hu_empty('Sin resultados.');
         return;
     }
 
@@ -811,7 +811,7 @@ function _hu_chartTM(d) {
         .slice(0, 12);
 
     if (!entries.length) {
-        wrap.innerHTML = _hu_empty('Sin resultados por tipo de muestra en el período.');
+        wrap.innerHTML = _hu_empty('Sin resultados.');
         return;
     }
 
@@ -845,7 +845,7 @@ function _hu_chartSpecies(d) {
         .sort((a, b) => b[1] - a[1]);
 
     if (!entries.length) {
-        wrap.innerHTML = _hu_empty('Sin microorganismos identificados en el período.');
+        wrap.innerHTML = _hu_empty('Sin resultados.');
         return;
     }
 
@@ -882,7 +882,7 @@ function _hu_chartAMR(d) {
         .filter(([, v]) => v.detected + v.not_detected + v.indeterminate > 0);
 
     if (!markers.length) {
-        wrap.innerHTML = _hu_empty('Sin datos de resistencia antimicrobiana en el período.');
+        wrap.innerHTML = _hu_empty('Sin resultados.');
         return;
     }
 
