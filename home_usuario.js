@@ -97,18 +97,6 @@ function _hu_render(user, el, dateFrom, dateTo) {
             </div>
         </div>
     </div>
-
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-lg-5">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body d-flex flex-column">
-                    <p class="hu-card-title mb-3">Estatus de las muestras</p>
-                    ${total === 0
-                        ? _hu_empty('Sin resultados.')
-                        : '<div style="position:relative; flex:1; min-height:220px; display:flex; align-items:center; justify-content:center;"><canvas id="hu-c-estados"></canvas></div>'}
-                </div>
-            </div>
-        </div>
         <div class="col-12 col-lg-7">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body d-flex flex-column">
@@ -159,13 +147,22 @@ function _hu_render(user, el, dateFrom, dateTo) {
         <div class="col-12 col-lg-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
-                    <p class="hu-card-title mb-1">Resistencia antimicrobiana (Marcadores)</p>
-                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">
-                        Rifampicina: Xpert MTB/RIF (Ultra). Demás marcadores: Xpert MTB/XDR.
-                    </p>
+                    <p class="hu-card-title mb-1">Resistencia a los medicamentos para la tuberculosis</p>
+                    
                     ${d.amr.total === 0
-    ? _hu_empty('Sin datos de resistencia antimicrobiana.')
-    : '<div id="hu-amr-wrapper" style="position: relative; width: 100%;"><canvas id="hu-c-amr"></canvas></div>'}
+                    ? _hu_empty('Sin resultados.')
+                    : '<div id="hu-amr-wrapper" style="position: relative; width: 100%;"><canvas id="hu-c-amr"></canvas></div>'}
+                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">
+                        * Resistencia a rifampicina determinado mediante ensayo Xpert MTB/RIF (Ultra). <br>
+                        * El resto de los marcadores, con ensayo Xpert MTB/XDR. <br>
+                        <b>Monorresistencia:</b> Resistencia a un solo medicamento anti-TB de primera línea.<br>
+                        <b>Polirresistencia:</b> Resistencia a más de un fármaco anti-TB de primera línea (que no sea simultáneamente rifampicina e isoniazida).<br>
+                        <b>Multidrogorresistencia (MRD):</b> Resistencia al menos a rifampicina e isoniazida.<br>
+                        <b>Resistencia a Rifampicina (RR):</b> Detectada utilizando métodos fenotípicos o genotíppicos, con o sin resistencia a otros medicamentos anti-TB. Incluye cualquier resistencia a rifampicina, ya sea monorresistente, MDR, polirresistente o XDR.<br>
+                        <b>Pre-extensamente resistente (Pre-XDR):</b> Tuberculosis causada por cepas de <i>M. tuberculosis</i> que cumplen con la definición de RR o MDR, y son resistentes a cualquier fluorquinolona<br>
+                        <b>Extensamente resistente (XDR):</b> Tuberculosis causadas por cepas de <i>M. tuberculosis</i> que cumplen con la definición de MDR o RR y también son resistentes a cualquier fluorquinolona y al menos a un medicamento adicional del grupo A.<br>
+                        
+                    </p>
                 </div>
             </div>
         </div>
