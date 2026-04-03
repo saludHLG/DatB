@@ -1,6 +1,8 @@
 /* =========================================================
    lab_resumen.js — Tab "Resumen de laboratorio"
    Índice de proceso y control de calidad por laboratorio.
+   Las cards de Tipos de muestra, Pirámide y Grupos de
+   vulnerabilidad tienen selector de tipo de examen.
 
    Requiere (cargados antes):
      laboratorio_core.js  — _getResBaci, _getResCultivo, etc.
@@ -19,7 +21,6 @@ function renderLabResumen(user, content) {
    SHELL — selector de laboratorio y filtros de fecha
    ══════════════════════════════════════════════════════════ */
 function _lr_buildShell(user, content) {
-    /* Labs accesibles por el usuario (cualquier permiso activo) */
     const permLabIds = [...new Set([
         ..._labsConPermiso(user.id, 'puede_emitir'),
         ..._labsConPermiso(user.id, 'puede_editar'),
@@ -34,11 +35,10 @@ function _lr_buildShell(user, content) {
         return;
     }
 
-    /* ── CORREGIDO: leer de _store en lugar de localStorage ── */
     const allLabs = (window._store.geo_labs && window._store.geo_labs.length)
                   ? window._store.geo_labs
                   : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
-    const labs    = permLabIds.map(id => allLabs.find(l => l.id === id)).filter(Boolean);
+    const labs = permLabIds.map(id => allLabs.find(l => l.id === id)).filter(Boolean);
 
     content.innerHTML = `
     <div style="background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:12px;
@@ -50,7 +50,7 @@ function _lr_buildShell(user, content) {
                            letter-spacing:.07em;color:var(--text-muted,#6b7280)">
                     Laboratorio
                 </label>
-                <input type="text" id="lr-lab-input" class="form-control form-control-sm" 
+                <input type="text" id="lr-lab-input" class="form-control form-control-sm"
                        list="lr-lab-list" placeholder="— Todos mis laboratorios —" style="width: 100%;">
                 <datalist id="lr-lab-list">
                     ${labs.map(l => `<option value="${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}"></option>`).join('')}
@@ -80,10 +80,8 @@ function _lr_buildShell(user, content) {
             </button>
         </div>
     </div>
-
     <div id="lr-panel"></div>`;
 
-    /* Pre-seleccionar si hay un único lab */
     if (labs.length === 1) {
         const l = labs[0];
         document.getElementById('lr-lab-input').value = `${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}`;
@@ -92,15 +90,13 @@ function _lr_buildShell(user, content) {
     const _run = () => {
         const labText = document.getElementById('lr-lab-input')?.value.trim();
         let ids = permLabIds;
-
         if (labText) {
             const matched = labs.find(l => {
-                const nombreCompleto = `${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}`;
-                return nombreCompleto.toLowerCase() === labText.toLowerCase();
+                const nc = `${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}`;
+                return nc.toLowerCase() === labText.toLowerCase();
             });
             ids = matched ? [matched.id] : [];
         }
-
         const from = document.getElementById('lr-from')?.value  || null;
         const to   = document.getElementById('lr-to')?.value    || null;
         _lr_renderPanel(document.getElementById('lr-panel'), ids, from, to);
@@ -118,7 +114,7 @@ function _lr_buildShell(user, content) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   PANEL PRINCIPAL DE CONTENIDO
+   PANEL PRINCIPAL
    ══════════════════════════════════════════════════════════ */
 function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
     if (!el) return;
@@ -170,15 +166,13 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body d-flex flex-column">
                     <p class="mb-1 lr-card-title">Tipos de muestra por resultado</p>
-                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf;line-height:1.5">
-                        Resultados definitivos agrupados por tipo de muestra. <br>
-                        <em>(Excluye Xpert MTB/XDR, cuyo fin es clasificar la resistencia en cepas ya confirmadas).</em>
+                    <p class="mb-2" style="font-size:.75rem;color:#8fa3bf;line-height:1.5">
+                        Resultados definitivos agrupados por tipo de muestra.
+                        <em>En "Todos" se excluye Xpert MTB/XDR, cuyo fin es clasificar
+                        la resistencia en cepas ya confirmadas.</em>
                     </p>
-                    ${Object.keys(d.byTMResult).length === 0
-                        ? _lr_empty('Sin resultados definitivos en el período.')
-                        : `<div style="position:relative;flex:1;min-height:260px;width:100%">
-                               <canvas id="lr-c-tm"></canvas>
-                           </div>`}
+                    <div id="lr-tm-filter" class="d-flex flex-wrap gap-1 mb-2"></div>
+                    <div id="lr-tm-content" style="position:relative;flex:1;min-height:260px;width:100%"></div>
                 </div>
             </div>
         </div>
@@ -196,13 +190,9 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
         <div class="col-12 col-lg-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
-                    <p class="mb-3 lr-card-title">
-                        Pirámide de pacientes — edad, sexo y resultado
-                        <span style="font-size:.75rem;font-weight:400;color:#8fa3bf;margin-left:.5rem">
-                            ${d.pyramid.total} paciente(s)
-                        </span>
-                    </p>
-                    <div id="lr-pyramid"></div>
+                    <p class="mb-1 lr-card-title">Pirámide de pacientes — edad, sexo y resultado</p>
+                    <div id="lr-pyramid-filter" class="d-flex flex-wrap gap-1 mb-2"></div>
+                    <div id="lr-pyramid-content"></div>
                 </div>
             </div>
         </div>
@@ -210,12 +200,13 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body">
                     <p class="mb-1 lr-card-title">Grupos de vulnerabilidad</p>
-                    <p class="mb-3" style="font-size:.75rem;color:#8fa3bf">
+                    <p class="mb-2" style="font-size:.75rem;color:#8fa3bf">
                         Solo indicaciones con resultado definitivo.
                         <span style="color:#e0435a;font-weight:600">+</span> pos. /
                         <span style="color:#00b87a;font-weight:600">−</span> neg.
                     </p>
-                    <div id="lr-gv"></div>
+                    <div id="lr-gv-filter" class="d-flex flex-wrap gap-1 mb-2"></div>
+                    <div id="lr-gv-content"></div>
                 </div>
             </div>
         </div>
@@ -263,25 +254,94 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
             color: #0b1e3d;
             margin-bottom: 0;
         }
+        .lr-exam-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: .18rem .6rem;
+            border: 1.5px solid #dce8f5;
+            border-radius: 20px;
+            background: transparent;
+            color: #8fa3bf;
+            font-size: .72rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color .15s, background .15s, color .15s;
+            white-space: nowrap;
+        }
+        .lr-exam-pill:hover:not(.active) {
+            border-color: #1a3a6b;
+            color: #0b1e3d;
+            background: #f0f4fa;
+        }
+        .lr-exam-pill.active {
+            border-color: #0b1e3d;
+            background: #0b1e3d;
+            color: #fff;
+        }
     </style>`;
 
     requestAnimationFrame(() => {
-        if (total > 0)                              _lr_chartEstados(d);
-        if (Object.keys(d.byExamen).length > 0)    _lr_chartExamenes(d);
-        if (Object.keys(d.byTMResult).length > 0)  _lr_chartTM(d);
-        _lr_renderResultados(d,  document.getElementById('lr-resultados'));
-        _lr_renderPyramid(d.pyramid, document.getElementById('lr-pyramid'));
-        _lr_renderGV(d,          document.getElementById('lr-gv'));
-        if (d.microorganisms.total > 0)             _lr_chartMicro(d);
-        if (d.amr.total > 0)                        _lr_chartAMR(d);
+        /* ── Selectores de examen para las 3 cards ── */
+        _lr_buildExamFilter('lr-tm-filter', d.availableExams, eid => {
+            const sub = eid === 0 ? d.byTMResult : (d.perExamStats[eid]?.byTMResult || {});
+            _lr_renderTMContent(document.getElementById('lr-tm-content'), sub, d.tmCat);
+        });
+        _lr_buildExamFilter('lr-pyramid-filter', d.availableExams, eid => {
+            const sub = eid === 0 ? d.pyramid : (d.perExamStats[eid]?.pyramid || null);
+            _lr_renderPyramidContent(document.getElementById('lr-pyramid-content'), sub);
+        });
+        _lr_buildExamFilter('lr-gv-filter', d.availableExams, eid => {
+            const sub = eid === 0 ? d.gvStats : (d.perExamStats[eid]?.gvStats || {});
+            _lr_renderGVContent(document.getElementById('lr-gv-content'), sub, d.gvCat);
+        });
+
+        /* ── Renders iniciales ── */
+        if (total > 0)                           _lr_chartEstados(d);
+        if (Object.keys(d.byExamen).length > 0)  _lr_chartExamenes(d);
+        _lr_renderTMContent(document.getElementById('lr-tm-content'), d.byTMResult, d.tmCat);
+        _lr_renderResultados(d, document.getElementById('lr-resultados'));
+        _lr_renderPyramidContent(document.getElementById('lr-pyramid-content'), d.pyramid);
+        _lr_renderGVContent(document.getElementById('lr-gv-content'), d.gvStats, d.gvCat);
+        if (d.microorganisms.total > 0)          _lr_chartMicro(d);
+        if (d.amr.total > 0)                     _lr_chartAMR(d);
     });
+}
+
+/* ══════════════════════════════════════════════════════════
+   SELECTOR DE EXAMEN (helper para las 3 cards con filtro)
+   ══════════════════════════════════════════════════════════ */
+function _lr_buildExamFilter(containerId, availableExams, onSelect) {
+    const container = document.getElementById(containerId);
+    if (!container || availableExams.length <= 1) return; // No se necesita con 0-1 exámenes
+
+    const examCodes = { 1: 'BACI', 2: 'CULT', 3: 'XPERT-U', 5: 'XPERT-XDR' };
+    let currentEid = 0;
+
+    const render = () => {
+        const opts = [{ id: 0, label: 'Todos' }].concat(
+            availableExams.map(eid => ({ id: eid, label: examCodes[eid] || `Ex.${eid}` }))
+        );
+        container.innerHTML = opts.map(opt => `
+            <button class="lr-exam-pill${currentEid === opt.id ? ' active' : ''}"
+                    data-eid="${opt.id}">${opt.label}</button>
+        `).join('');
+        container.querySelectorAll('.lr-exam-pill').forEach(btn => {
+            btn.addEventListener('click', function () {
+                currentEid = parseInt(this.dataset.eid);
+                render();
+                onSelect(currentEid);
+            });
+        });
+    };
+
+    render();
 }
 
 /* ══════════════════════════════════════════════════════════
    CÓMPUTO DE DATOS
    ══════════════════════════════════════════════════════════ */
 function _lr_computeData(labIds, dateFrom, dateTo) {
-    /* ── CORREGIDO: todas las fuentes desde window._store ── */
     const allInds   = window._store.indicaciones      || [];
     const recs      = _getRecepciones();
     const baci      = _getResBaci();
@@ -293,7 +353,6 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
     const gvCat     = typeof _getGVCat  === 'function' ? _getGVCat()  : [];
     const tmCat     = typeof _getTMCat  === 'function' ? _getTMCat()  : [];
 
-    /* ── Filtrar indicaciones por labs y rango de fechas ── */
     const inds = allInds.filter(ind => {
         if (!labIds.includes(Number(ind.laboratorio_id))) return false;
         const f = ind.fecha_indicacion || '';
@@ -302,41 +361,32 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         return true;
     });
 
-    /* ── Helper: recepción para indicación + examen ── */
     const getRec = (indId, eid) =>
         recs.find(r => r.indicacion_id === indId && Number(r.examen_id) === eid)
      || recs.find(r => r.indicacion_id === indId && !r.examen_id)
      || null;
 
-    /* ── IDs de recepciones del universo filtrado ── */
     const recIdSet = new Set();
-    inds.forEach(ind =>
-        recs.filter(r => r.indicacion_id === ind.id).forEach(r => recIdSet.add(r.id))
-    );
+    inds.forEach(ind => recs.filter(r => r.indicacion_id === ind.id).forEach(r => recIdSet.add(r.id)));
 
-    /* ── Conteo por estado, global y por examen ── */
+    /* Conteos por estado y por examen */
     const counts   = { pendiente: 0, recibida: 0, rechazada: 0, completada: 0 };
     const byExamen = {};
-
     inds.forEach(ind => {
         (ind.examenes_ids || []).forEach(eidRaw => {
             const eid = Number(eidRaw);
             const rec = getRec(ind.id, eid);
             let est;
-            if (!rec)
-                est = 'pendiente';
-            else if (rec.estado === 'rechazada')
-                est = 'rechazada';
-            else
-                est = _lr_hasResult(rec.id, eid, baci, cult, xpertU, xpertXDR)
-                    ? 'completada' : 'recibida';
+            if (!rec)                        est = 'pendiente';
+            else if (rec.estado === 'rechazada') est = 'rechazada';
+            else est = _lr_hasResult(rec.id, eid, baci, cult, xpertU, xpertXDR) ? 'completada' : 'recibida';
             counts[est]++;
             if (!byExamen[eid]) byExamen[eid] = { pendiente:0, recibida:0, rechazada:0, completada:0 };
             byExamen[eid][est]++;
         });
     });
 
-    /* ── Tipos de muestra por resultado ── */
+    /* Tipos de muestra × resultado (excluye XDR en vista "Todos") */
     const byTMResult = {};
     inds.forEach(ind => {
         if (!ind.tipo_muestra_id) return;
@@ -344,7 +394,7 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         let hasPos = false, hasNeg = false;
         (ind.examenes_ids || []).forEach(eidRaw => {
             const eid = Number(eidRaw);
-            if (eid === 5) return; // Excluir XDR (sesga tasa de positividad real)
+            if (eid === 5) return;
             const rec = getRec(ind.id, eid);
             if (!rec || rec.estado === 'rechazada') return;
             if (_lr_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR)) hasPos = true;
@@ -356,19 +406,15 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         if (hasNeg) byTMResult[tmId].neg++;
     });
 
-    /* ── Resultados emitidos por tipo de examen ── */
-    const baciF     = baci.filter(r => recIdSet.has(r.recepcion_id));
-    const cultF     = cult.filter(r => recIdSet.has(r.recepcion_id));
+    /* Resultados emitidos */
+    const baciF = baci.filter(r => recIdSet.has(r.recepcion_id));
+    const cultF = cult.filter(r => recIdSet.has(r.recepcion_id));
     const xpertUF   = xpertU.filter(r => recIdSet.has(r.recepcion_id));
     const xpertXDRF = xpertXDR.filter(r => recIdSet.has(r.recepcion_id));
-
     const resultados = {};
     if (baciF.length) {
         resultados[1] = { 'Negativo': 0, 'Positivo': 0 };
-        baciF.forEach(r => {
-            if (r.codificacion === 0) resultados[1].Negativo++;
-            else                      resultados[1].Positivo++;
-        });
+        baciF.forEach(r => { if (r.codificacion === 0) resultados[1].Negativo++; else resultados[1].Positivo++; });
     }
     if (cultF.length) {
         resultados[2] = { 'Sin crecimiento': 0, 'Positivo': 0, 'Contaminado': 0, 'En estudio': 0 };
@@ -388,7 +434,7 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         xpertXDRF.forEach(r => { resultados[5][r.resultado] = (resultados[5][r.resultado] || 0) + 1; });
     }
 
-    /* ── Microorganismos identificados (prioridad: Xpert > Cultivo > Baci) ── */
+    /* Microorganismos */
     const microorganisms = { total: 0, data: {} };
     inds.forEach(ind => {
         let species = null;
@@ -432,26 +478,21 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         microorganisms.total++;
     });
 
-    /* ── Clasificación TB Resistente ── */
+    /* Clasificación TB Resistente */
     const tbClass = { 'Sensible': 0, 'Monoresistente': 0, 'Polirresistente': 0, 'TB-MDR': 0, 'TB pre-XDR': 0, 'TB-XDR': 0 };
-
     inds.forEach(ind => {
-        const uRec = getRec(ind.id, 3);
-        const xRec = getRec(ind.id, 5);
+        const uRec = getRec(ind.id, 3), xRec = getRec(ind.id, 5);
         const uRes = uRec ? xpertU.find(r => r.recepcion_id === uRec.id) : null;
         const xRes = xRec ? xpertXDR.find(r => r.recepcion_id === xRec.id) : null;
-
         if ((uRes && uRes.resultado === 'MTB DETECTADO') || (xRes && xRes.resultado === 'MTB DETECTADO')) {
             let rR = false, rH = false, rFq = false, rSli = false;
             let tested = false, resistCount = 0;
-
             const check = (val) => {
                 if (!val || val === 'NO PROCEDE' || val === 'INDETERMINADO') return false;
                 tested = true;
                 if (val.includes('DETECTADO') && !val.includes('NO DETECTADO')) { resistCount++; return true; }
                 return false;
             };
-
             if (uRes) rR = check(uRes.resistencia_rifampicina);
             if (xRes) {
                 rH   = check(xRes.resistencia_isoniazida);
@@ -462,21 +503,17 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
                 rSli = amk || kan || cap;
             }
             if (!tested) return;
-
-            const isMDR    = rR && rH;
-            const isPreXDR = isMDR && (rFq || rSli);
-            const isXDR    = isMDR && rFq && rSli;
-
-            if      (isXDR)           tbClass['TB-XDR']++;
-            else if (isPreXDR)        tbClass['TB pre-XDR']++;
-            else if (isMDR)           tbClass['TB-MDR']++;
+            const isMDR = rR && rH, isPreXDR = isMDR && (rFq || rSli), isXDR = isMDR && rFq && rSli;
+            if      (isXDR)            tbClass['TB-XDR']++;
+            else if (isPreXDR)         tbClass['TB pre-XDR']++;
+            else if (isMDR)            tbClass['TB-MDR']++;
             else if (resistCount >= 2) tbClass['Polirresistente']++;
             else if (resistCount === 1) tbClass['Monoresistente']++;
             else                       tbClass['Sensible']++;
         }
     });
 
-    /* ── Resistencia antimicrobiana (marcadores) ── */
+    /* AMR */
     const amr = {
         total: 0,
         markers: {
@@ -511,7 +548,7 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
     amr.total = Object.values(amr.markers)
         .reduce((s, v) => s + v.detected + v.not_detected + v.indeterminate, 0);
 
-    /* ── Pirámide poblacional (pos/neg × sexo × edad) ── */
+    /* Pirámide (todos los exámenes) */
     const ageGroups = ['< 14', '15–29', '30–44', '45–59', '≥ 60'];
     const pyramid   = {
         total: 0,
@@ -542,7 +579,7 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         pyramid.total++;
     });
 
-    /* ── Grupos de vulnerabilidad × pos/neg ── */
+    /* Grupos de vulnerabilidad */
     const gvStats = {};
     inds.forEach(ind => {
         const pac = pacs.find(p => p.id === ind.paciente_id);
@@ -563,7 +600,82 @@ function _lr_computeData(labIds, dateFrom, dateTo) {
         });
     });
 
-    return { counts, byExamen, byTMResult, resultados, microorganisms, amr, pyramid, gvStats, gvCat, tmCat, tbClass };
+    /* ── Subconjuntos por examen (para los selectores de filtro) ── */
+    const availableExams = [1, 2, 3, 5].filter(eid =>
+        inds.some(ind => {
+            if (!(ind.examenes_ids || []).map(Number).includes(eid)) return false;
+            const rec = getRec(ind.id, eid);
+            return rec && rec.estado !== 'rechazada';
+        })
+    );
+
+    const perExamStats = { 0: { byTMResult, pyramid, gvStats } };
+    availableExams.forEach(eid => {
+        perExamStats[eid] = _lr_computeSubset(eid, inds, recs, baci, cult, xpertU, xpertXDR, pacs);
+    });
+
+    return {
+        counts, byExamen, byTMResult, resultados,
+        microorganisms, amr, pyramid, gvStats,
+        gvCat, tmCat, tbClass,
+        availableExams, perExamStats
+    };
+}
+
+/* ── Cómputo de subconjunto para un examen específico ── */
+function _lr_computeSubset(eid, inds, recs, baci, cult, xpertU, xpertXDR, pacs) {
+    const getRec = (indId, e) =>
+        recs.find(r => r.indicacion_id === indId && Number(r.examen_id) === e)
+     || recs.find(r => r.indicacion_id === indId && !r.examen_id)
+     || null;
+
+    const byTMResult = {};
+    const ageGroups  = ['< 14', '15–29', '30–44', '45–59', '≥ 60'];
+    const pyramid    = {
+        total: 0,
+        M_pos: [0,0,0,0,0], M_neg: [0,0,0,0,0],
+        F_pos: [0,0,0,0,0], F_neg: [0,0,0,0,0],
+        ageGroups
+    };
+    const gvStats = {};
+
+    inds.forEach(ind => {
+        if (!(ind.examenes_ids || []).map(Number).includes(eid)) return;
+        const rec = getRec(ind.id, eid);
+        if (!rec || rec.estado === 'rechazada') return;
+
+        const hasPos = _lr_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR);
+        const hasNeg = _lr_isNegative(rec.id, eid, baci, cult, xpertU, xpertXDR);
+        if (!hasPos && !hasNeg) return;
+
+        /* TM */
+        if (ind.tipo_muestra_id) {
+            const tmId = ind.tipo_muestra_id;
+            if (!byTMResult[tmId]) byTMResult[tmId] = { pos: 0, neg: 0 };
+            if (hasPos) byTMResult[tmId].pos++;
+            if (hasNeg) byTMResult[tmId].neg++;
+        }
+
+        /* Pirámide y GV */
+        const pac = pacs.find(p => p.id === ind.paciente_id);
+        if (pac) {
+            if (pac.fecha_nacimiento) {
+                const e   = _lr_edad(pac.fecha_nacimiento);
+                const g   = e < 14 ? 0 : e <= 29 ? 1 : e <= 44 ? 2 : e <= 59 ? 3 : 4;
+                const cat = hasPos ? 'pos' : 'neg';
+                if      (pac.sexo === 'M') { if (cat === 'pos') pyramid.M_pos[g]++; else pyramid.M_neg[g]++; }
+                else if (pac.sexo === 'F') { if (cat === 'pos') pyramid.F_pos[g]++; else pyramid.F_neg[g]++; }
+                pyramid.total++;
+            }
+            (pac.grupos_ids || []).forEach(gid => {
+                if (!gvStats[gid]) gvStats[gid] = { pos: 0, neg: 0 };
+                if (hasPos) gvStats[gid].pos++;
+                if (hasNeg) gvStats[gid].neg++;
+            });
+        }
+    });
+
+    return { byTMResult, pyramid, gvStats };
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -585,11 +697,9 @@ function _lr_isPositive(recId, eid, baci, cult, xpertU, xpertXDR) {
     if (eid === 5) {
         const r = xpertXDR.find(x => x.recepcion_id === recId);
         if (!r || r.resultado !== 'MTB DETECTADO') return false;
-        return [
-            r.resistencia_isoniazida, r.resistencia_fluorquinolona,
-            r.resistencia_amikacina,  r.resistencia_kanamicina,
-            r.resistencia_capreomicina, r.resistencia_etionamida
-        ].some(v => v && v.includes('DETECTADO') && !v.includes('NO DETECTADO'));
+        return [r.resistencia_isoniazida, r.resistencia_fluorquinolona, r.resistencia_amikacina,
+                r.resistencia_kanamicina, r.resistencia_capreomicina, r.resistencia_etionamida]
+            .some(v => v && v.includes('DETECTADO') && !v.includes('NO DETECTADO'));
     }
     return false;
 }
@@ -601,11 +711,9 @@ function _lr_isNegative(recId, eid, baci, cult, xpertU, xpertXDR) {
     if (eid === 5) {
         const r = xpertXDR.find(x => x.recepcion_id === recId);
         if (!r || r.resultado !== 'MTB DETECTADO') return false;
-        const marcadores = [
-            r.resistencia_isoniazida, r.resistencia_fluorquinolona,
-            r.resistencia_amikacina,  r.resistencia_kanamicina,
-            r.resistencia_capreomicina, r.resistencia_etionamida
-        ].filter(v => v && v !== 'NO PROCEDE');
+        const marcadores = [r.resistencia_isoniazida, r.resistencia_fluorquinolona, r.resistencia_amikacina,
+                            r.resistencia_kanamicina, r.resistencia_capreomicina, r.resistencia_etionamida]
+            .filter(v => v && v !== 'NO PROCEDE');
         return marcadores.length > 0 && marcadores.every(v => v.includes('NO DETECTADO'));
     }
     return false;
@@ -618,7 +726,7 @@ function _lr_edad(fechaNac) {
     return e;
 }
 
-/* ── Componentes de UI ──────────────────────────────────── */
+/* ── Componentes de UI ── */
 function _lr_pill(label, value, color, icon) {
     return `<div class="col-6 col-md">
         <div class="card border-0 shadow-sm" style="border-radius:10px;border-left:4px solid ${color}">
@@ -641,63 +749,32 @@ function _lr_empty(msg) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   GRÁFICOS (Chart.js — almacenados en _hl_charts)
+   RENDERS DE CARDS (manejan su propio estado vacío)
    ══════════════════════════════════════════════════════════ */
 
-function _lr_chartEstados(d) {
-    const c = document.getElementById('lr-c-estados'); if (!c) return;
-    _hl_charts['lr-estados'] = new Chart(c, {
-        type: 'doughnut',
-        data: {
-            labels: ['Pendientes', 'Recibidas', 'Rechazadas', 'Completadas'],
-            datasets: [{
-                data: [d.counts.pendiente, d.counts.recibida, d.counts.rechazada, d.counts.completada],
-                backgroundColor: ['#f0a500', '#1a56db', '#e0435a', '#00b87a'],
-                borderWidth: 2, borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } }
-        }
-    });
-}
+/* Tipos de muestra por resultado — reemplaza _lr_chartTM */
+function _lr_renderTMContent(el, byTMResult, tmCat) {
+    if (!el) return;
+    if (_hl_charts['lr-tm']) { _hl_charts['lr-tm'].destroy(); delete _hl_charts['lr-tm']; }
 
-function _lr_chartExamenes(d) {
-    const c = document.getElementById('lr-c-examenes'); if (!c) return;
-    const examIds = Object.keys(d.byExamen).map(Number)
-        .filter(id => Object.values(d.byExamen[id]).some(v => v > 0));
-    const labels  = examIds.map(id => _EXAMENES_CAT.find(e => e.id === id)?.codigo || `Ex.${id}`);
-    const mk = (label, key, bg) => ({
-        label, backgroundColor: bg, borderRadius: 3, maxBarThickness: 40,
-        data: examIds.map(id => d.byExamen[id][key] || 0)
-    });
-    _hl_charts['lr-examenes'] = new Chart(c, {
-        type: 'bar',
-        data: { labels, datasets: [
-            mk('Pendientes',  'pendiente', '#f0a500'),
-            mk('Recibidas',   'recibida',  '#1a56db'),
-            mk('Rechazadas',  'rechazada', '#e0435a'),
-            mk('Completadas', 'completada','#00b87a'),
-        ]},
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { stacked:true, grid:{ display:false } },
-                y: { stacked:true, ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } }
-            },
-            plugins: { legend:{ position:'bottom', labels:{ font:{size:11}, padding:6, boxWidth:12, color:'#334155' } } }
-        }
-    });
-}
-
-function _lr_chartTM(d) {
-    const c = document.getElementById('lr-c-tm'); if (!c) return;
-    const entries = Object.entries(d.byTMResult)
-        .map(([id, v]) => ({ label: d.tmCat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`, pos: v.pos, neg: v.neg }))
+    const entries = Object.entries(byTMResult || {})
+        .map(([id, v]) => ({
+            label: tmCat.find(m => m.id === Number(id))?.nombre || `Muestra #${id}`,
+            pos: v.pos, neg: v.neg
+        }))
         .filter(e => e.pos + e.neg > 0)
         .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg))
         .slice(0, 12);
+
+    if (!entries.length) {
+        el.innerHTML = _lr_empty('Sin resultados definitivos en el período.');
+        return;
+    }
+
+    el.innerHTML = '<canvas id="lr-c-tm"></canvas>';
+    const c = document.getElementById('lr-c-tm');
+    if (!c) return;
+
     _hl_charts['lr-tm'] = new Chart(c, {
         type: 'bar',
         data: { labels: entries.map(e => e.label), datasets: [
@@ -715,6 +792,121 @@ function _lr_chartTM(d) {
     });
 }
 
+/* Pirámide poblacional — reemplaza _lr_renderPyramid */
+function _lr_renderPyramidContent(el, pyramid) {
+    if (!el) return;
+    if (!pyramid || pyramid.total === 0) {
+        el.innerHTML = _lr_empty('Sin pacientes con resultados en el período.');
+        return;
+    }
+
+    const max = Math.max(
+        ...pyramid.ageGroups.map((_, i) => Math.max(
+            pyramid.M_pos[i] + pyramid.M_neg[i],
+            pyramid.F_pos[i] + pyramid.F_neg[i]
+        )), 1
+    );
+
+    el.innerHTML = `
+    <p style="font-size:.73rem;color:#8fa3bf;margin:0 0 .5rem">${pyramid.total} paciente(s)</p>
+    <div>
+        <div class="d-flex justify-content-between mb-3" style="font-size:.72rem;font-weight:700">
+            <span style="color:#334155"><i class="bi bi-gender-male me-1"></i>Hombres</span>
+            <span style="font-size:.68rem">
+                <span style="color:#e0435a;margin-right:2px">■ Pos</span>
+                <span style="color:#00b87a;margin-left:4px">■ Neg</span>
+            </span>
+            <span style="color:#334155">Mujeres<i class="bi bi-gender-female ms-1"></i></span>
+        </div>
+        ${pyramid.ageGroups.map((g, i) => {
+            const mP = pyramid.M_pos[i], mN = pyramid.M_neg[i];
+            const fP = pyramid.F_pos[i], fN = pyramid.F_neg[i];
+            const mTotal = mP + mN, fTotal = fP + fN;
+            const mPPct = (mP / max * 100).toFixed(1), mNPct = (mN / max * 100).toFixed(1);
+            const fPPct = (fP / max * 100).toFixed(1), fNPct = (fN / max * 100).toFixed(1);
+            return `<div class="d-flex align-items-center" style="gap:6px;margin-bottom:6px">
+                <div style="flex:1;display:flex;justify-content:flex-end;align-items:center;gap:2px">
+                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-right:4px">${mTotal || ''}</span>
+                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);border-radius:3px 0 0 3px;min-width:${mP>0?3:0}px" title="M pos: ${mP}"></div>
+                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);border-radius:${mP>0?0:3}px 0 0 ${mP>0?0:3}px;min-width:${mN>0?3:0}px" title="M neg: ${mN}"></div>
+                </div>
+                <div style="min-width:68px;text-align:center;font-size:.77rem;font-weight:600;color:#475569;white-space:nowrap">${g}</div>
+                <div style="flex:1;display:flex;align-items:center;gap:2px">
+                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);border-radius:0 ${fP>0?0:3}px ${fP>0?0:3}px 0;min-width:${fN>0?3:0}px" title="F neg: ${fN}"></div>
+                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);border-radius:0 3px 3px 0;min-width:${fP>0?3:0}px" title="F pos: ${fP}"></div>
+                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-left:4px">${fTotal || ''}</span>
+                </div>
+            </div>`;
+        }).join('')}
+    </div>`;
+}
+
+/* Grupos de vulnerabilidad — reemplaza _lr_renderGV */
+function _lr_renderGVContent(el, gvStats, gvCat) {
+    if (!el) return;
+    const entries = Object.entries(gvStats || {})
+        .map(([id, v]) => ({
+            label: gvCat.find(g => g.id === Number(id))?.nombre || `Grupo ${id}`,
+            pos: v.pos, neg: v.neg
+        }))
+        .filter(e => e.pos + e.neg > 0)
+        .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg));
+
+    if (!entries.length) {
+        el.innerHTML = _lr_empty('Sin resultados definitivos registrados.');
+        return;
+    }
+
+    el.innerHTML = entries.slice(0, 12).map(e => {
+        const total  = e.pos + e.neg;
+        const posPct = total > 0 ? Math.round(e.pos / total * 100) : 0;
+        const negPct = 100 - posPct;
+        const lbl    = e.label.length > 40 ? e.label.slice(0, 37) + '…' : e.label;
+        return `<div style="margin-bottom:.6rem">
+            <div class="d-flex justify-content-between" style="font-size:.75rem;margin-bottom:3px">
+                <span style="color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%">${lbl}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;white-space:nowrap;margin-left:.4rem">
+                    <span style="color:#e0435a;font-weight:700">${e.pos}</span><span style="color:#ccc;font-size:.65rem">+</span>
+                    <span style="color:#00b87a;font-weight:700;margin-left:.2rem">${e.neg}</span><span style="color:#ccc;font-size:.65rem">−</span>
+                </span>
+            </div>
+            <div style="height:6px;background:#f1f5f9;border-radius:3px;display:flex;overflow:hidden">
+                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;border-radius:${e.neg?'3px 0 0 3px':'3px'}"></div>` : ''}
+                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;border-radius:${e.pos?'0 3px 3px 0':'3px'}"></div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   GRÁFICOS (Chart.js)
+   ══════════════════════════════════════════════════════════ */
+
+function _lr_chartEstados(d) {
+    const c = document.getElementById('lr-c-estados'); if (!c) return;
+    _hl_charts['lr-estados'] = new Chart(c, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pendientes', 'Recibidas', 'Rechazadas', 'Completadas'],
+            datasets: [{ data: [d.counts.pendiente, d.counts.recibida, d.counts.rechazada, d.counts.completada],
+                backgroundColor: ['#f0a500','#1a56db','#e0435a','#00b87a'], borderWidth:2, borderColor:'#fff' }]
+        },
+        options: { responsive:true, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:8, boxWidth:12, color:'#334155' } } } }
+    });
+}
+
+function _lr_chartExamenes(d) {
+    const c = document.getElementById('lr-c-examenes'); if (!c) return;
+    const examIds = Object.keys(d.byExamen).map(Number).filter(id => Object.values(d.byExamen[id]).some(v => v > 0));
+    const labels  = examIds.map(id => _EXAMENES_CAT.find(e => e.id === id)?.codigo || `Ex.${id}`);
+    const mk = (label, key, bg) => ({ label, backgroundColor: bg, borderRadius:3, maxBarThickness:40, data: examIds.map(id => d.byExamen[id][key] || 0) });
+    _hl_charts['lr-examenes'] = new Chart(c, {
+        type: 'bar',
+        data: { labels, datasets: [ mk('Pendientes','pendiente','#f0a500'), mk('Recibidas','recibida','#1a56db'), mk('Rechazadas','rechazada','#e0435a'), mk('Completadas','completada','#00b87a') ] },
+        options: { responsive:true, maintainAspectRatio:false, scales: { x:{stacked:true,grid:{display:false}}, y:{stacked:true,ticks:{precision:0,color:'#64748b'},grid:{color:'rgba(0,0,0,.05)'}} }, plugins:{ legend:{ position:'bottom', labels:{font:{size:11},padding:6,boxWidth:12,color:'#334155'} } } }
+    });
+}
+
 function _lr_chartMicro(d) {
     const c = document.getElementById('lr-c-micro'); if (!c) return;
     const entries = Object.entries(d.microorganisms.data).sort((a, b) => b[1] - a[1]);
@@ -726,10 +918,7 @@ function _lr_chartMicro(d) {
         },
         options: {
             indexAxis:'y', responsive:true,
-            scales: {
-                x:{ ticks:{ precision:0, color:'#64748b' }, grid:{ color:'rgba(0,0,0,.05)' } },
-                y:{ ticks:{ font:{ size:10, style:'italic' }, color:'#334155' }, grid:{ display:false } }
-            },
+            scales: { x:{ticks:{precision:0,color:'#64748b'},grid:{color:'rgba(0,0,0,.05)'}}, y:{ticks:{font:{size:10,style:'italic'},color:'#334155'},grid:{display:false}} },
             plugins:{ legend:{ display:false } }
         }
     });
@@ -772,153 +961,38 @@ function _lr_chartAMR(d) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RENDERIZADOS NO-CHART
+   RENDERIZADO DE RESULTADOS EMITIDOS (sin cambios)
    ══════════════════════════════════════════════════════════ */
-
 function _lr_renderResultados(d, el) {
     if (!el) return;
     const exIds = Object.keys(d.resultados).map(Number);
     if (!exIds.length) { el.innerHTML = _lr_empty('Sin resultados emitidos en el período.'); return; }
 
-    const posKeys = new Set(['Positivo', 'MTB DETECTADO']);
-    const negKeys = new Set(['Negativo', 'Sin crecimiento', 'MTB NO DETECTADO']);
-
+    const posKeys = new Set(['Positivo','MTB DETECTADO']), negKeys = new Set(['Negativo','Sin crecimiento','MTB NO DETECTADO']);
     let html = exIds.map((eid, i) => {
-        const res   = d.resultados[eid];
-        const total = Object.values(res).reduce((s, v) => s + v, 0);
-        const ex    = _EXAMENES_CAT.find(e => e.id === eid);
-        const bars  = Object.entries(res).map(([label, cnt]) => {
-            const pct = total > 0 ? Math.round(cnt / total * 100) : 0;
-            const col = posKeys.has(label) ? '#e0435a' : negKeys.has(label) ? '#00b87a' : '#8fa3bf';
-            return `<div class="mb-2">
-                <div class="d-flex justify-content-between" style="font-size:.77rem;margin-bottom:3px">
-                    <span style="color:#475569">${label}</span>
-                    <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span>
-                </div>
-                <div style="height:5px;background:#f1f5f9;border-radius:3px">
-                    <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .4s ease"></div>
-                </div>
-            </div>`;
+        const res = d.resultados[eid], total = Object.values(res).reduce((s,v)=>s+v,0), ex = _EXAMENES_CAT.find(e=>e.id===eid);
+        const bars = Object.entries(res).map(([label,cnt]) => {
+            const pct = total>0 ? Math.round(cnt/total*100) : 0;
+            const col = posKeys.has(label)?'#e0435a':negKeys.has(label)?'#00b87a':'#8fa3bf';
+            return `<div class="mb-2"><div class="d-flex justify-content-between" style="font-size:.77rem;margin-bottom:3px"><span style="color:#475569">${label}</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span></div><div style="height:5px;background:#f1f5f9;border-radius:3px"><div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .4s ease"></div></div></div>`;
         }).join('');
-        const sep = i > 0 ? 'style="margin-top:.9rem;padding-top:.9rem;border-top:1px solid #f1f5f9"' : '';
-        return `<div ${sep}>
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span style="padding:.12em .55em;border-radius:5px;background:#e0f2fe;color:#0369a1;
-                             font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:700">
-                    ${ex?.codigo || eid}
-                </span>
-                <span style="font-size:.82rem;font-weight:600;color:#0b1e3d">${ex?.nombre || `Examen ${eid}`}</span>
-                <span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${total}</span>
-            </div>
-            ${bars}
-        </div>`;
+        const sep = i>0 ? 'style="margin-top:.9rem;padding-top:.9rem;border-top:1px solid #f1f5f9"' : '';
+        return `<div ${sep}><div class="d-flex align-items-center gap-2 mb-2"><span style="padding:.12em .55em;border-radius:5px;background:#e0f2fe;color:#0369a1;font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:700">${ex?.codigo||eid}</span><span style="font-size:.82rem;font-weight:600;color:#0b1e3d">${ex?.nombre||`Examen ${eid}`}</span><span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${total}</span></div>${bars}</div>`;
     }).join('');
 
     /* Perfil de Farmacorresistencia TB */
     const tc = d.tbClass;
-    const totalRes = Object.values(tc).reduce((a, b) => a + b, 0);
+    const totalRes = Object.values(tc).reduce((a,b)=>a+b,0);
     if (totalRes > 0) {
-        const mapColors = {
-            'Sensible':'#00b87a','Monoresistente':'#f0a500','Polirresistente':'#f97316',
-            'TB-MDR':'#e0435a','TB pre-XDR':'#be123c','TB-XDR':'#881337'
-        };
-        let resHtml = `<div style="margin-top:1.2rem;padding-top:1rem;border-top:1.5px dashed #cbd5e1">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span style="font-size:.82rem;font-weight:700;color:#0b1e3d"><i class="bi bi-shield-virus me-1"></i>Perfil de Farmacorresistencia (TB)</span>
-                <span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${totalRes}</span>
-            </div>`;
-        Object.entries(tc).forEach(([label, cnt]) => {
-            if (cnt === 0) return;
-            const pct = Math.round(cnt / totalRes * 100);
-            resHtml += `<div class="mb-2">
-                <div class="d-flex justify-content-between" style="font-size:.77rem;margin-bottom:3px">
-                    <span style="color:#475569;font-weight:600">${label}</span>
-                    <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span>
-                </div>
-                <div style="height:6px;background:#f1f5f9;border-radius:3px">
-                    <div style="height:100%;width:${pct}%;background:${mapColors[label]};border-radius:3px;transition:width .4s ease"></div>
-                </div>
-            </div>`;
+        const mapColors = { 'Sensible':'#00b87a','Monoresistente':'#f0a500','Polirresistente':'#f97316','TB-MDR':'#e0435a','TB pre-XDR':'#be123c','TB-XDR':'#881337' };
+        let resHtml = `<div style="margin-top:1.2rem;padding-top:1rem;border-top:1.5px dashed #cbd5e1"><div class="d-flex align-items-center gap-2 mb-2"><span style="font-size:.82rem;font-weight:700;color:#0b1e3d"><i class="bi bi-shield-virus me-1"></i>Perfil de Farmacorresistencia (TB)</span><span style="font-size:.72rem;color:#8fa3bf;margin-left:auto">n=${totalRes}</span></div>`;
+        Object.entries(tc).forEach(([label,cnt]) => {
+            if (cnt===0) return;
+            const pct = Math.round(cnt/totalRes*100);
+            resHtml += `<div class="mb-2"><div class="d-flex justify-content-between" style="font-size:.77rem;margin-bottom:3px"><span style="color:#475569;font-weight:600">${label}</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#0b1e3d">${cnt}</span></div><div style="height:6px;background:#f1f5f9;border-radius:3px"><div style="height:100%;width:${pct}%;background:${mapColors[label]};border-radius:3px;transition:width .4s ease"></div></div></div>`;
         });
         resHtml += `</div>`;
         html += resHtml;
     }
     el.innerHTML = html;
-}
-
-function _lr_renderPyramid(pyramid, el) {
-    if (!el) return;
-    if (pyramid.total === 0) { el.innerHTML = _lr_empty('Sin pacientes con resultados en el período.'); return; }
-
-    const max = Math.max(
-        ...pyramid.ageGroups.map((_, i) => Math.max(
-            pyramid.M_pos[i] + pyramid.M_neg[i],
-            pyramid.F_pos[i] + pyramid.F_neg[i]
-        )), 1
-    );
-
-    el.innerHTML = `
-    <div>
-        <div class="d-flex justify-content-between mb-3" style="font-size:.72rem;font-weight:700">
-            <span style="color:#334155"><i class="bi bi-gender-male me-1"></i>Hombres</span>
-            <span style="font-size:.68rem">
-                <span style="color:#e0435a;margin-right:2px">■ Pos</span>
-                <span style="color:#00b87a;margin-left:4px">■ Neg</span>
-            </span>
-            <span style="color:#334155">Mujeres<i class="bi bi-gender-female ms-1"></i></span>
-        </div>
-        ${pyramid.ageGroups.map((g, i) => {
-            const mP = pyramid.M_pos[i], mN = pyramid.M_neg[i];
-            const fP = pyramid.F_pos[i], fN = pyramid.F_neg[i];
-            const mTotal = mP + mN, fTotal = fP + fN;
-            const mPPct = (mP / max * 100).toFixed(1), mNPct = (mN / max * 100).toFixed(1);
-            const fPPct = (fP / max * 100).toFixed(1), fNPct = (fN / max * 100).toFixed(1);
-            return `<div class="d-flex align-items-center" style="gap:6px;margin-bottom:6px">
-                <div style="flex:1;display:flex;justify-content:flex-end;align-items:center;gap:2px">
-                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-right:4px">${mTotal || ''}</span>
-                    <div style="height:20px;width:${mPPct}%;background:rgba(224,67,90,.85);border-radius:3px 0 0 3px;min-width:${mP>0?3:0}px" title="M pos: ${mP}"></div>
-                    <div style="height:20px;width:${mNPct}%;background:rgba(0,184,122,.85);border-radius:${mP>0?'0':'3px'} 0 0 ${mP>0?'0':'3px'};min-width:${mN>0?3:0}px" title="M neg: ${mN}"></div>
-                </div>
-                <div style="min-width:68px;text-align:center;font-size:.77rem;font-weight:600;color:#475569;white-space:nowrap">${g}</div>
-                <div style="flex:1;display:flex;align-items:center;gap:2px">
-                    <div style="height:20px;width:${fNPct}%;background:rgba(0,184,122,.85);border-radius:0 ${fP>0?'0':'3px'} ${fP>0?'0':'3px'} 0;min-width:${fN>0?3:0}px" title="F neg: ${fN}"></div>
-                    <div style="height:20px;width:${fPPct}%;background:rgba(224,67,90,.85);border-radius:0 3px 3px 0;min-width:${fP>0?3:0}px" title="F pos: ${fP}"></div>
-                    <span style="font-size:.7rem;color:#334155;font-family:'IBM Plex Mono',monospace;margin-left:4px">${fTotal || ''}</span>
-                </div>
-            </div>`;
-        }).join('')}
-    </div>`;
-}
-
-function _lr_renderGV(d, el) {
-    if (!el) return;
-    const entries = Object.entries(d.gvStats)
-        .map(([id, v]) => ({
-            label: d.gvCat.find(g => g.id === Number(id))?.nombre || `Grupo ${id}`,
-            pos: v.pos, neg: v.neg
-        }))
-        .filter(e => e.pos + e.neg > 0)
-        .sort((a, b) => (b.pos + b.neg) - (a.pos + a.neg));
-
-    if (!entries.length) { el.innerHTML = _lr_empty('Sin resultados definitivos registrados.'); return; }
-
-    el.innerHTML = entries.slice(0, 12).map(e => {
-        const total  = e.pos + e.neg;
-        const posPct = total > 0 ? Math.round(e.pos / total * 100) : 0;
-        const negPct = 100 - posPct;
-        const lbl    = e.label.length > 40 ? e.label.slice(0, 37) + '…' : e.label;
-        return `<div style="margin-bottom:.6rem">
-            <div class="d-flex justify-content-between" style="font-size:.75rem;margin-bottom:3px">
-                <span style="color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%">${lbl}</span>
-                <span style="font-family:'IBM Plex Mono',monospace;white-space:nowrap;margin-left:.4rem">
-                    <span style="color:#e0435a;font-weight:700">${e.pos}</span><span style="color:#ccc;font-size:.65rem">+</span>
-                    <span style="color:#00b87a;font-weight:700;margin-left:.2rem">${e.neg}</span><span style="color:#ccc;font-size:.65rem">−</span>
-                </span>
-            </div>
-            <div style="height:6px;background:#f1f5f9;border-radius:3px;display:flex;overflow:hidden">
-                ${e.pos > 0 ? `<div style="width:${posPct}%;background:#e0435a;border-radius:${e.neg?'3px 0 0 3px':'3px'}"></div>` : ''}
-                ${e.neg > 0 ? `<div style="width:${negPct}%;background:#00b87a;border-radius:${e.pos?'0 3px 3px 0':'3px'}"></div>` : ''}
-            </div>
-        </div>`;
-    }).join('');
 }
