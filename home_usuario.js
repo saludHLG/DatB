@@ -39,7 +39,7 @@ function renderHomeUsuario(user, el) {
     el.innerHTML = `
         <div class="modulo-header">
             <h2 class="modulo-title">Bienvenido/a, ${user.nombres}</h2>
-            <p class="modulo-sub">Actividad clínica acumulada — sus indicaciones y resultados recibidos.</p>
+            <p class="modulo-sub">Actividad acumulada: indicaciones y resultados.</p>
         </div>
         <div id="hu-content"></div>`;
 
