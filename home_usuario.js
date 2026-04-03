@@ -89,19 +89,12 @@ function _hu_render(user, el, dateFrom, dateTo) {
 
         <div class="col-md-7 col-lg-8">
             <div class="row g-2 h-100 align-content-between">
-                ${_hu_pill('Total indicaciones', total,               '#0b1e3d', 'bi-collection')}
-                ${_hu_pill('Pendientes',          d.counts.pendiente,  '#f0a500', 'bi-hourglass-split')}
-                ${_hu_pill('Recibidas',           d.counts.recibida,   '#1a56db', 'bi-flask')}
-                ${_hu_pill('Rechazadas',          d.counts.rechazada,  '#e0435a', 'bi-x-circle')}
-                ${_hu_pill('Completadas',         d.counts.completada, '#00b87a', 'bi-check-circle')}
-                <div class="col-6">
-                    <div class="card border-0 h-100" style="border-radius:10px;background:#f8fbff;border:1.5px solid #dce8f5">
-                        <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
-                            <i class="bi bi-info-circle" style="color:#00c6b8;font-size:1rem;flex-shrink:0"></i>
-                            <span style="font-size:.7rem;color:#8fa3bf;line-height:1.35">Estudio piloto — datos en almacenamiento local</span>
-                        </div>
-                    </div>
-                </div>
+                ${_hu_pill('Muestras indicadas (Total)', total,               '#0b1e3d', 'bi-collection')}
+                ${_hu_pill('Muestras pendientes',          d.counts.pendiente,  '#f0a500', 'bi-hourglass-split')}
+                ${_hu_pill('Muestras recibidas',           d.counts.recibida,   '#1a56db', 'bi-flask')}
+                ${_hu_pill('Muestras rechazadas',          d.counts.rechazada,  '#e0435a', 'bi-x-circle')}
+                ${_hu_pill('Muestras completadas',         d.counts.completada, '#00b87a', 'bi-check-circle')}
+                
             </div>
         </div>
     </div>
@@ -110,9 +103,9 @@ function _hu_render(user, el, dateFrom, dateTo) {
         <div class="col-12 col-lg-5">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body d-flex flex-column">
-                    <p class="hu-card-title mb-3">Distribución por estado</p>
+                    <p class="hu-card-title mb-3">Estatus de las muestras</p>
                     ${total === 0
-                        ? _hu_empty('Sin indicaciones en el período.')
+                        ? _hu_empty('Sin indicaciones.')
                         : '<div style="position:relative; flex:1; min-height:220px; display:flex; align-items:center; justify-content:center;"><canvas id="hu-c-estados"></canvas></div>'}
                 </div>
             </div>
