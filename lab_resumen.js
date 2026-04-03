@@ -125,7 +125,7 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
 
     el.innerHTML = `
 
-    <div class="row g-3 mb-4">
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-2 mb-4">
         ${_lr_pill('Total',       total,               '#0b1e3d', 'bi-collection')}
         ${_lr_pill('Pendientes',  d.counts.pendiente,  '#f0a500', 'bi-hourglass-split')}
         ${_lr_pill('Recibidas',   d.counts.recibida,   '#1a56db', 'bi-flask')}
@@ -133,26 +133,12 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
         ${_lr_pill('Completadas', d.counts.completada, '#00b87a', 'bi-check-circle-fill')}
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-lg-4">
+    <div class="col-12 col-lg-8">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body d-flex flex-column">
-                    <p class="mb-3 lr-card-title">Distribución por estado</p>
-                    ${total === 0
-                        ? _lr_empty('Sin muestras en el período.')
-                        : `<div style="position:relative;flex:1;min-height:220px;
-                                       display:flex;align-items:center;justify-content:center">
-                               <canvas id="lr-c-estados"></canvas>
-                           </div>`}
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-8">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body d-flex flex-column">
-                    <p class="mb-3 lr-card-title">Por tipo de examen</p>
+                    <p class="mb-3 lr-card-title">Tipo de examen según estado de la muestra</p>
                     ${Object.keys(d.byExamen).length === 0
-                        ? _lr_empty('Sin exámenes en el período.')
+                        ? _lr_empty('Sin resultados.')
                         : `<div style="position:relative;flex:1;min-height:220px;width:100%">
                                <canvas id="lr-c-examenes"></canvas>
                            </div>`}
@@ -162,28 +148,28 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
     </div>
 
     <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
+                <div class="card-body">
+                    <p class="mb-3 lr-card-title">Resultados según tipo de examen</p>
+                    <div id="lr-resultados"></div>
+                </div>
+            </div>
+        </div>
         <div class="col-12 col-md-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
                 <div class="card-body d-flex flex-column">
-                    <p class="mb-1 lr-card-title">Tipos de muestra por resultado</p>
+                    <p class="mb-1 lr-card-title">Tipos de muestra y resultados</p>
                     <p class="mb-2" style="font-size:.75rem;color:#8fa3bf;line-height:1.5">
-                        Resultados definitivos agrupados por tipo de muestra.
-                        <em>En "Todos" se excluye Xpert MTB/XDR, cuyo fin es clasificar
-                        la resistencia en cepas ya confirmadas.</em>
+                        * En "Todos" se excluye Xpert MTB/XDR, cuyo fin es clasificar
+                        la resistencia en cepas ya confirmadas.
                     </p>
                     <div id="lr-tm-filter" class="d-flex flex-wrap gap-1 mb-2"></div>
                     <div id="lr-tm-content" style="position:relative;flex:1;min-height:260px;width:100%"></div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
-                <div class="card-body">
-                    <p class="mb-3 lr-card-title">Resultados emitidos</p>
-                    <div id="lr-resultados"></div>
-                </div>
-            </div>
-        </div>
+        
     </div>
 
     <div class="row g-3 mb-4">
