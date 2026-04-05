@@ -852,6 +852,14 @@ function renderLabs() {
     tbody.innerHTML = '';
 
     labs.forEach(l => {
+        const exTags = (l.examenes_ids && l.examenes_ids.length ? l.examenes_ids : [1,2,3,4,5])
+            .map(eid => {
+                const ex = [
+                    { id:1, codigo:'BACI' }, { id:2, codigo:'CULT' },
+                    { id:3, codigo:'XPERT-U' }, { id:4, codigo:'MF-LED' }, { id:5, codigo:'XPERT-XDR' }
+                ].find(e => e.id === Number(eid));
+                return ex ? `<span class="exam-tag" style="font-size:.65rem;padding:.12em .5em">${ex.codigo}</span>` : '';
+            }).join(' ');
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="td-muted" style="font-family:var(--font-mono)">${l.id}</td>
@@ -859,6 +867,7 @@ function renderLabs() {
             <td>${levelBadge(l.nivel_referencia)}</td>
             <td class="td-muted">${geoMunName(l.municipio_id)}</td>
             <td class="td-muted">${geoProvName(l.provincia_id)}</td>
+            <td style="white-space:nowrap">${exTags}</td>
             <td><span class="status-badge ${l.activo ? 'aprobado' : 'rechazado'}">${l.activo ? 'Activo' : 'Inactivo'}</span></td>
             <td class="text-end">
                 <div class="table-actions justify-content-end">
@@ -885,6 +894,8 @@ $a('btn-new-lab')?.addEventListener('click', () => {
     $a('lab-municipio').innerHTML = '<option value="">— Seleccione provincia —</option>';
     $a('lab-municipio').disabled = true;
     document.querySelector('input[name="lab-activo"][value="true"]').checked = true;
+    document.querySelectorAll('.lab-ex-chk').forEach(c => c.checked = true);
+    _hideLabExErr();
     $a('lab-err').classList.add('d-none');
     _modalLab().show();
 });
@@ -900,6 +911,14 @@ function openLabModal(id) {
     fillMunSelect($a('lab-municipio'), l.provincia_id, l.municipio_id);
     $a('lab-municipio').disabled = false;
     document.querySelector(`input[name="lab-activo"][value="${l.activo}"]`).checked = true;
+    /* Exámenes: marcar los asignados; si no tiene, marcar todos (backward-compat) */
+    const exIds = (l.examenes_ids && l.examenes_ids.length)
+        ? l.examenes_ids.map(Number)
+        : [1, 2, 3, 4, 5];
+    document.querySelectorAll('.lab-ex-chk').forEach(c => {
+        c.checked = exIds.includes(parseInt(c.value));
+    });
+    _hideLabExErr();
     $a('lab-err').classList.add('d-none');
     _modalLab().show();
 }
@@ -909,26 +928,38 @@ $a('lab-provincia')?.addEventListener('change', function () {
     $a('lab-municipio').disabled = !this.value;
 });
 
+function _hideLabExErr() {
+    const el = $a('err-lab-examenes');
+    if (el) el.style.display = 'none';
+}
+
 $a('btn-save-lab')?.addEventListener('click', () => {
     const nombre  = $a('lab-nombre').value.trim();
     const nivel   = $a('lab-nivel').value;
     const provId  = Number($a('lab-provincia').value);
     const munId   = Number($a('lab-municipio').value);
     const activo  = document.querySelector('input[name="lab-activo"]:checked')?.value === 'true';
+    const exIds   = [...document.querySelectorAll('.lab-ex-chk:checked')].map(c => parseInt(c.value));
     $a('lab-err').classList.add('d-none');
+    _hideLabExErr();
 
     if (!nombre) return showLocErr('lab-err', 'El nombre es obligatorio.');
     if (!provId) return showLocErr('lab-err', 'Seleccione la provincia.');
     if (!munId)  return showLocErr('lab-err', 'Seleccione el municipio.');
+    if (!exIds.length) {
+        const el = $a('err-lab-examenes');
+        if (el) { el.textContent = 'Seleccione al menos un examen disponible.'; el.style.display = 'block'; }
+        return;
+    }
 
     const labs   = GEO.getLabs();
     const editId = Number($a('lab-edit-id').value);
 
     if (editId) {
         const idx = labs.findIndex(l => l.id === editId);
-        labs[idx] = { ...labs[idx], nombre, nivel_referencia: nivel, provincia_id: provId, municipio_id: munId, activo };
+        labs[idx] = { ...labs[idx], nombre, nivel_referencia: nivel, provincia_id: provId, municipio_id: munId, activo, examenes_ids: exIds };
     } else {
-        labs.push({ id: nextGeoId(labs), nombre, nivel_referencia: nivel, provincia_id: provId, municipio_id: munId, activo });
+        labs.push({ id: nextGeoId(labs), nombre, nivel_referencia: nivel, provincia_id: provId, municipio_id: munId, activo, examenes_ids: exIds });
     }
 
     GEO.saveLabs(labs);

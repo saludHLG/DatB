@@ -417,7 +417,7 @@
                 </div>
                 <div class="table-card">
                     <table class="admin-table">
-                        <thead><tr><th>#</th><th>Nombre</th><th>Nivel</th><th>Municipio</th><th>Provincia</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+                        <thead><tr><th>#</th><th>Nombre</th><th>Nivel</th><th>Municipio</th><th>Provincia</th><th>Exámenes</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
                         <tbody id="tbody-laboratorios"></tbody>
                     </table>
                 </div>
@@ -610,6 +610,28 @@
                         <select id="lab-municipio" class="form-select admin-select" disabled>
                             <option value="">— Seleccione provincia —</option>
                         </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Exámenes disponibles <span class="required">*</span></label>
+                        <p class="modal-hint mb-2">Seleccione los exámenes que puede realizar este laboratorio.</p>
+                        <div class="lab-examenes-grid" id="lab-examenes-grid">
+                            <label class="perm-check-label lab-ex-item">
+                                <input type="checkbox" class="lab-ex-chk" value="1"> Baciloscopia <code class="exam-cod ms-1">BACI</code>
+                            </label>
+                            <label class="perm-check-label lab-ex-item">
+                                <input type="checkbox" class="lab-ex-chk" value="2"> Cultivo <code class="exam-cod ms-1">CULT</code>
+                            </label>
+                            <label class="perm-check-label lab-ex-item">
+                                <input type="checkbox" class="lab-ex-chk" value="3"> Xpert MTB/RIF (Ultra) <code class="exam-cod ms-1">XPERT-ULTRA</code>
+                            </label>
+                            <label class="perm-check-label lab-ex-item">
+                                <input type="checkbox" class="lab-ex-chk" value="4"> MF-LED <code class="exam-cod ms-1">MF-LED</code>
+                            </label>
+                            <label class="perm-check-label lab-ex-item">
+                                <input type="checkbox" class="lab-ex-chk" value="5"> Xpert MTB/XDR <code class="exam-cod ms-1">XPERT-XDR</code>
+                            </label>
+                        </div>
+                        <div class="invalid-feedback d-block" id="err-lab-examenes" style="display:none!important"></div>
                     </div>
                     <div class="col-12">
                         <label class="admin-label">Estado</label>

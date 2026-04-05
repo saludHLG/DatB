@@ -766,3 +766,38 @@
 }
 .cat-badge-active   { background: #d1fae5; color: #065f46; }
 .cat-badge-inactive { background: #f1f5f9; color: #64748b; }
+/* ── Grilla de exámenes en modal de laboratorio ── */
+.lab-examenes-grid {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+.lab-ex-item {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .45rem .75rem;
+    border: 1px solid var(--a-border);
+    border-radius: 8px;
+    background: #f8fbff;
+    cursor: pointer;
+    font-size: .84rem;
+    color: var(--a-navy);
+    transition: background .13s, border-color .13s;
+    user-select: none;
+}
+.lab-ex-item:hover { background: #eef3fb; border-color: var(--a-cyan); }
+.lab-ex-item input[type="checkbox"] {
+    accent-color: var(--a-cyan);
+    width: 1rem; height: 1rem;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.lab-ex-item .exam-cod {
+    margin-left: auto;
+    font-size: .7rem;
+    background: #e0f2fe;
+    color: #0369a1;
+    border-radius: 4px;
+    padding: .1em .45em;
+}

@@ -762,8 +762,6 @@ function _htmlPaso3() {
     const prov    = allProvs.find(p => p.id === provId)?.nombre || '—';
     const labsHtml     = labs.map(l => `<option value="${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}"></option>`).join('');
     const muestrasHtml = _getTMCat().map(m => `<option value="${m.nombre}"></option>`).join('');
-    const examenesHtml = EXAMENES_TB_CAT.map(e => `
-        <div class="col-12 col-sm-6 col-xl-4"><div class="exam-card"><input class="form-check-input exam-chk" type="checkbox" id="ex-${e.id}" value="${e.id}"><label class="exam-label" for="ex-${e.id}"><span class="exam-nombre">${e.nombre}</span><code class="exam-cod">${e.codigo}</code></label></div></div>`).join('');
     return `<div class="paso-inner">
         <div class="row g-3">
             <div class="col-12 col-md-6">
@@ -783,8 +781,12 @@ function _htmlPaso3() {
             </div>
             <div class="col-12">
                 <label class="form-label fw-semibold">Exámenes indicados <span class="required">*</span></label>
-                <p class="form-text mt-0">Seleccione uno o más.</p>
-                <div class="row g-2" id="examenes-grid">${examenesHtml}</div>
+                <div id="examenes-grid-wrapper">
+                    <p class="form-text mt-0 mb-2" id="examenes-hint" style="color:var(--text-muted)">
+                        <i class="bi bi-arrow-up-circle me-1"></i>Seleccione primero el laboratorio para ver los exámenes disponibles.
+                    </p>
+                    <div class="row g-2" id="examenes-grid"></div>
+                </div>
                 <div class="invalid-feedback d-block" id="err-ind-examenes"></div>
             </div>
             <div class="col-12">
@@ -806,15 +808,80 @@ function _initPaso3() {
     const allLabs = _store.geo_labs.length ? _store.geo_labs : (typeof DATOS_GEO !== 'undefined' ? (DATOS_GEO.laboratorios || []) : []);
     const labs    = allLabs.filter(l => l.provincia_id === provId && l.activo !== false);
     const tmCat   = _getTMCat();
+
+    /* Actualiza la grilla de exámenes según el laboratorio seleccionado */
+    function _actualizarExamenesGrid(labId, preserveChecked) {
+        const grid    = document.getElementById('examenes-grid');
+        const hint    = document.getElementById('examenes-hint');
+        if (!grid) return;
+        if (!labId) {
+            grid.innerHTML = '';
+            if (hint) hint.style.display = '';
+            return;
+        }
+        const lab    = labs.find(l => l.id === Number(labId));
+        const exIds  = (lab?.examenes_ids && lab.examenes_ids.length)
+            ? lab.examenes_ids.map(Number)
+            : EXAMENES_TB_CAT.map(e => e.id);
+        const disponibles = EXAMENES_TB_CAT.filter(e => exIds.includes(e.id));
+        if (hint) hint.style.display = 'none';
+        if (!disponibles.length) {
+            grid.innerHTML = `<div class="col-12"><p class="form-text" style="color:var(--a-danger,#e0435a)">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                Este laboratorio no tiene exámenes asignados. Contacte al administrador.
+            </p></div>`;
+            return;
+        }
+        /* Conservar los IDs marcados antes del cambio (modo edición) */
+        const prevChecked = preserveChecked
+            ? [...document.querySelectorAll('.exam-chk:checked')].map(c => parseInt(c.value))
+            : (_st.examenes_ids || []);
+        grid.innerHTML = disponibles.map(e => `
+            <div class="col-12 col-sm-6 col-xl-4">
+                <div class="exam-card">
+                    <input class="form-check-input exam-chk" type="checkbox"
+                           id="ex-${e.id}" value="${e.id}"
+                           ${prevChecked.includes(e.id) ? 'checked' : ''}>
+                    <label class="exam-label" for="ex-${e.id}">
+                        <span class="exam-nombre">${e.nombre}</span>
+                        <code class="exam-cod">${e.codigo}</code>
+                    </label>
+                </div>
+            </div>`).join('');
+    }
+
     const labInp = document.getElementById('ind-lab-input'), labHid = document.getElementById('ind-lab');
-    labInp.addEventListener('input', () => { const v = labInp.value.toLowerCase().trim(); const l = labs.find(x => { const nom = `${x.nombre}${x.nivel_referencia ? ' — ' + x.nivel_referencia : ''}`.toLowerCase(); return nom === v; }); labHid.value = l ? l.id : ''; });
+
+    const _resolveLabId = () => {
+        const v = labInp.value.toLowerCase().trim();
+        const l = labs.find(x => {
+            const nom = `${x.nombre}${x.nivel_referencia ? ' — ' + x.nivel_referencia : ''}`.toLowerCase();
+            return nom === v;
+        });
+        return l ? l.id : '';
+    };
+
+    labInp.addEventListener('input', () => {
+        const id = _resolveLabId();
+        labHid.value = id;
+        _actualizarExamenesGrid(id, true);
+    });
     labInp.addEventListener('change', () => { if (!labHid.value) labInp.value = ''; });
+
     const mInp = document.getElementById('ind-muestra-input'), mHid = document.getElementById('ind-muestra');
     mInp.addEventListener('input', () => { const v = mInp.value.toLowerCase().trim(); const m = tmCat.find(x => x.nombre.toLowerCase() === v); mHid.value = m ? m.id : ''; });
     mInp.addEventListener('change', () => { if (!mHid.value) mInp.value = ''; });
-    if (_st.laboratorio_id) { const l = labs.find(x => x.id === Number(_st.laboratorio_id)); if (l) { labInp.value = `${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}`; labHid.value = l.id; } }
+
+    /* Restaurar valores si venimos de paso anterior o de edición */
+    if (_st.laboratorio_id) {
+        const l = labs.find(x => x.id === Number(_st.laboratorio_id));
+        if (l) {
+            labInp.value = `${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}`;
+            labHid.value = l.id;
+            _actualizarExamenesGrid(l.id, false);
+        }
+    }
     if (_st.tipo_muestra_id) { const m = tmCat.find(x => x.id === Number(_st.tipo_muestra_id)); if (m) { mInp.value = m.nombre; mHid.value = m.id; } }
-    _st.examenes_ids.forEach(eid => { const chk = document.getElementById(`ex-${eid}`); if (chk) chk.checked = true; });
     if (_st.observaciones) document.getElementById('ind-obs').value = _st.observaciones;
 }
 

@@ -50,8 +50,8 @@ const DATOS_GEO = {
 
     laboratorios: [
         // Holguín
-        { id: 4001, nombre: "Lab. Prov. de Tuberculosis (Holguín, CPHEM)",                       provincia_id: 12, municipio_id: 1201, nivel_referencia: 'provincial'},
-        { id: 4002, nombre: "Lab. de Microbiología de Hptal. V. I. Lenin",                   provincia_id: 12, municipio_id: 1201, nivel_referencia: 'municipal' }
+        { id: 4001, nombre: "Lab. Prov. de Tuberculosis (Holguín, CPHEM)",                       provincia_id: 12, municipio_id: 1201, nivel_referencia: 'provincial', examenes_ids: [1, 2, 3, 5] },
+        { id: 4002, nombre: "Lab. de Microbiología de Hptal. V. I. Lenin",                   provincia_id: 12, municipio_id: 1201, nivel_referencia: 'municipal', examenes_ids: [1, 2] }
     ]
 };
 
