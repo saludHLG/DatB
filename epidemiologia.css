@@ -1,0 +1,486 @@
+/*
+ * epidemiologia.css
+ * Estilos para:
+ *   - Módulo principal de Epidemiología (pills, header, placeholder)
+ *   - Pill "Datos generales" (filtros inteligentes, tabla paginada)
+ *   - Componente Área de salud en formulario de indicaciones (moderadores_core.js)
+ *
+ * Variables: usa las CSS vars del sistema (--color-primario, --color-borde, etc.)
+ * con fallbacks seguros para no romper instalaciones donde aún no estén definidas.
+ */
+
+/* ── Variables locales con fallbacks ─────────────────────────────────────── */
+.epi-modulo,
+.dg-wrapper,
+.mod-area-salud-wrapper {
+  --epi-primario:    var(--color-primario,    #1a6fb5);
+  --epi-primario-lt: var(--color-primario-lt, #e8f1fb);
+  --epi-borde:       var(--color-borde,       #d6dce5);
+  --epi-superficie:  var(--color-superficie,  #f5f7fa);
+  --epi-texto:       var(--color-texto,       #1e2a3a);
+  --epi-texto-sec:   var(--color-texto-sec,   #5a6a7e);
+  --epi-radio:       var(--border-radius,     6px);
+  --epi-sombra:      0 1px 4px rgba(0,0,0,.08);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MÓDULO EPIDEMIOLÓGICO — ESTRUCTURA PRINCIPAL
+════════════════════════════════════════════════════════════════════════════ */
+
+.epi-modulo {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-family: inherit;
+  color: var(--epi-texto);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.epi-header {
+  background: #fff;
+  border-bottom: 1px solid var(--epi-borde);
+  padding: 1.25rem 1.5rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.epi-header-top {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+
+.epi-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--epi-texto);
+}
+
+/* Badge de nivel del moderador */
+.epi-nivel-badge {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  padding: .2rem .6rem;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.epi-nivel-nacional      { background: #e7f3e8; color: #2a7a31; }
+.epi-nivel-provincial    { background: #e8f1fb; color: #1a5fa0; }
+.epi-nivel-municipal     { background: #fef4e5; color: #8a5a00; }
+.epi-nivel-institucional { background: #f3eefa; color: #6a3db0; }
+
+/* ── Pills nav ───────────────────────────────────────────────────────────── */
+.epi-pills {
+  display: flex;
+  gap: 0;
+  border-bottom: none;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.epi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .65rem 1.1rem;
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--epi-texto-sec);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.epi-pill:hover { color: var(--epi-primario); }
+.epi-pill.active {
+  color: var(--epi-primario);
+  border-bottom-color: var(--epi-primario);
+  font-weight: 600;
+}
+
+.epi-pill-icono { font-size: 1em; line-height: 1; }
+
+/* ── Área de contenido ───────────────────────────────────────────────────── */
+.epi-content {
+  padding: 1.25rem 1.5rem;
+  min-height: 200px;
+}
+
+/* ── Placeholder (pills en desarrollo) ───────────────────────────────────── */
+.epi-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  min-height: 200px;
+  color: var(--epi-texto-sec);
+  text-align: center;
+}
+.epi-placeholder-icono { font-size: 2.5rem; line-height: 1; opacity: .5; }
+.epi-placeholder p     { margin: 0; font-size: .92rem; }
+
+.epi-error {
+  color: #c0392b;
+  font-size: .875rem;
+  padding: .5rem .75rem;
+  background: #fdecea;
+  border-radius: var(--epi-radio);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PILL DATOS GENERALES
+════════════════════════════════════════════════════════════════════════════ */
+
+.dg-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Panel de filtros ────────────────────────────────────────────────────── */
+.dg-filtros-panel {
+  background: var(--epi-superficie);
+  border: 1px solid var(--epi-borde);
+  border-radius: var(--epi-radio);
+  padding: 1rem 1.25rem;
+}
+
+.dg-filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: .75rem 1rem;
+  align-items: end;
+}
+
+.dg-filtro-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.dg-filtro-accion {
+  justify-content: flex-end;
+}
+
+.dg-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--epi-texto-sec);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.dg-input {
+  width: 100%;
+  padding: .5rem .7rem;
+  font-size: .875rem;
+  color: var(--epi-texto);
+  background: #fff;
+  border: 1px solid var(--epi-borde);
+  border-radius: var(--epi-radio);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.dg-input:focus {
+  border-color: var(--epi-primario);
+  box-shadow: 0 0 0 3px rgba(26,111,181,.12);
+}
+
+/* ── Smart search ────────────────────────────────────────────────────────── */
+.dg-smart-wrap {
+  position: relative;
+}
+
+.dg-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--epi-borde);
+  border-radius: var(--epi-radio);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 200;
+  margin: 0;
+  padding: .25rem 0;
+  list-style: none;
+}
+
+.dg-dropdown li {
+  padding: .5rem .85rem;
+  font-size: .875rem;
+  cursor: pointer;
+  color: var(--epi-texto);
+  transition: background .1s;
+}
+.dg-dropdown li:hover { background: var(--epi-primario-lt); }
+.dg-dd-empty {
+  color: var(--epi-texto-sec) !important;
+  cursor: default !important;
+  font-style: italic;
+}
+
+/* ── Botones ─────────────────────────────────────────────────────────────── */
+.dg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .5rem 1rem;
+  font-size: .875rem;
+  font-weight: 500;
+  border-radius: var(--epi-radio);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.dg-btn-sec {
+  background: #fff;
+  color: var(--epi-texto-sec);
+  border-color: var(--epi-borde);
+}
+.dg-btn-sec:hover {
+  background: var(--epi-superficie);
+  border-color: #b0bbc8;
+}
+
+/* ── Área de tabla ───────────────────────────────────────────────────────── */
+.dg-tabla-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.dg-tabla-meta {
+  font-size: .82rem;
+  color: var(--epi-texto-sec);
+}
+
+.dg-tabla-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--epi-borde);
+  border-radius: var(--epi-radio);
+  box-shadow: var(--epi-sombra);
+}
+
+.dg-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+  white-space: nowrap;
+  background: #fff;
+}
+
+.dg-tabla thead {
+  background: var(--epi-superficie);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.dg-tabla th {
+  padding: .7rem .9rem;
+  text-align: left;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--epi-texto-sec);
+  border-bottom: 1px solid var(--epi-borde);
+  white-space: nowrap;
+}
+
+.dg-tabla td {
+  padding: .65rem .9rem;
+  border-bottom: 1px solid var(--epi-borde);
+  color: var(--epi-texto);
+  vertical-align: middle;
+}
+
+.dg-tabla tbody tr:last-child td { border-bottom: none; }
+.dg-tabla tbody tr:hover          { background: var(--epi-primario-lt); }
+
+.dg-ci {
+  font-family: 'Courier New', monospace;
+  font-size: .82rem;
+  letter-spacing: .03em;
+}
+
+/* Badges de resultado */
+.dg-res-badge {
+  display: inline-block;
+  padding: .2rem .55rem;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.dg-res-pos {
+  background: #fde8e8;
+  color: #b91c1c;
+}
+.dg-res-neg {
+  background: #e7f3e8;
+  color: #166534;
+}
+.dg-res-ind {
+  background: var(--epi-superficie);
+  color: var(--epi-texto-sec);
+}
+
+.dg-tabla-vacia {
+  text-align: center;
+  color: var(--epi-texto-sec);
+  font-style: italic;
+  padding: 2rem !important;
+}
+
+/* ── Paginación ──────────────────────────────────────────────────────────── */
+.dg-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .3rem;
+  padding: .25rem 0;
+}
+
+.dg-pag-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 .5rem;
+  border: 1px solid var(--epi-borde);
+  border-radius: var(--epi-radio);
+  background: #fff;
+  color: var(--epi-texto);
+  font-size: .875rem;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dg-pag-btn:hover:not([disabled]) {
+  background: var(--epi-primario-lt);
+  border-color: var(--epi-primario);
+  color: var(--epi-primario);
+}
+.dg-pag-btn.active {
+  background: var(--epi-primario);
+  border-color: var(--epi-primario);
+  color: #fff;
+  font-weight: 700;
+}
+.dg-pag-btn[disabled] {
+  opacity: .35;
+  cursor: default;
+}
+.dg-pag-ellipsis {
+  color: var(--epi-texto-sec);
+  padding: 0 .25rem;
+  line-height: 34px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SELECTOR DE ÁREA DE SALUD (formulario de indicación)
+   Renderizado por _renderSelectorAreaSalud() en moderadores_core.js
+════════════════════════════════════════════════════════════════════════════ */
+
+.mod-area-salud-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.mod-opcional-badge {
+  display: inline-block;
+  font-size: .7rem;
+  font-weight: 500;
+  color: var(--epi-texto-sec);
+  background: var(--epi-superficie);
+  border: 1px solid var(--epi-borde);
+  border-radius: 20px;
+  padding: .1rem .45rem;
+  margin-left: .4rem;
+  vertical-align: middle;
+  text-transform: lowercase;
+}
+
+.mod-smart-wrap {
+  position: relative;
+}
+
+.mod-smart-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mod-smart-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--epi-borde);
+  border-radius: var(--epi-radio);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 200;
+  margin: 0;
+  padding: .25rem 0;
+  list-style: none;
+}
+.mod-smart-dropdown li {
+  padding: .5rem .85rem;
+  font-size: .875rem;
+  cursor: pointer;
+  transition: background .1s;
+}
+.mod-smart-dropdown li:hover { background: var(--epi-primario-lt); }
+.mod-dd-empty {
+  color: var(--epi-texto-sec) !important;
+  cursor: default !important;
+  font-style: italic;
+}
+
+.mod-hint {
+  font-size: .78rem;
+  color: var(--epi-texto-sec);
+  margin: 0;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .epi-header        { padding: 1rem 1rem 0; }
+  .epi-content       { padding: 1rem; }
+  .epi-title         { font-size: 1.05rem; }
+
+  .dg-filtros-grid   { grid-template-columns: 1fr 1fr; }
+  .dg-filtro-accion  { grid-column: 1 / -1; }
+
+  .dg-tabla          { font-size: .8rem; }
+  .dg-tabla th,
+  .dg-tabla td       { padding: .55rem .65rem; }
+}
+
+@media (max-width: 480px) {
+  .dg-filtros-grid   { grid-template-columns: 1fr; }
+  .epi-pill          { padding: .6rem .75rem; font-size: .82rem; }
+}
