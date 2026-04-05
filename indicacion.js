@@ -1,6 +1,13 @@
 /* =========================================================
    indicacion.js  —  Módulo de Indicaciones de Examen
    Usa _store (memoria) + Supabase. Sin localStorage.
+
+   CAMBIOS vs versión anterior:
+   ─ Paso 2 (datos del paciente): campo "Área de salud" opcional.
+     Se filtra desde getGeoCentros() con tipo === 'área de salud'
+     en cascada desde el municipio seleccionado.
+   ─ _st.area_salud_id persistido en la indicación y en el paciente.
+   ─ Tarjeta de indicación muestra el área de salud si está asignada.
    ========================================================= */
 
 /* ── Catálogos desde _store ───────────────────────────────── */
@@ -125,6 +132,43 @@ function _getUserProvinciaId(user) {
     return mun ? mun.provincia_id : null;
 }
 
+/* ── Área de salud — helper de módulo ─────────────────────────────────────
+   Actualiza el datalist y habilita/deshabilita el campo de área de salud
+   en Paso 2 según el municipio seleccionado del paciente.
+   Definida a nivel de módulo para poder ser reutilizada desde
+   _rellenarFormPaciente y _initPaso2.
+   ───────────────────────────────────────────────────────────────────────── */
+function _indActualizarAreaSalud(municipio_id) {
+    const areaInp = document.getElementById('pac-area-salud-input');
+    const areaDl  = document.getElementById('dl-area-salud');
+    const areaHid = document.getElementById('pac-area-salud');
+    if (!areaInp || !areaDl || !areaHid) return;
+
+    // Limpiar selección actual al cambiar municipio
+    areaInp.value = '';
+    areaHid.value = '';
+
+    if (!municipio_id) {
+        areaInp.disabled    = true;
+        areaInp.placeholder = '— Seleccione municipio primero —';
+        areaDl.innerHTML    = '';
+        return;
+    }
+
+    const areas = getGeoCentros().filter(
+        c => c.municipio_id === Number(municipio_id) && c.tipo === 'área de salud'
+    );
+    areaDl.innerHTML = areas.map(a => `<option value="${a.nombre}"></option>`).join('');
+
+    if (areas.length) {
+        areaInp.disabled    = false;
+        areaInp.placeholder = '— Buscar área de salud —';
+    } else {
+        areaInp.disabled    = true;
+        areaInp.placeholder = '— Sin áreas registradas para este municipio —';
+    }
+}
+
 /* ══════════════════════════════════════════════════════════════
    VISTA PRINCIPAL
    ══════════════════════════════════════════════════════════════ */
@@ -234,6 +278,11 @@ function _renderIndCard(ind, currentUser) {
         const ex = EXAMENES_TB_CAT.find(e => e.id === eid);
         return ex ? `<span class="exam-tag">${ex.codigo}</span>` : '';
     }).join('');
+
+    /* ── Área de salud (nuevo campo) ── */
+    const areaSalud = ind.area_salud_id
+        ? getGeoCentros().find(c => c.id === Number(ind.area_salud_id))
+        : null;
 
     const statusMap = {
         pendiente:  ['badge-estado pendiente',  'Pendiente'],
@@ -383,6 +432,7 @@ function _renderIndCard(ind, currentUser) {
             <span><i class="bi bi-calendar3"></i> ${_formatDate(ind.fecha_indicacion)}</span>
             <span><i class="bi bi-hospital"></i> ${lab?.nombre || '—'}</span>
             <span><i class="bi bi-droplet-half"></i> ${muestra?.nombre || '—'}</span>
+            ${areaSalud ? `<span><i class="bi bi-geo-alt-fill"></i> ${areaSalud.nombre}</span>` : ''}
         </div>
         <div class="ind-card-tags">${tags}</div>
         ${resBlock}
@@ -400,6 +450,7 @@ function _renderNuevaIndicacion(user, el) {
         user, paso: 1, medico: null, paciente: null, esNuevo: true,
         laboratorio_id: null, tipo_muestra_id: null, examenes_ids: [],
         observaciones: '', firma: null, fecha_indicacion: _today(),
+        area_salud_id: null,          // ← campo nuevo: área de salud del paciente
     };
     _sigHasContent = false; _sigCtx = null;
 
@@ -602,6 +653,27 @@ function _htmlPaso2() {
                     <datalist id="dl-mun"></datalist>
                     <input type="hidden" id="pac-mun"><div class="invalid-feedback" id="err-pac-mun"></div>
                 </div>
+
+                <!-- ── Área de salud (NUEVO — opcional) ─────────────────── -->
+                <div class="col-12">
+                    <label for="pac-area-salud-input" class="form-label">
+                        Área de salud
+                        <span style="font-size:.78rem;font-weight:400;color:var(--text-muted,#6b7280)"> — opcional</span>
+                    </label>
+                    <input type="text" id="pac-area-salud-input" class="form-control"
+                           list="dl-area-salud"
+                           placeholder="— Seleccione municipio primero —"
+                           autocomplete="off"
+                           disabled>
+                    <datalist id="dl-area-salud"></datalist>
+                    <input type="hidden" id="pac-area-salud">
+                    <div class="form-text" style="font-size:.78rem;color:var(--text-muted,#6b7280);margin-top:.3rem">
+                        <i class="bi bi-info-circle me-1"></i>Área de salud donde se realiza el seguimiento del paciente.
+                        Si no la conoce, puede omitir este campo.
+                    </div>
+                </div>
+                <!-- ── fin Área de salud ─────────────────────────────────── -->
+
             </div>
             <div class="mt-4">
                 <label class="form-label fw-semibold">Grupos de vulnerabilidad</label>
@@ -632,18 +704,66 @@ function _initPaso2() {
     const provInp = document.getElementById('pac-prov-input'), provHid = document.getElementById('pac-prov');
     const munInp  = document.getElementById('pac-mun-input'),  munHid  = document.getElementById('pac-mun');
     const munDl   = document.getElementById('dl-mun');
+    const areaInp = document.getElementById('pac-area-salud-input');
+    const areaHid = document.getElementById('pac-area-salud');
 
-    provInp.addEventListener('input', () => { const p = getGeoProvs().find(x => x.nombre.toLowerCase() === provInp.value.toLowerCase().trim()); provHid.value = p ? p.id : ''; });
-    provInp.addEventListener('change', () => {
-        if (!provHid.value) { provInp.value = ''; munInp.disabled = true; munInp.value = ''; munInp.placeholder = '— Seleccione provincia —'; munHid.value = ''; munDl.innerHTML = ''; }
-        else { munInp.disabled = false; munInp.value = ''; munHid.value = ''; munInp.placeholder = '— Seleccione —'; munDl.innerHTML = getGeoMuns().filter(m => m.provincia_id === Number(provHid.value)).map(m => `<option value="${m.nombre}"></option>`).join(''); }
+    provInp.addEventListener('input', () => {
+        const p = getGeoProvs().find(x => x.nombre.toLowerCase() === provInp.value.toLowerCase().trim());
+        provHid.value = p ? p.id : '';
     });
-    munInp.addEventListener('input', () => { const pId = Number(provHid.value); const m = getGeoMuns().find(x => x.provincia_id === pId && x.nombre.toLowerCase() === munInp.value.toLowerCase().trim()); munHid.value = m ? m.id : ''; });
-    munInp.addEventListener('change', () => { if (!munHid.value) munInp.value = ''; });
+    provInp.addEventListener('change', () => {
+        if (!provHid.value) {
+            provInp.value = '';
+            munInp.disabled = true; munInp.value = ''; munInp.placeholder = '— Seleccione provincia —'; munHid.value = ''; munDl.innerHTML = '';
+            // Limpiar área de salud también
+            _indActualizarAreaSalud(null);
+        } else {
+            munInp.disabled = false; munInp.value = ''; munHid.value = ''; munInp.placeholder = '— Seleccione —';
+            munDl.innerHTML = getGeoMuns().filter(m => m.provincia_id === Number(provHid.value)).map(m => `<option value="${m.nombre}"></option>`).join('');
+            _indActualizarAreaSalud(null);
+        }
+    });
+
+    munInp.addEventListener('input', () => {
+        const pId = Number(provHid.value);
+        const m = getGeoMuns().find(x => x.provincia_id === pId && x.nombre.toLowerCase() === munInp.value.toLowerCase().trim());
+        munHid.value = m ? m.id : '';
+    });
+    munInp.addEventListener('change', () => {
+        if (!munHid.value) munInp.value = '';
+        // Cascada: actualizar área de salud según municipio seleccionado
+        _indActualizarAreaSalud(munHid.value || null);
+    });
+
+    // ── Bindings del campo Área de salud ─────────────────────────────────────
+    if (areaInp && areaHid) {
+        areaInp.addEventListener('change', function () {
+            const munId  = Number(munHid.value);
+            const nombre = this.value.trim();
+            if (!nombre || !munId) { areaHid.value = ''; return; }
+            const match = getGeoCentros().find(
+                c => c.municipio_id === munId && c.tipo === 'área de salud' &&
+                     c.nombre.toLowerCase() === nombre.toLowerCase()
+            );
+            if (match) {
+                areaHid.value = match.id;
+            } else {
+                // No coincide con ningún área registrada → limpiar
+                areaHid.value = '';
+                this.value    = '';
+            }
+        });
+        areaInp.addEventListener('input', function () {
+            if (!this.value.trim()) areaHid.value = '';
+        });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     function _restFields(locked) {
         ['pac-fnac','pac-nombres','pac-apellidos'].forEach(id => { const el = document.getElementById(id); if (el) locked ? el.setAttribute('readonly','') : el.removeAttribute('readonly'); });
         ['pac-sexo-input','pac-prov-input','pac-mun-input'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = locked || (id === 'pac-mun-input' && !document.getElementById('pac-prov').value); });
+        const aInp = document.getElementById('pac-area-salud-input');
+        if (aInp) aInp.disabled = locked;
         document.querySelectorAll('.gv-chk').forEach(c => c.disabled = locked);
     }
 
@@ -653,10 +773,12 @@ function _initPaso2() {
         document.getElementById('pac-prov').value = ''; document.getElementById('pac-prov-input').value = '';
         munInp.value = ''; munInp.placeholder = '— Seleccione provincia —'; munInp.disabled = true;
         munHid.value = ''; munDl.innerHTML = '';
+        // Limpiar área de salud
+        _indActualizarAreaSalud(null);
         document.querySelectorAll('.gv-chk').forEach(c => { c.checked = false; c.disabled = false; });
         document.getElementById('gv-edad-hint')?.classList.add('d-none');
         banner.classList.add('d-none'); banner.innerHTML = '';
-        _st.paciente = null; _st.esNuevo = true;
+        _st.paciente = null; _st.esNuevo = true; _st.area_salud_id = null;
     }
 
     function _lockPaciente(pac) {
@@ -724,6 +846,24 @@ function _rellenarFormPaciente(pac) {
             selHid.value = pac.municipio_id; selInp.value = mun.nombre; selInp.disabled = false;
             dlMun.innerHTML = getGeoMuns().filter(m => m.provincia_id === mun.provincia_id).map(m => `<option value="${m.nombre}"></option>`).join('');
         }
+
+        // ── Área de salud: poblar datalist y preseleccionar si existe en el paciente ──
+        _indActualizarAreaSalud(pac.municipio_id);
+        if (pac.area_salud_id) {
+            const areaMatch = getGeoCentros().find(
+                c => c.id === Number(pac.area_salud_id) && c.tipo === 'área de salud'
+            );
+            if (areaMatch) {
+                const areaInp = document.getElementById('pac-area-salud-input');
+                const areaHid = document.getElementById('pac-area-salud');
+                if (areaInp && areaHid) {
+                    areaInp.value   = areaMatch.nombre;
+                    areaHid.value   = areaMatch.id;
+                    areaInp.disabled = false;
+                }
+            }
+        }
+        // ──────────────────────────────────────────────────────────────────────────────
     }
     (pac.grupos_ids || []).forEach(gid => { const chk = document.getElementById(`gv-${gid}`); if (chk) chk.checked = true; });
     if (pac.fecha_nacimiento) _mostrarHintEdad(pac.fecha_nacimiento);
@@ -746,9 +886,27 @@ function _validarPaso2() {
         else { inp?.classList.remove('is-invalid'); err?.classList.remove('show'); }
     });
     if (!ok) return;
+
     const grupos_ids = [...document.querySelectorAll('.gv-chk:checked')].map(c => parseInt(c.value));
-    const munId = parseInt(document.getElementById('pac-mun').value);
-    _st.paciente = { ...(_st.paciente || {}), carnet_identidad: document.getElementById('pac-ci').value.trim(), nombres: document.getElementById('pac-nombres').value.trim(), apellidos: document.getElementById('pac-apellidos').value.trim(), fecha_nacimiento: document.getElementById('pac-fnac').value, sexo: document.getElementById('pac-sexo').value, municipio_id: munId, grupos_ids };
+    const munId      = parseInt(document.getElementById('pac-mun').value);
+
+    // Área de salud: campo opcional, no bloquea la validación
+    const areaHid  = document.getElementById('pac-area-salud');
+    const areaInp  = document.getElementById('pac-area-salud-input');
+    const area_salud_id = (areaHid?.value) ? Number(areaHid.value) : null;
+    _st.area_salud_id   = area_salud_id;
+
+    _st.paciente = {
+        ...(_st.paciente || {}),
+        carnet_identidad: document.getElementById('pac-ci').value.trim(),
+        nombres:          document.getElementById('pac-nombres').value.trim(),
+        apellidos:        document.getElementById('pac-apellidos').value.trim(),
+        fecha_nacimiento: document.getElementById('pac-fnac').value,
+        sexo:             document.getElementById('pac-sexo').value,
+        municipio_id:     munId,
+        grupos_ids,
+        area_salud_id,   // ← persiste en el paciente también
+    };
     _st.esNuevo = !_st.paciente.id;
     _goToPaso(3);
 }
@@ -809,7 +967,6 @@ function _initPaso3() {
     const labs    = allLabs.filter(l => l.provincia_id === provId && l.activo !== false);
     const tmCat   = _getTMCat();
 
-    /* Actualiza la grilla de exámenes según el laboratorio seleccionado */
     function _actualizarExamenesGrid(labId, preserveChecked) {
         const grid    = document.getElementById('examenes-grid');
         const hint    = document.getElementById('examenes-hint');
@@ -832,7 +989,6 @@ function _initPaso3() {
             </p></div>`;
             return;
         }
-        /* Conservar los IDs marcados antes del cambio (modo edición) */
         const prevChecked = preserveChecked
             ? [...document.querySelectorAll('.exam-chk:checked')].map(c => parseInt(c.value))
             : (_st.examenes_ids || []);
@@ -872,7 +1028,6 @@ function _initPaso3() {
     mInp.addEventListener('input', () => { const v = mInp.value.toLowerCase().trim(); const m = tmCat.find(x => x.nombre.toLowerCase() === v); mHid.value = m ? m.id : ''; });
     mInp.addEventListener('change', () => { if (!mHid.value) mInp.value = ''; });
 
-    /* Restaurar valores si venimos de paso anterior o de edición */
     if (_st.laboratorio_id) {
         const l = labs.find(x => x.id === Number(_st.laboratorio_id));
         if (l) {
@@ -922,6 +1077,12 @@ function _htmlPaso4() {
     const gvNom  = [...new Set(pac?.grupos_ids || [])].map(gid => allGV.find(g => g.id === gid)?.nombre || '?');
     const examTags = _st.examenes_ids.map(eid => `<span class="exam-tag">${EXAMENES_TB_CAT.find(e => e.id === eid)?.codigo || '?'}</span>`).join('');
     const nuevoLabel = _st.esNuevo ? '<span class="badge bg-info ms-2">Nuevo registro</span>' : '<span class="badge bg-secondary ms-2">Paciente existente</span>';
+
+    // Área de salud en el resumen (si fue seleccionada)
+    const areaNombre = _st.area_salud_id
+        ? getGeoCentros().find(c => c.id === Number(_st.area_salud_id))?.nombre
+        : null;
+
     return `<div class="paso-inner">
         <div class="ind-resumen">
             <h6 class="resumen-titulo"><i class="bi bi-clipboard2-check me-2"></i>Resumen de la indicación</h6>
@@ -930,6 +1091,7 @@ function _htmlPaso4() {
                 <div class="resumen-item"><div class="ri-label">Paciente ${nuevoLabel}</div><div class="ri-val">${pac?.apellidos}, ${pac?.nombres}</div><div class="ri-sub">CI: ${pac?.carnet_identidad}&nbsp;·&nbsp;${edad} años&nbsp;·&nbsp;${sexoStr}&nbsp;·&nbsp;${mun}</div>${gvNom.length ? `<div class="ri-gv"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>${gvNom.join(' · ')}</div>` : ''}</div>
                 <div class="resumen-item"><div class="ri-label">Laboratorio</div><div class="ri-val">${lab?.nombre || '—'}</div></div>
                 <div class="resumen-item"><div class="ri-label">Tipo de muestra</div><div class="ri-val">${muestra?.nombre || '—'}</div></div>
+                ${areaNombre ? `<div class="resumen-item"><div class="ri-label">Área de salud</div><div class="ri-val"><i class="bi bi-geo-alt-fill me-1" style="color:var(--accent,#0369a1)"></i>${areaNombre}</div></div>` : ''}
                 <div class="resumen-item"><div class="ri-label">Exámenes indicados</div><div class="ri-val">${examTags}</div></div>
                 <div class="resumen-item"><div class="ri-label">Fecha</div><div class="ri-val">${_formatDate(_st.fecha_indicacion)}</div></div>
                 ${_st.observaciones ? `<div class="resumen-item resumen-full"><div class="ri-label">Observaciones</div><div class="ri-val">${_st.observaciones}</div></div>` : ''}
@@ -998,10 +1160,10 @@ function _clearFirma() {
 
 async function _submitIndicacion() {
     const errFirma = document.getElementById('err-firma');
-    if (!_sigHasContent && !_st.firma) { 
-        errFirma.textContent = 'La firma es obligatoria. Trace su firma en el recuadro.'; 
-        errFirma.style.display = 'block'; 
-        return; 
+    if (!_sigHasContent && !_st.firma) {
+        errFirma.textContent = 'La firma es obligatoria. Trace su firma en el recuadro.';
+        errFirma.style.display = 'block';
+        return;
     }
     errFirma.style.display = 'none';
     const btn = document.getElementById('p4-submit');
@@ -1012,63 +1174,60 @@ async function _submitIndicacion() {
         let pacienteId;
 
         if (_st.paciente?.id) {
-            // Paciente existente: actualizar grupos_ids
             pacienteId = _st.paciente.id;
             const idx = pacientes.findIndex(p => p.id === pacienteId);
             if (idx !== -1) {
-                pacientes[idx].grupos_ids = _st.paciente.grupos_ids;
+                pacientes[idx].grupos_ids    = _st.paciente.grupos_ids;
+                pacientes[idx].area_salud_id = _st.paciente.area_salud_id ?? null;
                 _savePacientes(pacientes);
                 if (typeof sbUpdateRow === 'function') {
-                    sbUpdateRow('pacientes', pacienteId, { grupos_ids: _st.paciente.grupos_ids })
-                        .catch(e => console.error('upsert paciente:', e));
+                    sbUpdateRow('pacientes', pacienteId, {
+                        grupos_ids:    _st.paciente.grupos_ids,
+                        area_salud_id: _st.paciente.area_salud_id ?? null,
+                    }).catch(e => console.error('upsert paciente:', e));
                 }
             }
         } else {
-            const nuevo = { 
-                id: _genUUID(), 
-                ..._st.paciente, 
-                creado_por: _st.user.id, 
-                creado_en: new Date().toISOString() 
+            const nuevo = {
+                id: _genUUID(),
+                ..._st.paciente,
+                creado_por: _st.user.id,
+                creado_en:  new Date().toISOString()
             };
-            pacienteId = nuevo.id; 
-            _st.paciente.id = pacienteId;
-            pacientes.push(nuevo); 
-            _savePacientes(pacientes);
+            pacienteId = nuevo.id; _st.paciente.id = pacienteId;
+            pacientes.push(nuevo); _savePacientes(pacientes);
             if (typeof sbUpsertRow === 'function') {
-             await sbUpsertRow('pacientes', nuevo)
-              .catch(e => console.error('upsert paciente:', e));
+                await sbUpsertRow('pacientes', nuevo)
+                    .catch(e => console.error('upsert paciente:', e));
             }
         }
 
         let firmaDataUrl = _st.firma || null;
-        if (_sigHasContent) { 
-            const canvas = document.getElementById('firma-canvas'); 
-            if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); 
-        }
+        if (_sigHasContent) { const canvas = document.getElementById('firma-canvas'); if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); }
 
         const nuevaInd = {
-            id: _genUUID(), 
-            paciente_id: pacienteId, 
-            indicado_por: _st.user.id,
-            medico: _st.medico, 
-            laboratorio_id: _st.laboratorio_id,
-            tipo_muestra_id: _st.tipo_muestra_id, 
-            examenes_ids: _st.examenes_ids,
-            observaciones: _st.observaciones, 
+            id:              _genUUID(),
+            paciente_id:     pacienteId,
+            indicado_por:    _st.user.id,
+            medico:          _st.medico,
+            laboratorio_id:  _st.laboratorio_id,
+            tipo_muestra_id: _st.tipo_muestra_id,
+            examenes_ids:    _st.examenes_ids,
+            observaciones:   _st.observaciones,
             fecha_indicacion: _st.fecha_indicacion,
-            firma_digital: firmaDataUrl, 
-            estado: 'pendiente',
-            creado_en: new Date().toISOString(),
+            firma_digital:   firmaDataUrl,
+            estado:          'pendiente',
+            area_salud_id:   _st.area_salud_id ?? null,   // ← campo nuevo
+            creado_en:       new Date().toISOString(),
         };
 
-        const indicaciones = _getIndicaciones(); 
-        indicaciones.push(nuevaInd); 
+        const indicaciones = _getIndicaciones();
+        indicaciones.push(nuevaInd);
         _saveIndicaciones(indicaciones);
 
         if (typeof sbUpsertRow === 'function') {
             sbUpsertRow('indicaciones_examen', nuevaInd)
                 .then(() => {
-                    // Insertar en tabla junction (fire-and-forget)
                     const sb = typeof _client === 'function' ? _client() : null;
                     if (sb && _st.examenes_ids.length) {
                         sb.from('indicacion_examenes')
@@ -1105,7 +1264,20 @@ async function _submitIndicacion() {
    EDITAR INDICACIÓN
    ══════════════════════════════════════════════════════════════ */
 function _renderEditarIndicacion(user, el, ind) {
-    _st = { user, modo: 'editar', indId: ind.id, medico: ind.medico, paciente: _getPacientes().find(p => p.id === ind.paciente_id) || {}, esNuevo: false, laboratorio_id: ind.laboratorio_id, tipo_muestra_id: ind.tipo_muestra_id, examenes_ids: ind.examenes_ids || [], observaciones: ind.observaciones || '', firma: ind.firma_digital || null, fecha_indicacion: ind.fecha_indicacion, paso: 3 };
+    _st = {
+        user, modo: 'editar', indId: ind.id,
+        medico:          ind.medico,
+        paciente:        _getPacientes().find(p => p.id === ind.paciente_id) || {},
+        esNuevo:         false,
+        laboratorio_id:  ind.laboratorio_id,
+        tipo_muestra_id: ind.tipo_muestra_id,
+        examenes_ids:    ind.examenes_ids || [],
+        observaciones:   ind.observaciones || '',
+        firma:           ind.firma_digital || null,
+        fecha_indicacion: ind.fecha_indicacion,
+        area_salud_id:   ind.area_salud_id ?? null,   // ← campo nuevo
+        paso: 3,
+    };
     _sigHasContent = !!ind.firma_digital; _sigCtx = null;
 
     el.innerHTML = `
@@ -1166,20 +1338,17 @@ function _initPaso4Edit() {
 async function _submitEdicion() {
     const btn = document.getElementById('p4-submit');
     const errFirma = document.getElementById('err-firma');
-    if (!_sigHasContent && !_st.firma) { 
-        errFirma.textContent = 'La firma es obligatoria.'; 
-        errFirma.style.display = 'block'; 
-        return; 
+    if (!_sigHasContent && !_st.firma) {
+        errFirma.textContent = 'La firma es obligatoria.';
+        errFirma.style.display = 'block';
+        return;
     }
-    errFirma.style.display = 'none'; 
+    errFirma.style.display = 'none';
     btn.disabled = true;
 
     try {
         let firmaDataUrl = _st.firma || null;
-        if (_sigHasContent) { 
-            const canvas = document.getElementById('firma-canvas'); 
-            if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); 
-        }
+        if (_sigHasContent) { const canvas = document.getElementById('firma-canvas'); if (canvas) firmaDataUrl = canvas.toDataURL('image/png'); }
 
         const inds = _getIndicaciones();
         const idx  = inds.findIndex(i => i.id === _st.indId);
@@ -1190,6 +1359,7 @@ async function _submitEdicion() {
             inds[idx].observaciones   = _st.observaciones;
             inds[idx].firma_digital   = firmaDataUrl;
             inds[idx].editado_en      = new Date().toISOString();
+            // area_salud_id no se modifica en edición (pertenece al paso 2)
         }
         _saveIndicaciones(inds);
         if (typeof sbUpsertRow === 'function') {
@@ -1203,9 +1373,9 @@ async function _submitEdicion() {
             alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Indicación actualizada correctamente.';
             alertEl.classList.remove('d-none');
         }
-        setTimeout(() => { 
-            const el = document.getElementById('app-content-inner'); 
-            if (el) renderIndicaciones(_st.user, el); 
+        setTimeout(() => {
+            const el = document.getElementById('app-content-inner');
+            if (el) renderIndicaciones(_st.user, el);
         }, 1400);
     } catch (err) {
         console.error('_submitEdicion error:', err);
