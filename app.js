@@ -138,6 +138,12 @@ function renderModulo(id, user) {
             </div>`;
     } else if (id === 'indicaciones') {
         renderIndicaciones(user, el);
+    } else if (id === 'datos') {
+        if (typeof _initEpidemiologia === 'function') {
+            _initEpidemiologia(el);
+        } else {
+            el.innerHTML = '<div class="modulo-header"><h2 class="modulo-title">Datos epidemiológicos</h2><p class="modulo-sub">Módulo no disponible — verifique que epidemiologia.js esté cargado.</p></div>';
+        }
     } else if (id === 'laboratorio') {
         renderLaboratorio(user, el);
     } else {
