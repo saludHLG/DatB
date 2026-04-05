@@ -20,9 +20,9 @@
 // ─── Configuración de pills ───────────────────────────────────────────────────
 
 const EPI_PILLS = [
-  { id: 'resumen',         label: 'Resumen',         icono: '📊' },
-  { id: 'datos_generales', label: 'Datos generales',  icono: '📋' },
-  { id: 'casos_positivos', label: 'Casos positivos',  icono: '🔬' },
+  { id: 'resumen',         label: 'Resumen',         icono: 'bi-bar-chart-line' },
+  { id: 'datos_generales', label: 'Datos generales',  icono: 'bi-clipboard2-data' },
+  { id: 'casos_positivos', label: 'Casos positivos',  icono: 'bi-capsule' },
 ];
 
 // ─── Estado interno del módulo ────────────────────────────────────────────────
@@ -56,7 +56,7 @@ function _renderEpidemiologia(contenedor) {
               aria-selected="${p.id === _epiState.pillActual}"
               aria-controls="epi_contenido"
             >
-              <span class="epi-pill-icono" aria-hidden="true">${p.icono}</span>
+              <i class="bi ${p.icono} epi-pill-icono" aria-hidden="true"></i>
               ${p.label}
             </button>
           `).join('')}
@@ -97,7 +97,7 @@ function _renderPillContent(contenedor, pill) {
     case 'resumen':
       contenedor.innerHTML = `
         <div class="epi-placeholder">
-          <div class="epi-placeholder-icono">📊</div>
+          <i class="bi bi-bar-chart-line epi-placeholder-icono"></i>
           <p>El módulo <strong>Resumen</strong> con visualizaciones estadísticas
              estará disponible próximamente.</p>
         </div>`;
@@ -115,7 +115,7 @@ function _renderPillContent(contenedor, pill) {
     case 'casos_positivos':
       contenedor.innerHTML = `
         <div class="epi-placeholder">
-          <div class="epi-placeholder-icono">🔬</div>
+          <i class="bi bi-capsule epi-placeholder-icono"></i>
           <p>El módulo <strong>Casos positivos</strong> estará disponible
              próximamente.</p>
         </div>`;
