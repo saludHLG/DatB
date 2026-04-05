@@ -932,3 +932,134 @@
     background: #ef4444;
     color: #fff;
 }
+
+/* ══════════════════════════════════════════════════════════
+   CSS ADICIONAL — Cards de pendientes con acción inline
+   Añadir al final de modules.css
+   ══════════════════════════════════════════════════════════ */
+
+/* Card de pendiente: layout vertical en lugar del flex horizontal original */
+.lab-pend-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .85rem;
+}
+
+/* Zona de acción al pie de la card */
+.lab-pend-actions {
+    border-top: 1px solid var(--border, #e2e8f0);
+    padding-top: .75rem;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+}
+
+/* Botón Recibir */
+.btn-pend-accept {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .42rem 1rem;
+    background: #0b1e3d;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s;
+    white-space: nowrap;
+}
+.btn-pend-accept:hover { background: #1a3a6b; }
+
+/* Botón Rechazar */
+.btn-pend-reject {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .42rem 1rem;
+    background: transparent;
+    color: #e0435a;
+    border: 1.5px solid #e0435a;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+}
+.btn-pend-reject:hover { background: #ffeef1; }
+
+/* Bloque de rechazo: textarea + botones */
+.pend-reject-block {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    animation: fadeSlide .18s ease both;
+}
+
+.pend-motivo-input {
+    font-size: .84rem;
+    resize: vertical;
+    min-height: 64px;
+    border-color: #e0435a !important;
+}
+.pend-motivo-input:focus {
+    box-shadow: 0 0 0 3px rgba(224,67,90,.15) !important;
+    outline: none;
+}
+
+/* Botón confirmar rechazo */
+.btn-pend-confirm-reject {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .9rem;
+    background: #e0435a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s;
+    white-space: nowrap;
+}
+.btn-pend-confirm-reject:hover    { background: #c53050; }
+.btn-pend-confirm-reject:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Botón cancelar (dentro del bloque de rechazo) */
+.btn-pend-cancel-reject {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .85rem;
+    background: transparent;
+    color: #6b7280;
+    border: 1.5px solid #dce8f5;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, border-color .15s;
+    white-space: nowrap;
+}
+.btn-pend-cancel-reject:hover { background: #f0f4fa; border-color: #8fa3bf; }
+
+/* Mensaje de resultado inline */
+.pend-result-msg {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .85rem;
+    border-radius: 8px;
+    font-size: .84rem;
+    font-weight: 500;
+    animation: fadeSlide .2s ease both;
+}
+.pend-result-ok   { background: #e6faf4; color: #007a52; border: 1px solid rgba(0,184,122,.2); }
+.pend-result-warn { background: #fff8e6; color: #8a5a00; border: 1px solid rgba(240,165,0,.25); }
