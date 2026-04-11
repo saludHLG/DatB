@@ -1063,3 +1063,116 @@
 }
 .pend-result-ok   { background: #e6faf4; color: #007a52; border: 1px solid rgba(0,184,122,.2); }
 .pend-result-warn { background: #fff8e6; color: #8a5a00; border: 1px solid rgba(240,165,0,.25); }
+
+/* =========================================================
+   PESTAÑAS DEL LABORATORIO (estilo unificado con epidemiología)
+   ========================================================= */
+
+.lab-pills-wrapper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.lab-pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: none;
+    margin: 0;
+}
+
+.lab-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted, #6b7280);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    font-family: inherit;
+}
+
+.lab-pill:hover {
+    color: var(--accent, #0369a1);
+}
+
+.lab-pill.active {
+    color: var(--accent, #0369a1);
+    border-bottom-color: var(--accent, #0369a1);
+    font-weight: 600;
+}
+
+.lab-pill-icon {
+    font-size: 1em;
+    line-height: 1;
+}
+
+.lab-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.32rem;
+    border-radius: 20px;
+    background: var(--danger, #e0435a);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    margin-left: 0.25rem;
+}
+
+.lab-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.48rem 1rem;
+    background: transparent;
+    border: 1.5px solid var(--border, #dce8f5);
+    border-radius: 8px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text-muted, #6b7280);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.lab-refresh-btn:hover {
+    border-color: #1a3a6b;
+    color: #0b1e3d;
+    background: #f0f4fa;
+}
+
+.lab-refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive: en móvil las pills pueden hacer scroll horizontal */
+@media (max-width: 576px) {
+    .lab-pills-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+        width: 100%;
+    }
+    .lab-pill {
+        padding: 0.55rem 0.9rem;
+        font-size: 0.8rem;
+    }
+    .lab-pill span:not(.lab-pill-badge) {
+        /* opcional: ocultar texto en pantallas muy pequeñas */
+    }
+}
