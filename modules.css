@@ -1065,14 +1065,16 @@
 .pend-result-warn { background: #fff8e6; color: #8a5a00; border: 1px solid rgba(240,165,0,.25); }
 
 /* =========================================================
+   PESTAÑAS DEL LABORATORIO (estilo unificado con epide/* =========================================================
    PESTAÑAS DEL LABORATORIO (estilo unificado con epidemiología)
    ========================================================= */
 
+/* Contenedor principal de pestañas y botón refresco */
 .lab-pills-wrapper {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
     flex-wrap: wrap;
     gap: 0.5rem;
 }
@@ -1085,6 +1087,7 @@
     margin: 0;
 }
 
+/* Pestaña principal */
 .lab-pill {
     display: inline-flex;
     align-items: center;
@@ -1112,11 +1115,6 @@
     font-weight: 600;
 }
 
-.lab-pill-icon {
-    font-size: 1em;
-    line-height: 1;
-}
-
 .lab-pill-badge {
     display: inline-flex;
     align-items: center;
@@ -1132,6 +1130,7 @@
     margin-left: 0.25rem;
 }
 
+/* Botón de refresco */
 .lab-refresh-btn {
     display: inline-flex;
     align-items: center;
@@ -1160,7 +1159,59 @@
     cursor: not-allowed;
 }
 
-/* Responsive: en móvil las pills pueden hacer scroll horizontal */
+/* ── Subpestañas de exámenes (estilo pills) ── */
+.lab-subpills-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+}
+
+.lab-subpill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-muted, #6b7280);
+    background: transparent;
+    border: 1.5px solid var(--border, #dce8f5);
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.lab-subpill:hover {
+    border-color: #1a3a6b;
+    color: #0b1e3d;
+    background: #f0f4fa;
+}
+
+.lab-subpill.active {
+    border-color: #0b1e3d;
+    background: #0b1e3d;
+    color: #fff;
+}
+
+.lab-subpill.active .exam-tag {
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+}
+
+.lab-subpill-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 0.1em 0.5em;
+    border-radius: 20px;
+    margin-left: 0.25rem;
+}
+
+/* Responsive */
 @media (max-width: 576px) {
     .lab-pills-container {
         overflow-x: auto;
@@ -1172,7 +1223,9 @@
         padding: 0.55rem 0.9rem;
         font-size: 0.8rem;
     }
-    .lab-pill span:not(.lab-pill-badge) {
-        /* opcional: ocultar texto en pantallas muy pequeñas */
+    .lab-subpills-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
     }
 }
