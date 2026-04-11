@@ -113,12 +113,12 @@ function _renderPillContent(contenedor, pill) {
       break;
 
     case 'casos_positivos':
-      contenedor.innerHTML = `
-        <div class="epi-placeholder">
-          <i class="bi bi-capsule epi-placeholder-icono"></i>
-          <p>El módulo <strong>Casos positivos</strong> estará disponible
-             próximamente.</p>
-        </div>`;
+      if (typeof _initEpiCasosPositivos === 'function') {
+        _initEpiCasosPositivos(contenedor);
+      } else {
+        contenedor.innerHTML = `<p class="epi-error">epi_casos_positivos.js no está cargado.</p>`;
+        console.error('[Epi] _initEpiCasosPositivos no disponible.');
+      }
       break;
 
     default:
