@@ -1,6 +1,6 @@
 /* =========================================================
    lab_recibidas.js — Tabs "Muestras recibidas" y "Rechazadas".
-   Sin localStorage. Requiere: laboratorio_core.js, lab_resultados.js
+   Subpestañas de exámenes con estilo pills (unificado).
    ========================================================= */
 
 /* ── Tab: Muestras rechazadas ─────────────────────────────── */
@@ -83,17 +83,14 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
             _appConfirm(
                 'Se eliminará este registro de rechazo y el examen de la indicación. Esta acción no se puede deshacer.',
                 () => {
-                    /* 1 — Localizar recepción antes de borrarla */
                     const rec   = _getRecepciones().find(r => r.id === recId);
                     const indId = rec?.indicacion_id || null;
                     const exId  = Number(rec?.examen_id || rec?.snap?.examen_id || 0);
 
-                    /* 2 — Borrar recepción */
                     _saveRecepciones(_getRecepciones().filter(r => r.id !== recId));
                     if (typeof sbDeleteRow === 'function')
                         sbDeleteRow('recepciones_muestra', recId).catch(console.error);
 
-                    /* 3 — Quitar el examen de la indicación (evita que vuelva a pendiente) */
                     if (indId && exId) {
                         const indArr = window._store.indicaciones || [];
                         const idx    = indArr.findIndex(i => i.id === indId);
@@ -101,12 +98,10 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
                             indArr[idx].examenes_ids = (indArr[idx].examenes_ids || [])
                                 .filter(e => Number(e) !== exId);
 
-                            /* Sincronizar columna jsonb */
                             if (typeof sbUpdateRow === 'function')
                                 sbUpdateRow('indicaciones_examen', indId,
                                     { examenes_ids: indArr[idx].examenes_ids }).catch(console.error);
 
-                            /* Sincronizar tabla junction */
                             const sb = typeof _client === 'function' ? _client() : null;
                             if (sb)
                                 sb.from('indicacion_examenes')
@@ -115,7 +110,6 @@ function _renderRechazadas(rechazadas, content, user, rootEl, emitirIds, editarI
                                   .eq('examen_id', exId)
                                   .catch(console.error);
 
-                            /* Recalcular estado de la indicación */
                             _recalcIndEstado(indId).catch(console.error);
                         }
                     }
@@ -140,7 +134,7 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
         return;
     }
 
-    const inds = window._store.indicaciones || [];   /* ← corregido: era window..indicaciones */
+    const inds = window._store.indicaciones || [];
     const pacs = window._store.pacientes    || [];
     const baci = _getResBaci();
     const cult = _getResCultivo();
@@ -160,12 +154,14 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
     if (!content._exActivo || !examCat.find(e => e.id === content._exActivo))
         content._exActivo = examCat[0]?.id || 1;
 
-    const subTabs = examCat.map(e => `
-        <button class="lab-subtab-btn${content._exActivo === e.id ? ' active' : ''}" data-ex-id="${e.id}">
-            <span class="exam-tag">${e.codigo}</span>
+    /* ── Subpestañas de exámenes con estilo PILLS ── */
+    const subPills = examCat.map(e => `
+        <button class="lab-subpill ${content._exActivo === e.id ? 'active' : ''}" data-ex-id="${e.id}">
+            <span class="exam-tag" style="background:transparent;padding:0">${e.codigo}</span>
             <span>${e.nombre}</span>
-            ${!_SOPORTADOS.has(e.id) ? '<span class="lab-badge-prox">Prox.</span>' : ''}
-        </button>`).join('');
+            ${!_SOPORTADOS.has(e.id) ? '<span class="lab-subpill-badge">Prox.</span>' : ''}
+        </button>
+    `).join('');
 
     content.innerHTML = `
     <div style="display:flex;gap:.65rem;margin-bottom:.85rem">
@@ -176,7 +172,7 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
                    value="${content._searchQ || ''}">
         </div>
     </div>
-    <div class="lab-subtabs mb-3">${subTabs}</div>
+    <div class="lab-subpills-wrapper mb-3">${subPills}</div>
     <div id="lab-exam-table-wrap"></div>`;
 
     document.getElementById('lab-rec-search').addEventListener('input', function () {
@@ -184,17 +180,20 @@ function _renderRecibidas(recepciones, content, user, rootEl, emitirIds, editarI
         content._page = 1;
         _renderExamTable(content._exActivo, recepciones, inds, pacs, baci, cult, user, rootEl, emitirIds, editarIds, content._searchQ, content);
     });
-    content.querySelectorAll('.lab-subtab-btn').forEach(btn =>
+    content.querySelectorAll('.lab-subpill').forEach(btn =>
         btn.addEventListener('click', function () {
             content._exActivo = parseInt(this.dataset.exId);
             content._page = 1;
-            content.querySelectorAll('.lab-subtab-btn').forEach(b => b.classList.remove('active'));
+            content.querySelectorAll('.lab-subpill').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             _renderExamTable(content._exActivo, recepciones, inds, pacs, baci, cult, user, rootEl, emitirIds, editarIds, content._searchQ || '', content);
         })
     );
     _renderExamTable(content._exActivo, recepciones, inds, pacs, baci, cult, user, rootEl, emitirIds, editarIds, content._searchQ || '', content);
 }
+
+/* ── Resto de funciones (_buildPagination, _renderExamTable, etc.) permanecen igual ── */
+/* (No se modifican, se mantienen del archivo original) */
 
 const _LAB_PAGE_SIZE = 50;
 
@@ -417,23 +416,19 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
         btn.addEventListener('click', () => {
             const recId = btn.dataset.recId;
             _appConfirm('Se eliminará la recepción, sus resultados y el examen de la indicación. Esta acción no se puede deshacer.', () => {
-                /* 1 — Localizar recepción antes de borrarla */
                 const rec   = _getRecepciones().find(r => r.id === recId);
                 const indId = rec?.indicacion_id || null;
                 const exId  = Number(rec?.examen_id || rec?.snap?.examen_id || 0);
 
-                /* 2 — Borrar resultados de todos los tipos */
                 _saveResBaci(_getResBaci().filter(r => r.recepcion_id !== recId));
                 _saveResCultivo(_getResCultivo().filter(r => r.recepcion_id !== recId));
                 _saveResXpertUltra(_getResXpertUltra().filter(r => r.recepcion_id !== recId));
                 _saveResXpertXDR(_getResXpertXDR().filter(r => r.recepcion_id !== recId));
 
-                /* 3 — Borrar recepción (Supabase la elimina en cascada con FK) */
                 _saveRecepciones(_getRecepciones().filter(r => r.id !== recId));
                 if (typeof sbDeleteRow === 'function')
                     sbDeleteRow('recepciones_muestra', recId).catch(console.error);
 
-                /* 4 — Quitar el examen de la indicación (evita que vuelva a pendiente) */
                 if (indId && exId) {
                     const inds = window._store.indicaciones || [];
                     const idx  = inds.findIndex(i => i.id === indId);
@@ -441,12 +436,10 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
                         inds[idx].examenes_ids = (inds[idx].examenes_ids || [])
                             .filter(e => Number(e) !== exId);
 
-                        /* Sincronizar columna jsonb en indicaciones_examen */
                         if (typeof sbUpdateRow === 'function')
                             sbUpdateRow('indicaciones_examen', indId,
                                 { examenes_ids: inds[idx].examenes_ids }).catch(console.error);
 
-                        /* Sincronizar tabla junction indicacion_examenes */
                         const sb = typeof _client === 'function' ? _client() : null;
                         if (sb)
                             sb.from('indicacion_examenes')
@@ -455,7 +448,6 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
                               .eq('examen_id', exId)
                               .catch(console.error);
 
-                        /* Recalcular estado de la indicación */
                         _recalcIndEstado(indId).catch(console.error);
                     }
                 }
