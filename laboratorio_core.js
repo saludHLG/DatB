@@ -13,6 +13,8 @@ window._store = window._store || {
     res_cultivo: [],
     res_xpert_ultra: [],
     res_xpert_xdr: [],
+    res_mf_led: [],
+    res_tb_lam: [],
     usuarios: [],
     laboratorios: [],
     permisos_lab: [],
@@ -30,15 +32,17 @@ function _getResBaci()           { return window._store.res_baci          || [];
 function _getResCultivo()        { return window._store.res_cultivo       || []; }
 function _getResXpertUltra()     { return window._store.res_xpert_ultra   || []; }
 function _getResXpertXDR()       { return window._store.res_xpert_xdr     || []; }
+function _getResMfLed()          { return window._store.res_mf_led        || []; }
+function _getResTbLam()          { return window._store.res_tb_lam        || []; }
 
-/* ── Escritores síncronos (sólo actualizan _store)
-      Los llamadores se encargan de la sincronización con Supabase
-      usando sbUpsertRow / sbDeleteRow directamente. ─────── */
+/* ── Escritores síncronos ─────────────────────────────────── */
 function _saveRecepciones(arr)   { window._store.recepciones     = arr; }
 function _saveResBaci(arr)       { window._store.res_baci        = arr; }
 function _saveResCultivo(arr)    { window._store.res_cultivo     = arr; }
 function _saveResXpertUltra(arr) { window._store.res_xpert_ultra = arr; }
 function _saveResXpertXDR(arr)   { window._store.res_xpert_xdr   = arr; }
+function _saveResMfLed(arr)      { window._store.res_mf_led      = arr; }
+function _saveResTbLam(arr)      { window._store.res_tb_lam      = arr; }
 
 /* ── Catálogos ──────────────────────────────────────────── */
 const _MICRO_DEFAULTS = [
@@ -62,14 +66,115 @@ const _EXAMENES_CAT = [
     { id: 3, nombre: 'Xpert MTB/RIF (Ultra)', codigo: 'XPERT-ULTRA' },
     { id: 4, nombre: 'MF-LED',                codigo: 'MF-LED'      },
     { id: 5, nombre: 'Xpert MTB/XDR',         codigo: 'XPERT-XDR'   },
+    { id: 6, nombre: 'TB-LAM',                codigo: 'TB-LAM'      },
 ];
-const _SOPORTADOS = new Set([1, 2, 3, 5]);
 
-/* ── Resolutores de nombres / lógicas de negocio ────────── */
+/* IDs con formulario de resultados implementado */
+const _SOPORTADOS = new Set([1, 2, 3, 4, 5, 6]);
+
+/* ── Tablas de resultados MF-LED ──────────────────────────
+   lectura → etiqueta / clase CSS
+   ──────────────────────────────────────────────────────── */
+const _MFLED_LECTURAS = {
+    negativo:         { label: 'No se observan BAAR',              cls: 'res-neg',    positivo: false, negativo: true  },
+    confirmacion:     { label: 'Requiere confirmación (1–2 BAAR)', cls: 'res-estudio',positivo: null,  negativo: false },
+    positivo_escaso:  { label: 'Positivo escaso (paucibacilar)',   cls: 'res-pos',    positivo: true,  negativo: false },
+    positivo_1:       { label: 'Positivo + (1–6 BAAR/campo)',      cls: 'res-pos',    positivo: true,  negativo: false },
+    positivo_2:       { label: 'Positivo ++ (7–60 BAAR/campo)',    cls: 'res-pos',    positivo: true,  negativo: false },
+    positivo_3:       { label: 'Positivo +++ (>60 BAAR/campo)',    cls: 'res-pos',    positivo: true,  negativo: false },
+};
+
+/**
+ * Para lectura 'confirmacion', verifica si la misma indicación
+ * tiene un cultivo positivo (resultado 1–9) o un Xpert Ultra positivo.
+ * Si es así, el MF-LED se considera positivo.
+ */
+function _mfLedIsConfirmed(indicacionId) {
+    const recs = _getRecepciones().filter(r => r.indicacion_id === indicacionId);
+    return recs.some(rec => {
+        const cr = _getResCultivo().find(r => r.recepcion_id === rec.id);
+        if (cr && /^[1-9]$/.test(cr.resultado)) return true;
+        const xr = _getResXpertUltra().find(r => r.recepcion_id === rec.id);
+        if (xr && xr.resultado === 'MTB DETECTADO') return true;
+        return false;
+    });
+}
+
+/* ── Helpers de positivo/negativo por examen ─────────────── */
+
+/**
+ * Devuelve true si el resultado de la recepción para ese examen
+ * es definitivamente positivo.
+ * Para MF-LED 'confirmacion' se necesita el indicacionId.
+ */
+function _examenIsPositive(recId, eid, indicacionId) {
+    const n = Number(eid);
+    if (n === 1) {
+        const r = _getResBaci().find(x => x.recepcion_id === recId);
+        return !!(r && r.codificacion > 0);
+    }
+    if (n === 2) {
+        const r = _getResCultivo().find(x => x.recepcion_id === recId);
+        return !!(r && /^[1-9]$/.test(r.resultado));
+    }
+    if (n === 3) {
+        const r = _getResXpertUltra().find(x => x.recepcion_id === recId);
+        return !!(r && r.resultado === 'MTB DETECTADO');
+    }
+    if (n === 4) {
+        const r = _getResMfLed().find(x => x.recepcion_id === recId);
+        if (!r) return false;
+        const info = _MFLED_LECTURAS[r.lectura];
+        if (!info) return false;
+        if (info.positivo === true) return true;
+        if (info.positivo === null && indicacionId) return _mfLedIsConfirmed(indicacionId);
+        return false;
+    }
+    if (n === 5) {
+        const r = _getResXpertXDR().find(x => x.recepcion_id === recId);
+        return !!(r && r.resultado === 'MTB DETECTADO');
+    }
+    if (n === 6) {
+        const r = _getResTbLam().find(x => x.recepcion_id === recId);
+        return !!(r && r.resultado === 'POSITIVO');
+    }
+    return false;
+}
+
+function _examenIsNegative(recId, eid) {
+    const n = Number(eid);
+    if (n === 1) {
+        const r = _getResBaci().find(x => x.recepcion_id === recId);
+        return !!(r && r.codificacion === 0);
+    }
+    if (n === 2) {
+        const r = _getResCultivo().find(x => x.recepcion_id === recId);
+        return !!(r && r.resultado === '0');
+    }
+    if (n === 3) {
+        const r = _getResXpertUltra().find(x => x.recepcion_id === recId);
+        return !!(r && r.resultado === 'MTB NO DETECTADO');
+    }
+    if (n === 4) {
+        const r = _getResMfLed().find(x => x.recepcion_id === recId);
+        return !!(r && _MFLED_LECTURAS[r.lectura]?.negativo === true);
+    }
+    if (n === 5) {
+        const r = _getResXpertXDR().find(x => x.recepcion_id === recId);
+        return !!(r && r.resultado === 'MTB NO DETECTADO');
+    }
+    if (n === 6) {
+        const r = _getResTbLam().find(x => x.recepcion_id === recId);
+        return !!(r && r.resultado === 'NEGATIVO');
+    }
+    return false;
+}
+
+/* ── Resolvedores de nombres / lógicas de negocio ────────── */
 function _labsConPermiso(userId, campo = 'puede_emitir') {
     return (window._store.permisos_lab || [])
         .filter(p => p.usuario_id === userId && p[campo] && p.activo)
-        .map(p => Number(p.laboratorio_id));   /* ← normalizar a Number */
+        .map(p => Number(p.laboratorio_id));
 }
 
 function _recepcionesDelLab(userId) {
@@ -141,7 +246,9 @@ function _tieneAlgunResultado(recId) {
     return _getResBaci().some(r => r.recepcion_id === recId)       ||
            _getResCultivo().some(r => r.recepcion_id === recId)    ||
            _getResXpertUltra().some(r => r.recepcion_id === recId) ||
-           _getResXpertXDR().some(r => r.recepcion_id === recId);
+           _getResXpertXDR().some(r => r.recepcion_id === recId)   ||
+           _getResMfLed().some(r => r.recepcion_id === recId)      ||
+           _getResTbLam().some(r => r.recepcion_id === recId);
 }
 
 function _resultadoXpertCls(resultado) {
@@ -158,8 +265,33 @@ function _tieneResultadoFinal(recId, exId) {
         return r ? r.resultado !== 'en_estudio' : false;
     }
     if (n === 3) return _getResXpertUltra().some(r => r.recepcion_id === recId);
+    if (n === 4) return _getResMfLed().some(r => r.recepcion_id === recId);
     if (n === 5) return _getResXpertXDR().some(r => r.recepcion_id === recId);
+    if (n === 6) return _getResTbLam().some(r => r.recepcion_id === recId);
     return false;
+}
+
+/**
+ * Elimina del store local todos los resultados asociados a una recepción.
+ */
+function _purgeResultadosDeRecepcion(recId) {
+    _saveResBaci(_getResBaci().filter(r => r.recepcion_id !== recId));
+    _saveResCultivo(_getResCultivo().filter(r => r.recepcion_id !== recId));
+    _saveResXpertUltra(_getResXpertUltra().filter(r => r.recepcion_id !== recId));
+    _saveResXpertXDR(_getResXpertXDR().filter(r => r.recepcion_id !== recId));
+    _saveResMfLed(_getResMfLed().filter(r => r.recepcion_id !== recId));
+    _saveResTbLam(_getResTbLam().filter(r => r.recepcion_id !== recId));
+}
+
+/**
+ * Elimina del store local una indicación completa con todas sus dependencias.
+ * Supabase se encarga del cascade en BD; aquí actualizamos _store.
+ */
+function _purgeIndicacionLocal(indId) {
+    const recs = _getRecepciones().filter(r => r.indicacion_id === indId);
+    recs.forEach(rec => _purgeResultadosDeRecepcion(rec.id));
+    _saveRecepciones(_getRecepciones().filter(r => r.indicacion_id !== indId));
+    window._store.indicaciones = (window._store.indicaciones || []).filter(i => i.id !== indId);
 }
 
 async function _recalcIndEstado(indId) {
