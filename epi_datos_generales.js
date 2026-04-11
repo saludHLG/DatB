@@ -1,182 +1,229 @@
 /**
- * epi_datos_generales.js
+ * epi_datos_generales.js  v2
  * Pill "Datos generales" del módulo epidemiológico.
  *
- * Muestra indicaciones y sus resultados de forma granular,
- * restringida automáticamente al scope del moderador.
+ * Una fila por (indicación × examen).
+ * Columnas: Fecha indicación | Nombres y apellidos | CI | Tipo examen |
+ *           Laboratorio | Médico solicitante | N.° muestra |
+ *           Fecha resultado | Resultado
  *
- * Filtros disponibles:
- *   - Provincia / Municipio / Institución (búsqueda inteligente en cascada)
- *   - Rango de fechas de indicación
+ * Filtros: Búsqueda libre (nombre/CI) | Provincia → Municipio |
+ *          Fecha desde / hasta
  *
- * Tabla (50 filas por página, paginada):
- *   Nombre y apellidos | CI | Fecha indicación | Examen |
- *   Laboratorio remitido | N.° muestra | Fecha resultado | Resultado
- *
- * Dependencias: moderadores_core.js, laboratorio_core.js
+ * Dependencias: moderadores_core.js, laboratorio_core.js, utils.js
  */
 
 'use strict';
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// ─── Constantes ────────────────────────────────────────────────────────────────
 
 const _DG_PAGE_SIZE = 50;
 
-// ─── Estado ───────────────────────────────────────────────────────────────────
+// ─── Estado ────────────────────────────────────────────────────────────────────
 
 const _dgState = {
   filtros: {
-    provincia_id:   null,
-    municipio_id:   null,
-    institucion_id: null,
-    fecha_desde:    '',
-    fecha_hasta:    '',
+    provincia_id: null,
+    municipio_id: null,
+    search:       '',
+    fecha_desde:  '',
+    fecha_hasta:  '',
   },
-  pagina:     1,
-  totalFilas: 0,
+  pagina: 1,
 };
 
-// ─── Acceso a datos ───────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Construye el array completo de filas combinando indicaciones,
- * pacientes, recepciones y resultados.
- * El filtrado por nivel del moderador se aplica sobre las indicaciones
- * antes de construir las filas.
- */
-function _dgGetFilas() {
-  // Indicaciones ya filtradas por nivel del moderador
-  const indicaciones = typeof _filtrarIndicacionesPorNivel === 'function'
-    ? _filtrarIndicacionesPorNivel(window._store?.indicaciones ?? [])
-    : (window._store?.indicaciones ?? []);
-
-  const pacientes   = window._store?.pacientes  ?? [];
-  const geo         = window._store?.geo_labs   ?? [];
-
-  // Recepciones (nº de muestra y laboratorio destino)
-  const recepciones = typeof _getRecepciones === 'function'
-    ? _getRecepciones()
-    : (window._store?.recepciones ?? []);
-
-  // Todos los tipos de resultado
-  const todosResultados = [
-    ...(typeof _getResBaci      === 'function' ? _getResBaci()      : (window._store?.res_baci       ?? [])),
-    ...(typeof _getResCultivo   === 'function' ? _getResCultivo()   : (window._store?.res_cultivo    ?? [])),
-    ...(typeof _getResXpertUltra=== 'function' ? _getResXpertUltra(): (window._store?.res_xpert_ultra ?? [])),
-    ...(typeof _getResXpertXDR  === 'function' ? _getResXpertXDR()  : (window._store?.res_xpert_xdr  ?? [])),
-  ];
-
-  // Índices para búsqueda O(1)
-  const pacIdx    = new Map(pacientes.map(p => [p.id, p]));
-  const geoIdx    = new Map(geo.map(g => [g.id, g]));
-  const recepIdx  = {};
-  recepciones.forEach(r => { recepIdx[r.indicacion_id] = r; });
-  const resIdx    = {};
-  todosResultados.forEach(r => {
-    if (!resIdx[r.indicacion_id]) resIdx[r.indicacion_id] = [];
-    resIdx[r.indicacion_id].push(r);
-  });
-
-  return indicaciones.map(ind => {
-    const pac   = pacIdx.get(ind.paciente_id)  || {};
-    const inst  = geoIdx.get(ind.institucion_id) || {};
-    const recep = recepIdx[ind.id]             || {};
-    const ress  = resIdx[ind.id]               || [];
-    // Último resultado disponible
-    const res   = ress[ress.length - 1]        || {};
-
-    const fechaInd = ind.fecha ?? ind.fecha_indicacion ?? '';
-
-    return {
-      // Campos para filtrado interno
-      provincia_id:   ind.provincia_id   ?? pac.provincia_id   ?? null,
-      municipio_id:   ind.municipio_id   ?? pac.municipio_id   ?? null,
-      institucion_id: ind.institucion_id ?? null,
-      fecha_raw:      fechaInd,
-
-      // Columnas visibles
-      nombre:          _dgNombreCompleto(pac),
-      ci:              pac.ci ?? pac.carnet ?? '—',
-      fecha_indicacion: _dgFmtFecha(fechaInd),
-      examen:          ind.tipo_examen ?? ind.examen ?? '—',
-      laboratorio:     inst.nombre ?? '—',
-      num_muestra:     recep.num_muestra ?? recep.numero_muestra ?? '—',
-      fecha_resultado: _dgFmtFecha(res.fecha ?? res.fecha_resultado ?? ''),
-      resultado:       res.resultado ?? res.interpretacion ?? '—',
-    };
-  });
+function _dgNorm(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-function _dgNombreCompleto(pac) {
-  const n = [pac.nombres, pac.apellidos].filter(Boolean).join(' ').trim();
-  return n || '—';
-}
-
-function _dgFmtFecha(f) {
+function _dgFmt(f) {
   if (!f) return '—';
-  const d = new Date(f);
-  if (isNaN(d)) return f;
-  return d.toLocaleDateString('es-CU', {
-    day:   '2-digit',
-    month: '2-digit',
-    year:  'numeric',
-  });
+  const p = String(f).split('T')[0].split('-');
+  return p.length < 3 ? f : `${p[2]}/${p[1]}/${p[0]}`;
 }
 
-// ─── Filtrado ─────────────────────────────────────────────────────────────────
+function _dgExNombre(eid) {
+  const cat = [
+    { id: 1, nombre: 'Baciloscopia',          codigo: 'BACI'      },
+    { id: 2, nombre: 'Cultivo',               codigo: 'CULT'      },
+    { id: 3, nombre: 'Xpert MTB/RIF (Ultra)', codigo: 'XPERT-U'   },
+    { id: 4, nombre: 'MF-LED',                codigo: 'MF-LED'    },
+    { id: 5, nombre: 'Xpert MTB/XDR',         codigo: 'XPERT-XDR' },
+  ];
+  return cat.find(e => e.id === Number(eid)) || { nombre: `Examen ${eid}`, codigo: `${eid}` };
+}
+
+function _dgLabNombre(labId) {
+  const labs = window._store?.geo_labs || [];
+  return labs.find(l => l.id === Number(labId))?.nombre || `Lab #${labId}`;
+}
+
+/** Nombre del médico que solicitó: del objeto embebido ind.medico o del usuario indicador */
+function _dgMedicoNombre(ind) {
+  if (ind.medico && (ind.medico.nombres || ind.medico.apellidos)) {
+    return [ind.medico.nombres, ind.medico.apellidos].filter(Boolean).join(' ') || '—';
+  }
+  const u = (window._store?.usuarios || []).find(x => x.id === ind.indicado_por);
+  return u ? `${u.nombres || ''} ${u.apellidos || ''}`.trim() || '—' : '—';
+}
+
+/** Localiza la recepción para una indicación + examen */
+function _dgGetRec(recs, indId, eid) {
+  const exact = recs.find(r => r.indicacion_id === indId && Number(r.examen_id) === eid);
+  if (exact) return exact;
+  const indRecs = recs.filter(r => r.indicacion_id === indId);
+  return (indRecs.length === 1 && !indRecs[0].examen_id) ? indRecs[0] : null;
+}
+
+/** Número de muestra, fecha de resultado y texto de resultado según examen */
+function _dgGetResultado(recId, eid) {
+  const n = Number(eid);
+  let nMuestra = null, fechaRes = null, resultado = '—';
+
+  if (n === 1) {
+    const r = (window._store?.res_baci || []).find(x => x.recepcion_id === recId);
+    if (r) {
+      nMuestra = r.numero_muestra;
+      fechaRes = r.fecha_analisis;
+      resultado = r.codificacion === 0 ? 'Negativo (0)' : `Positivo (${r.codificacion})`;
+    }
+  } else if (n === 2) {
+    const r = (window._store?.res_cultivo || []).find(x => x.recepcion_id === recId);
+    if (r) {
+      nMuestra = r.numero_muestra;
+      fechaRes = r.fecha_resultado || r.fecha_cultivo;
+      const m = { en_estudio: 'En estudio', contaminado: 'Contaminado', '0': 'Sin crecimiento (0)' };
+      resultado = m[r.resultado] ?? `Positivo (${r.resultado})`;
+    }
+  } else if (n === 3) {
+    const r = (window._store?.res_xpert_ultra || []).find(x => x.recepcion_id === recId);
+    if (r) {
+      nMuestra = r.numero_muestra;
+      fechaRes = r.fecha;
+      resultado = r.resultado || '—';
+      if (r.resultado === 'MTB DETECTADO' && r.resistencia_rifampicina && r.resistencia_rifampicina !== 'NO PROCEDE') {
+        resultado += ` · RIF: ${r.resistencia_rifampicina}`;
+      }
+    }
+  } else if (n === 5) {
+    const r = (window._store?.res_xpert_xdr || []).find(x => x.recepcion_id === recId);
+    if (r) {
+      nMuestra = r.numero_muestra;
+      fechaRes = r.fecha;
+      resultado = r.resultado || '—';
+    }
+  }
+
+  return { nMuestra, fechaRes, resultado };
+}
+
+// ─── Construcción de filas (una por indicación × examen) ──────────────────────
+
+function _dgGetFilas() {
+  const allInds = window._store?.indicaciones || [];
+  const pacs    = window._store?.pacientes    || [];
+  const recs    = window._store?.recepciones  || [];
+  const muns    = window._store?.geo_municipios || [];
+
+  // Filtrar por nivel del moderador
+  const indicaciones = typeof _filtrarIndicacionesPorNivel === 'function'
+    ? _filtrarIndicacionesPorNivel(allInds)
+    : allInds;
+
+  const filas = [];
+
+  indicaciones.forEach(ind => {
+    const pac     = pacs.find(p => p.id === ind.paciente_id) || null;
+    const examIds = (ind.examenes_ids || []).map(Number).filter(Boolean);
+    const targets = examIds.length ? examIds : [null]; // al menos una fila por indicación
+
+    targets.forEach(eid => {
+      const ex  = eid != null ? _dgExNombre(eid) : { nombre: '—', codigo: '—' };
+      const rec = eid != null ? _dgGetRec(recs, ind.id, eid) : null;
+
+      let nMuestra = '—', fechaRes = '—', resTexto = '—';
+      if (rec?.estado === 'rechazada') {
+        resTexto = 'Muestra rechazada';
+      } else if (rec) {
+        const res = _dgGetResultado(rec.id, eid);
+        nMuestra = res.nMuestra != null ? String(res.nMuestra) : '—';
+        fechaRes = _dgFmt(res.fechaRes);
+        resTexto = res.resultado;
+      }
+
+      // Provincia/municipio: preferir del paciente, fallback del laboratorio
+      const pacMun    = pac?.municipio_id ? muns.find(m => m.id === Number(pac.municipio_id)) : null;
+      const pacProvId = pacMun?.provincia_id ? Number(pacMun.provincia_id) : null;
+      const pacMunId  = pac?.municipio_id   ? Number(pac.municipio_id)    : null;
+      const lab       = (window._store?.geo_labs || []).find(l => l.id === Number(ind.laboratorio_id));
+
+      filas.push({
+        // campos de filtro
+        fecha_raw:    ind.fecha_indicacion || '',
+        provincia_id: pacProvId ?? (lab?.provincia_id ? Number(lab.provincia_id) : null),
+        municipio_id: pacMunId  ?? (lab?.municipio_id  ? Number(lab.municipio_id)  : null),
+        pac_search:   _dgNorm(`${pac?.nombres || ''} ${pac?.apellidos || ''} ${pac?.carnet_identidad || ''}`),
+
+        // campos visibles
+        fecha_indicacion: _dgFmt(ind.fecha_indicacion),
+        pac_nombre:  pac ? `${pac.apellidos}, ${pac.nombres}` : '—',
+        pac_ci:      pac?.carnet_identidad || '—',
+        examen:      ex.nombre,
+        examen_cod:  ex.codigo,
+        laboratorio: _dgLabNombre(ind.laboratorio_id),
+        medico:      _dgMedicoNombre(ind),
+        n_muestra:   nMuestra,
+        fecha_resultado: fechaRes,
+        resultado:   resTexto,
+      });
+    });
+  });
+
+  // Orden descendente por fecha de indicación
+  filas.sort((a, b) => b.fecha_raw.localeCompare(a.fecha_raw));
+  return filas;
+}
+
+// ─── Filtrado ──────────────────────────────────────────────────────────────────
 
 function _dgAplicarFiltros(filas) {
-  const { provincia_id, municipio_id, institucion_id, fecha_desde, fecha_hasta } = _dgState.filtros;
+  const { provincia_id, municipio_id, search, fecha_desde, fecha_hasta } = _dgState.filtros;
+  const q = _dgNorm(search);
+
   return filas.filter(f => {
-    if (provincia_id   && f.provincia_id   !== provincia_id)   return false;
-    if (municipio_id   && f.municipio_id   !== municipio_id)   return false;
-    if (institucion_id && f.institucion_id !== institucion_id) return false;
-    if (fecha_desde    && f.fecha_raw < fecha_desde)           return false;
-    if (fecha_hasta    && f.fecha_raw > fecha_hasta)           return false;
+    if (provincia_id && f.provincia_id !== Number(provincia_id)) return false;
+    if (municipio_id && f.municipio_id !== Number(municipio_id)) return false;
+    if (fecha_desde  && f.fecha_raw < fecha_desde)               return false;
+    if (fecha_hasta  && f.fecha_raw > fecha_hasta)               return false;
+    if (q            && !f.pac_search.includes(q))               return false;
     return true;
   });
 }
 
-// ─── Catálogos para los filtros ───────────────────────────────────────────────
+// ─── Catálogos geográficos para selectores ────────────────────────────────────
 
 function _dgGetProvincias() {
-  const geo   = window._store?.geo_labs ?? [];
   const scope = typeof _getModeradorScope === 'function' ? _getModeradorScope() : null;
-  const nivel = scope?.nivel ?? 'nacional';
+  const provs = window._store?.geo_provincias || [];
+  if (!scope || scope.nivel === 'nacional') return provs;
+  if (scope.provincia_id) return provs.filter(p => p.id === scope.provincia_id);
+  return provs;
+}
 
-  if (nivel === 'nacional') {
-    // Todas las provincias, sin duplicados
-    const seen = new Set();
-    return geo.filter(g => g.tipo === 'provincia' && !seen.has(g.id) && seen.add(g.id));
+function _dgGetMunicipios(provinciaId) {
+  const scope = typeof _getModeradorScope === 'function' ? _getModeradorScope() : null;
+  let muns = (window._store?.geo_municipios || []).filter(m =>
+    !provinciaId || m.provincia_id === Number(provinciaId)
+  );
+  if (scope?.nivel === 'municipal' && scope.municipio_id) {
+    muns = muns.filter(m => m.id === scope.municipio_id);
   }
-  if (nivel === 'provincial') {
-    return geo.filter(g => g.tipo === 'provincia' && g.id === scope.provincia_id);
-  }
-  // Municipal e institucional no necesitan filtro por provincia (lo infieren del scope)
-  return [];
+  return muns;
 }
 
-function _dgGetMunicipios(provincia_id) {
-  const geo   = window._store?.geo_labs ?? [];
-  const scope = typeof _getModeradorScope === 'function' ? _getModeradorScope() : null;
-  let arr = geo.filter(g => g.tipo === 'municipio');
-  if (provincia_id) arr = arr.filter(g => g.provincia_id === provincia_id);
-  // Moderador municipal: solo su municipio
-  if (scope?.nivel === 'municipal') arr = arr.filter(g => g.id === scope.municipio_id);
-  return arr;
-}
-
-function _dgGetInstituciones(municipio_id) {
-  const geo   = window._store?.geo_labs ?? [];
-  const scope = typeof _getModeradorScope === 'function' ? _getModeradorScope() : null;
-  const EXCLUIDOS = new Set(['provincia', 'municipio', 'área de salud']);
-  let arr = geo.filter(g => !EXCLUIDOS.has(g.tipo));
-  if (municipio_id)              arr = arr.filter(g => g.municipio_id  === municipio_id);
-  if (scope?.nivel === 'institucional') arr = arr.filter(g => g.id === scope.institucion_id);
-  return arr;
-}
-
-// ─── HTML estático del panel ──────────────────────────────────────────────────
+// ─── HTML ──────────────────────────────────────────────────────────────────────
 
 function _dgHTML() {
   return `
@@ -185,49 +232,42 @@ function _dgHTML() {
     <div class="dg-filtros-panel">
       <div class="dg-filtros-grid">
 
-        <div class="dg-filtro-grupo">
-          <label class="dg-label">Provincia</label>
-          <div class="dg-smart-wrap">
-            <input  id="dg_prov_input" type="text" class="dg-input dg-smart"
-                    placeholder="Todas las provincias" autocomplete="off" />
-            <input  id="dg_prov_id" type="hidden" />
-            <ul     id="dg_prov_dd" class="dg-dropdown" hidden></ul>
+        <div class="dg-filtro-grupo" style="grid-column:1/-1">
+          <label class="dg-label" for="dg_search">Buscar paciente</label>
+          <div style="position:relative">
+            <i class="bi bi-search" style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:#8fa3bf;pointer-events:none;font-size:.9rem"></i>
+            <input id="dg_search" type="text" class="dg-input" style="padding-left:2.2rem"
+                   placeholder="Nombre, apellidos o carnet de identidad…" autocomplete="off">
           </div>
         </div>
 
         <div class="dg-filtro-grupo">
-          <label class="dg-label">Municipio</label>
-          <div class="dg-smart-wrap">
-            <input  id="dg_mun_input" type="text" class="dg-input dg-smart"
-                    placeholder="Todos los municipios" autocomplete="off" />
-            <input  id="dg_mun_id" type="hidden" />
-            <ul     id="dg_mun_dd" class="dg-dropdown" hidden></ul>
-          </div>
+          <label class="dg-label" for="dg_prov">Provincia</label>
+          <select id="dg_prov" class="dg-input">
+            <option value="">Todas las provincias</option>
+          </select>
         </div>
 
         <div class="dg-filtro-grupo">
-          <label class="dg-label">Institución</label>
-          <div class="dg-smart-wrap">
-            <input  id="dg_inst_input" type="text" class="dg-input dg-smart"
-                    placeholder="Todas las instituciones" autocomplete="off" />
-            <input  id="dg_inst_id" type="hidden" />
-            <ul     id="dg_inst_dd" class="dg-dropdown" hidden></ul>
-          </div>
+          <label class="dg-label" for="dg_mun">Municipio</label>
+          <select id="dg_mun" class="dg-input" disabled>
+            <option value="">Todos los municipios</option>
+          </select>
         </div>
 
         <div class="dg-filtro-grupo">
           <label class="dg-label" for="dg_fecha_desde">Fecha desde</label>
-          <input id="dg_fecha_desde" type="date" class="dg-input" />
+          <input id="dg_fecha_desde" type="date" class="dg-input">
         </div>
 
         <div class="dg-filtro-grupo">
           <label class="dg-label" for="dg_fecha_hasta">Fecha hasta</label>
-          <input id="dg_fecha_hasta" type="date" class="dg-input" />
+          <input id="dg_fecha_hasta" type="date" class="dg-input">
         </div>
 
         <div class="dg-filtro-grupo dg-filtro-accion">
           <button id="dg_btn_limpiar" class="dg-btn dg-btn-sec" type="button">
-            Limpiar filtros
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
           </button>
         </div>
 
@@ -237,16 +277,17 @@ function _dgHTML() {
     <div class="dg-tabla-wrap">
       <div class="dg-tabla-meta" id="dg_meta">Cargando…</div>
       <div class="dg-tabla-scroll">
-        <table class="dg-tabla" id="dg_tabla">
+        <table class="dg-tabla">
           <thead>
             <tr>
-              <th>Nombre y apellidos</th>
-              <th>Carnet de identidad</th>
-              <th>Fecha de indicación</th>
-              <th>Examen</th>
-              <th>Laboratorio remitido</th>
-              <th>N.° de muestra</th>
-              <th>Fecha de resultado</th>
+              <th>Fecha indicación</th>
+              <th>Nombres y apellidos</th>
+              <th>Carnet identidad</th>
+              <th>Tipo de examen</th>
+              <th>Laboratorio</th>
+              <th>Médico solicitante</th>
+              <th style="text-align:center">N.° muestra</th>
+              <th>Fecha resultado</th>
               <th>Resultado</th>
             </tr>
           </thead>
@@ -256,60 +297,76 @@ function _dgHTML() {
       <div class="dg-paginacion" id="dg_paginacion"></div>
     </div>
 
-  </div>
-  `;
+  </div>`;
+}
+
+// ─── Poblar selectores ────────────────────────────────────────────────────────
+
+function _dgPoblarProvincias() {
+  const sel = document.getElementById('dg_prov');
+  if (!sel) return;
+  const provs = _dgGetProvincias();
+  sel.innerHTML = '<option value="">Todas las provincias</option>';
+  provs.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value       = p.id;
+    opt.textContent = p.nombre;
+    if (_dgState.filtros.provincia_id && Number(p.id) === Number(_dgState.filtros.provincia_id)) {
+      opt.selected = true;
+    }
+    sel.appendChild(opt);
+  });
+}
+
+function _dgPoblarMunicipios(provinciaId) {
+  const sel = document.getElementById('dg_mun');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Todos los municipios</option>';
+
+  if (!provinciaId) {
+    sel.disabled = true;
+    return;
+  }
+
+  const muns = _dgGetMunicipios(provinciaId);
+  muns.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value       = m.id;
+    opt.textContent = m.nombre;
+    if (_dgState.filtros.municipio_id && Number(m.id) === Number(_dgState.filtros.municipio_id)) {
+      opt.selected = true;
+    }
+    sel.appendChild(opt);
+  });
+  sel.disabled = muns.length === 0;
 }
 
 // ─── Binding de eventos ───────────────────────────────────────────────────────
 
 function _dgBindEventos(contenedor) {
-
-  // Smart search: Provincia → limpia Municipio e Institución en cascada
-  _dgSmartSearch({
-    inputId:    'dg_prov_input',
-    hiddenId:   'dg_prov_id',
-    ddId:       'dg_prov_dd',
-    getItems:   () => _dgGetProvincias(),
-    onChange:   item => {
-      _dgState.filtros.provincia_id   = item?.id ?? null;
-      _dgState.filtros.municipio_id   = null;
-      _dgState.filtros.institucion_id = null;
-      _dgLimpiarSmartInput('dg_mun_input',  'dg_mun_id');
-      _dgLimpiarSmartInput('dg_inst_input', 'dg_inst_id');
-      _dgState.pagina = 1;
-      _dgRefrescar(contenedor);
-    },
+  document.getElementById('dg_search')?.addEventListener('input', e => {
+    _dgState.filtros.search = e.target.value.trim();
+    _dgState.pagina = 1;
+    _dgRefrescar(contenedor);
   });
 
-  // Smart search: Municipio → limpia Institución en cascada
-  _dgSmartSearch({
-    inputId:    'dg_mun_input',
-    hiddenId:   'dg_mun_id',
-    ddId:       'dg_mun_dd',
-    getItems:   () => _dgGetMunicipios(_dgState.filtros.provincia_id),
-    onChange:   item => {
-      _dgState.filtros.municipio_id   = item?.id ?? null;
-      _dgState.filtros.institucion_id = null;
-      _dgLimpiarSmartInput('dg_inst_input', 'dg_inst_id');
-      _dgState.pagina = 1;
-      _dgRefrescar(contenedor);
-    },
+  document.getElementById('dg_prov')?.addEventListener('change', e => {
+    _dgState.filtros.provincia_id = e.target.value ? Number(e.target.value) : null;
+    _dgState.filtros.municipio_id = null;
+    _dgState.pagina = 1;
+    _dgPoblarMunicipios(_dgState.filtros.provincia_id);
+    // Resetear selector de municipio visualmente
+    const selMun = document.getElementById('dg_mun');
+    if (selMun) selMun.value = '';
+    _dgRefrescar(contenedor);
   });
 
-  // Smart search: Institución
-  _dgSmartSearch({
-    inputId:    'dg_inst_input',
-    hiddenId:   'dg_inst_id',
-    ddId:       'dg_inst_dd',
-    getItems:   () => _dgGetInstituciones(_dgState.filtros.municipio_id),
-    onChange:   item => {
-      _dgState.filtros.institucion_id = item?.id ?? null;
-      _dgState.pagina = 1;
-      _dgRefrescar(contenedor);
-    },
+  document.getElementById('dg_mun')?.addEventListener('change', e => {
+    _dgState.filtros.municipio_id = e.target.value ? Number(e.target.value) : null;
+    _dgState.pagina = 1;
+    _dgRefrescar(contenedor);
   });
 
-  // Fechas
   document.getElementById('dg_fecha_desde')?.addEventListener('change', e => {
     _dgState.filtros.fecha_desde = e.target.value;
     _dgState.pagina = 1;
@@ -322,74 +379,25 @@ function _dgBindEventos(contenedor) {
     _dgRefrescar(contenedor);
   });
 
-  // Limpiar todos los filtros
   document.getElementById('dg_btn_limpiar')?.addEventListener('click', () => {
-    _dgState.filtros = {
-      provincia_id: null, municipio_id: null, institucion_id: null,
-      fecha_desde: '', fecha_hasta: '',
-    };
+    _dgState.filtros = { provincia_id: null, municipio_id: null, search: '', fecha_desde: '', fecha_hasta: '' };
     _dgState.pagina = 1;
-    ['dg_prov_input', 'dg_mun_input', 'dg_inst_input'].forEach(id => _dgLimpiarSmartInput(id, null));
-    const desde = document.getElementById('dg_fecha_desde');
-    const hasta = document.getElementById('dg_fecha_hasta');
-    if (desde) desde.value = '';
-    if (hasta) hasta.value = '';
+    const ids = ['dg_search', 'dg_fecha_desde', 'dg_fecha_hasta'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    _dgPoblarProvincias();
+    _dgPoblarMunicipios(null);
     _dgRefrescar(contenedor);
   });
 }
 
-// ─── Smart search reutilizable ────────────────────────────────────────────────
+// ─── Clase CSS según resultado ────────────────────────────────────────────────
 
-function _dgSmartSearch({ inputId, hiddenId, ddId, getItems, onChange }) {
-  const input    = document.getElementById(inputId);
-  const hidden   = document.getElementById(hiddenId);
-  const dropdown = document.getElementById(ddId);
-  if (!input || !hidden || !dropdown) return;
-
-  function mostrar(items) {
-    dropdown.innerHTML = items.length
-      ? items.map(i =>
-          `<li data-id="${i.id}" data-nombre="${i.nombre}">${i.nombre}</li>`
-        ).join('')
-      : `<li class="dg-dd-empty">Sin resultados</li>`;
-    dropdown.hidden = false;
-  }
-
-  input.addEventListener('focus', () => {
-    const q = input.value.toLowerCase().trim();
-    const items = getItems().filter(i => !q || i.nombre.toLowerCase().includes(q));
-    mostrar(items);
-  });
-
-  input.addEventListener('input', () => {
-    hidden.value = '';
-    onChange(null);
-    const q = input.value.toLowerCase().trim();
-    mostrar(getItems().filter(i => i.nombre.toLowerCase().includes(q)));
-  });
-
-  dropdown.addEventListener('click', e => {
-    const li = e.target.closest('li[data-id]');
-    if (!li) return;
-    input.value  = li.dataset.nombre;
-    hidden.value = li.dataset.id;
-    dropdown.hidden = true;
-    onChange({ id: li.dataset.id, nombre: li.dataset.nombre });
-  });
-
-  // Cierra al hacer clic fuera
-  document.addEventListener('click', e => {
-    if (input !== e.target && !dropdown.contains(e.target)) dropdown.hidden = true;
-  }, { capture: true });
-}
-
-function _dgLimpiarSmartInput(inputId, hiddenId) {
-  const i = document.getElementById(inputId);
-  if (i) i.value = '';
-  if (hiddenId) {
-    const h = document.getElementById(hiddenId);
-    if (h) h.value = '';
-  }
+function _dgClaseRes(res) {
+  if (!res || res === '—') return '';
+  const r = res.toLowerCase();
+  if (r.includes('positivo') || (r.includes('detectado') && !r.includes('no detectado'))) return 'dg-res-pos';
+  if (r.includes('negativo') || r.includes('no detectado') || r.includes('sin crecimiento')) return 'dg-res-neg';
+  return 'dg-res-ind';
 }
 
 // ─── Tabla y paginación ───────────────────────────────────────────────────────
@@ -400,61 +408,45 @@ function _dgRefrescar(contenedor) {
   const total     = filtradas.length;
   const totalPags = Math.max(1, Math.ceil(total / _DG_PAGE_SIZE));
   _dgState.pagina = Math.min(_dgState.pagina, totalPags);
-  _dgState.totalFilas = total;
 
   const inicio = (_dgState.pagina - 1) * _DG_PAGE_SIZE;
   const pag    = filtradas.slice(inicio, inicio + _DG_PAGE_SIZE);
 
-  // Meta
   const meta = document.getElementById('dg_meta');
   if (meta) {
-    if (total === 0) {
-      meta.textContent = 'Sin indicaciones para los filtros seleccionados.';
-    } else {
-      const fin = Math.min(inicio + _DG_PAGE_SIZE, total);
-      meta.textContent = `Mostrando ${inicio + 1}–${fin} de ${total} indicación${total !== 1 ? 'es' : ''}`;
-    }
+    meta.textContent = total === 0
+      ? 'Sin registros para los filtros seleccionados.'
+      : `Mostrando ${inicio + 1}–${Math.min(inicio + _DG_PAGE_SIZE, total)} de ${total} registro${total !== 1 ? 's' : ''}`;
   }
 
-  // Cuerpo
   const tbody = document.getElementById('dg_tbody');
   if (tbody) {
     tbody.innerHTML = pag.length
       ? pag.map(f => `
           <tr>
-            <td>${f.nombre}</td>
-            <td class="dg-ci">${f.ci}</td>
-            <td>${f.fecha_indicacion}</td>
-            <td>${f.examen}</td>
-            <td>${f.laboratorio}</td>
-            <td class="dg-ci">${f.num_muestra}</td>
-            <td>${f.fecha_resultado}</td>
+            <td style="white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:.78rem">${f.fecha_indicacion}</td>
+            <td style="font-weight:500;min-width:160px">${f.pac_nombre}</td>
+            <td class="dg-ci">${f.pac_ci}</td>
+            <td style="white-space:nowrap">
+              <span style="background:#e0f2fe;color:#0369a1;font-family:'IBM Plex Mono',monospace;font-size:.68rem;font-weight:700;padding:.1em .45em;border-radius:4px">${f.examen_cod}</span>
+              <span style="font-size:.82rem;margin-left:.3rem">${f.examen}</span>
+            </td>
+            <td style="font-size:.82rem;max-width:200px">
+              <span title="${f.laboratorio}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px">${f.laboratorio}</span>
+            </td>
+            <td style="font-size:.82rem">${f.medico}</td>
+            <td class="dg-ci" style="text-align:center">${f.n_muestra}</td>
+            <td style="white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:.78rem">${f.fecha_resultado}</td>
             <td>
-              <span class="dg-res-badge ${_dgClaseResultado(f.resultado)}">
+              <span class="dg-res-badge ${_dgClaseRes(f.resultado)}" style="font-size:.78rem;white-space:normal;word-break:break-word;max-width:220px;display:inline-block">
                 ${f.resultado}
               </span>
             </td>
-          </tr>
-        `).join('')
-      : `<tr>
-           <td colspan="8" class="dg-tabla-vacia">
-             No se encontraron indicaciones registradas.
-           </td>
-         </tr>`;
+          </tr>`).join('')
+      : `<tr><td colspan="9" class="dg-tabla-vacia">No se encontraron registros.</td></tr>`;
   }
 
-  // Paginación
   _dgRenderPaginacion(totalPags, contenedor);
-}
-
-function _dgClaseResultado(res) {
-  if (!res || res === '—') return '';
-  const r = res.toLowerCase();
-  if (r.includes('positivo') || r.includes('detectado') && !r.includes('no detectado'))
-    return 'dg-res-pos';
-  if (r.includes('negativo') || r.includes('no detectado'))
-    return 'dg-res-neg';
-  return 'dg-res-ind';
 }
 
 function _dgRenderPaginacion(totalPags, contenedor) {
@@ -466,22 +458,17 @@ function _dgRenderPaginacion(totalPags, contenedor) {
   const pages = _dgPaginas(pag, totalPags);
 
   wrap.innerHTML = `
-    <button class="dg-pag-btn" data-pag="${pag - 1}" ${pag === 1 ? 'disabled' : ''}
-            aria-label="Página anterior">‹</button>
+    <button class="dg-pag-btn" data-pag="${pag - 1}" ${pag === 1 ? 'disabled' : ''}>‹</button>
     ${pages.map(p => p === '…'
-      ? `<span class="dg-pag-ellipsis" aria-hidden="true">…</span>`
-      : `<button class="dg-pag-btn${p === pag ? ' active' : ''}" data-pag="${p}"
-               aria-label="Página ${p}" aria-current="${p === pag ? 'page' : 'false'}">${p}</button>`
+      ? `<span class="dg-pag-ellipsis">…</span>`
+      : `<button class="dg-pag-btn${p === pag ? ' active' : ''}" data-pag="${p}">${p}</button>`
     ).join('')}
-    <button class="dg-pag-btn" data-pag="${pag + 1}" ${pag === totalPags ? 'disabled' : ''}
-            aria-label="Página siguiente">›</button>
-  `;
+    <button class="dg-pag-btn" data-pag="${pag + 1}" ${pag === totalPags ? 'disabled' : ''}>›</button>`;
 
   wrap.querySelectorAll('.dg-pag-btn:not([disabled])').forEach(btn => {
     btn.addEventListener('click', () => {
       _dgState.pagina = +btn.dataset.pag;
       _dgRefrescar(contenedor);
-      // Scroll suave al inicio de la tabla
       document.getElementById('dg_meta')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   });
@@ -490,22 +477,24 @@ function _dgRenderPaginacion(totalPags, contenedor) {
 function _dgPaginas(actual, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const p = [1];
-  if (actual > 3)           p.push('…');
+  if (actual > 3) p.push('…');
   for (let i = Math.max(2, actual - 1); i <= Math.min(total - 1, actual + 1); i++) p.push(i);
-  if (actual < total - 2)   p.push('…');
+  if (actual < total - 2) p.push('…');
   p.push(total);
   return p;
 }
 
-// ─── Inicialización pública ───────────────────────────────────────────────────
+// ─── Punto de entrada ─────────────────────────────────────────────────────────
 
 function _initEpiDatosGenerales(contenedor) {
   if (!contenedor) return;
-  // Resetear estado al entrar en la pill
-  _dgState.filtros  = { provincia_id: null, municipio_id: null, institucion_id: null, fecha_desde: '', fecha_hasta: '' };
-  _dgState.pagina   = 1;
+
+  _dgState.filtros = { provincia_id: null, municipio_id: null, search: '', fecha_desde: '', fecha_hasta: '' };
+  _dgState.pagina  = 1;
 
   contenedor.innerHTML = _dgHTML();
+  _dgPoblarProvincias();
+  _dgPoblarMunicipios(null);
   _dgBindEventos(contenedor);
   _dgRefrescar(contenedor);
 }
