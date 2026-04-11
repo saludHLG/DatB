@@ -14,7 +14,11 @@ async function renderLaboratorio(user, el) {
     const sb = typeof _client === 'function' ? _client() : null;
     if (sb) {
         try {
-            const [rPerms, rInds, rIndEx, rRecs, rBaci, rCult, rXU, rXDR] = await Promise.allSettled([
+            const [
+                rPerms, rInds, rIndEx, rRecs,
+                rBaci, rCult, rXU, rXDR,
+                rMfLed, rTbLam
+            ] = await Promise.allSettled([
                 sb.from('permisos_lab').select('*'),
                 sb.from('indicaciones_examen').select('*'),
                 sb.from('indicacion_examenes').select('*'),
@@ -23,6 +27,8 @@ async function renderLaboratorio(user, el) {
                 sb.from('resultados_cultivo').select('*'),
                 sb.from('resultados_xpert_ultra').select('*'),
                 sb.from('resultados_xpert_xdr').select('*'),
+                sb.from('resultados_mf_led').select('*'),
+                sb.from('resultados_tb_lam').select('*'),
             ]);
             const d = r => (r.status === 'fulfilled' && r.value.data) ? r.value.data : null;
 
@@ -40,11 +46,13 @@ async function renderLaboratorio(user, el) {
                             .map(ie => ie.examen_id),
                 }));
             }
-            if (d(rRecs)) window._store.recepciones    = d(rRecs);
-            if (d(rBaci)) window._store.res_baci        = d(rBaci);
-            if (d(rCult)) window._store.res_cultivo     = d(rCult);
-            if (d(rXU))   window._store.res_xpert_ultra = d(rXU);
-            if (d(rXDR))  window._store.res_xpert_xdr   = d(rXDR);
+            if (d(rRecs))   window._store.recepciones     = d(rRecs);
+            if (d(rBaci))   window._store.res_baci         = d(rBaci);
+            if (d(rCult))   window._store.res_cultivo      = d(rCult);
+            if (d(rXU))     window._store.res_xpert_ultra  = d(rXU);
+            if (d(rXDR))    window._store.res_xpert_xdr    = d(rXDR);
+            if (d(rMfLed))  window._store.res_mf_led       = d(rMfLed);
+            if (d(rTbLam))  window._store.res_tb_lam       = d(rTbLam);
         } catch (e) {
             console.warn('renderLaboratorio: refresco Supabase falló —', e);
         }
