@@ -1,6 +1,7 @@
 /* =========================================================
    laboratorio.js — Módulo de Laboratorio
    Tabs: Resumen · Pendientes · Muestras recibidas · Muestras rechazadas
+   Estilo de pestañas unificado con epidemiología (pills)
    ========================================================= */
 
 let _labUser = null;
@@ -16,8 +17,7 @@ async function renderLaboratorio(user, el) {
         try {
             const [
                 rPerms, rInds, rIndEx, rRecs,
-                rBaci, rCult, rXU, rXDR,
-                rMfLed, rTbLam
+                rBaci, rCult, rXU, rXDR, rMfLed, rTbLam
             ] = await Promise.allSettled([
                 sb.from('permisos_lab').select('*'),
                 sb.from('indicaciones_examen').select('*'),
@@ -46,13 +46,13 @@ async function renderLaboratorio(user, el) {
                             .map(ie => ie.examen_id),
                 }));
             }
-            if (d(rRecs))   window._store.recepciones     = d(rRecs);
-            if (d(rBaci))   window._store.res_baci         = d(rBaci);
-            if (d(rCult))   window._store.res_cultivo      = d(rCult);
-            if (d(rXU))     window._store.res_xpert_ultra  = d(rXU);
-            if (d(rXDR))    window._store.res_xpert_xdr    = d(rXDR);
-            if (d(rMfLed))  window._store.res_mf_led       = d(rMfLed);
-            if (d(rTbLam))  window._store.res_tb_lam       = d(rTbLam);
+            if (d(rRecs))    window._store.recepciones    = d(rRecs);
+            if (d(rBaci))    window._store.res_baci        = d(rBaci);
+            if (d(rCult))    window._store.res_cultivo     = d(rCult);
+            if (d(rXU))      window._store.res_xpert_ultra = d(rXU);
+            if (d(rXDR))     window._store.res_xpert_xdr   = d(rXDR);
+            if (d(rMfLed))   window._store.res_mf_led      = d(rMfLed);
+            if (d(rTbLam))   window._store.res_tb_lam      = d(rTbLam);
         } catch (e) {
             console.warn('renderLaboratorio: refresco Supabase falló —', e);
         }
@@ -97,69 +97,84 @@ async function renderLaboratorio(user, el) {
         return;
     }
 
-    /* ── Construir tabs: Resumen → Pendientes → Recibidas → Rechazadas ── */
-    const tabs = [];
-
-    if (esLabStaff)
-        tabs.push(`<button class="lab-tab-btn${_labView === 'resumen' ? ' active' : ''}" id="tab-resumen">
-            <i class="bi bi-bar-chart-line"></i><span class="tab-label"> Resumen</span>
-        </button>`);
-
-    if (puedeRecibirAlgo)
-        tabs.push(`<button class="lab-tab-btn${_labView === 'pendientes' ? ' active' : ''}" id="tab-pend">
-            <i class="bi bi-inbox"></i><span class="tab-label"> Pendientes</span>
-            ${pendientes.length ? `<span class="lab-tab-badge">${pendientes.length}</span>` : ''}
-        </button>`);
+    /* ── Construir pestañas con el mismo estilo que epidemiología (pills) ── */
+    const pills = [];
 
     if (esLabStaff) {
-        tabs.push(`<button class="lab-tab-btn${_labView === 'recibidas' ? ' active' : ''}" id="tab-rec">
-            <i class="bi bi-flask"></i><span class="tab-label"> Muestras recibidas</span>
-        </button>`);
-        tabs.push(`<button class="lab-tab-btn${_labView === 'rechazadas' ? ' active' : ''}" id="tab-rech">
-            <i class="bi bi-x-circle"></i><span class="tab-label"> Muestras rechazadas</span>
-            ${rechazadas.length ? `<span class="lab-tab-badge">${rechazadas.length}</span>` : ''}
-        </button>`);
+        pills.push(`
+            <button class="lab-pill ${_labView === 'resumen' ? 'active' : ''}" data-view="resumen">
+                <i class="bi bi-bar-chart-line lab-pill-icon"></i>
+                Resumen
+            </button>
+        `);
     }
 
-    /* ── Botón de refresco separado del grupo de tabs ── */
-    const btnRefresh = `<button class="lab-tab-btn" id="tab-refresh"
-            title="Actualizar datos desde el servidor"
-            style="opacity:.7;flex-shrink:0">
-        <i class="bi bi-arrow-clockwise"></i><span class="tab-label"> Actualizar</span>
-    </button>`;
+    if (puedeRecibirAlgo) {
+        pills.push(`
+            <button class="lab-pill ${_labView === 'pendientes' ? 'active' : ''}" data-view="pendientes">
+                <i class="bi bi-inbox lab-pill-icon"></i>
+                Pendientes
+                ${pendientes.length ? `<span class="lab-pill-badge">${pendientes.length}</span>` : ''}
+            </button>
+        `);
+    }
+
+    if (esLabStaff) {
+        pills.push(`
+            <button class="lab-pill ${_labView === 'recibidas' ? 'active' : ''}" data-view="recibidas">
+                <i class="bi bi-flask lab-pill-icon"></i>
+                Muestras recibidas
+            </button>
+        `);
+        pills.push(`
+            <button class="lab-pill ${_labView === 'rechazadas' ? 'active' : ''}" data-view="rechazadas">
+                <i class="bi bi-x-circle lab-pill-icon"></i>
+                Rechazadas
+                ${rechazadas.length ? `<span class="lab-pill-badge">${rechazadas.length}</span>` : ''}
+            </button>
+        `);
+    }
+
+    /* Botón de refresco independiente, alineado a la derecha */
+    const refreshButton = `
+        <button class="lab-refresh-btn" id="tab-refresh" title="Actualizar datos desde el servidor">
+            <i class="bi bi-arrow-clockwise"></i>
+            <span>Actualizar</span>
+        </button>
+    `;
 
     el.innerHTML = `
     <div class="modulo-header">
         <h2 class="modulo-title">Laboratorio</h2>
         <p class="modulo-sub">Gestión de muestras y consulta de resultados.</p>
     </div>
-    <div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
-        <div class="lab-tabs" style="flex:1;min-width:0;margin-bottom:0">
-            ${tabs.join('')}
+
+    <div class="lab-pills-wrapper">
+        <div class="lab-pills-container">
+            ${pills.join('')}
         </div>
-        ${btnRefresh}
+        ${refreshButton}
     </div>
+
     <div id="lab-tab-content"></div>`;
 
-    /* ── Listeners de tabs ── */
-    if (esLabStaff)
-        document.getElementById('tab-resumen')?.addEventListener('click',
-            () => { _labView = 'resumen'; renderLaboratorio(user, el); });
-
-    if (puedeRecibirAlgo)
-        document.getElementById('tab-pend')?.addEventListener('click',
-            () => { _labView = 'pendientes'; renderLaboratorio(user, el); });
-
-    if (esLabStaff) {
-        document.getElementById('tab-rec')?.addEventListener('click',
-            () => { _labView = 'recibidas'; renderLaboratorio(user, el); });
-        document.getElementById('tab-rech')?.addEventListener('click',
-            () => { _labView = 'rechazadas'; renderLaboratorio(user, el); });
-    }
+    /* ── Listeners de pestañas ── */
+    el.querySelectorAll('.lab-pill[data-view]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+            if (view === _labView) return;
+            _labView = view;
+            renderLaboratorio(user, el);
+        });
+    });
 
     document.getElementById('tab-refresh')?.addEventListener('click', async () => {
         const btn = document.getElementById('tab-refresh');
-        if (btn) { btn.disabled = true; btn.querySelector('i').className = 'bi bi-hourglass-split'; }
+        if (btn) {
+            btn.disabled = true;
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = 'bi bi-hourglass-split';
+        }
         await renderLaboratorio(user, el);
     });
 
