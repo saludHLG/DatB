@@ -268,7 +268,9 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
             if (exId === 1) nMuestra = baci.find(r => r.recepcion_id === rec.id)?.numero_muestra ?? null;
             if (exId === 2) nMuestra = cult.find(r => r.recepcion_id === rec.id)?.numero_muestra ?? null;
             if (exId === 3) nMuestra = _getResXpertUltra().find(r => r.recepcion_id === rec.id)?.numero_muestra ?? null;
+            if (exId === 4) nMuestra = _getResMfLed().find(r => r.recepcion_id === rec.id)?.numero_muestra ?? null;
             if (exId === 5) nMuestra = _getResXpertXDR().find(r => r.recepcion_id === rec.id)?.numero_muestra ?? null;
+            if (exId === 6) nMuestra = _getResTbLam().find(r => r.recepcion_id === rec.id)?.numero_muestra ?? null;
             const ind = inds.find(i => i.id === rec.indicacion_id) || null;
             return { rec, ind, nMuestra };
         })
@@ -315,9 +317,23 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
         } else if (exId === 3) {
             const r = _getResXpertUltra().find(x => x.recepcion_id === rec.id);
             if (r) resHtml = `<span class="res-cod ${_resultadoXpertCls(r.resultado)}" style="font-size:.72rem">${r.resultado}</span>`;
+        } else if (exId === 4) {
+            const _MFLED_LABELS = {
+                negativo: 'No BAAR (0)', confirmacion: 'Confirmación (1–2)',
+                positivo_escaso: 'Pos. escaso', positivo_1: 'Pos. +', positivo_2: 'Pos. ++', positivo_3: 'Pos. +++',
+            };
+            const _MFLED_CLS = {
+                negativo: 'res-neg', confirmacion: 'res-estudio',
+                positivo_escaso: 'res-pos', positivo_1: 'res-pos', positivo_2: 'res-pos', positivo_3: 'res-pos',
+            };
+            const r = _getResMfLed().find(x => x.recepcion_id === rec.id);
+            if (r) resHtml = `<span class="res-cod ${_MFLED_CLS[r.lectura] || 'res-contam'}" style="font-size:.72rem">${_MFLED_LABELS[r.lectura] || r.lectura}</span>`;
         } else if (exId === 5) {
             const r = _getResXpertXDR().find(x => x.recepcion_id === rec.id);
             if (r) resHtml = `<span class="res-cod ${_resultadoXpertCls(r.resultado)}" style="font-size:.72rem">${r.resultado}</span>`;
+        } else if (exId === 6) {
+            const r = _getResTbLam().find(x => x.recepcion_id === rec.id);
+            if (r) resHtml = `<span class="res-cod ${r.resultado === 'POSITIVO' ? 'res-pos' : 'res-neg'}" style="font-size:.72rem">${r.resultado}</span>`;
         }
 
         const puedeEmitir = (emitirIds || []).includes(rec.laboratorio_id);
@@ -336,7 +352,9 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
         if (exId === 1) { const r = baci.find(x => x.recepcion_id === rec.id); regPor = r?.registrado_por ?? null; }
         if (exId === 2) { const r = cult.find(x => x.recepcion_id === rec.id); regPor = r?.registrado_por ?? null; }
         if (exId === 3) { const r = _getResXpertUltra().find(x => x.recepcion_id === rec.id); regPor = r?.registrado_por ?? null; }
+        if (exId === 4) { const r = _getResMfLed().find(x => x.recepcion_id === rec.id); regPor = r?.registrado_por ?? null; }
         if (exId === 5) { const r = _getResXpertXDR().find(x => x.recepcion_id === rec.id); regPor = r?.registrado_por ?? null; }
+        if (exId === 6) { const r = _getResTbLam().find(x => x.recepcion_id === rec.id); regPor = r?.registrado_por ?? null; }
 
         return `<tr>
             <td style="white-space:nowrap;font-family:var(--font-mono);font-size:.78rem">${_fmtDate(fInd)}</td>

@@ -81,6 +81,7 @@ const EXAMENES_TB_CAT = [
     { id: 3, nombre: 'Xpert MTB/RIF (Ultra)', codigo: 'XPERT-ULTRA' },
     { id: 4, nombre: 'MF-LED',                codigo: 'MF-LED' },
     { id: 5, nombre: 'Xpert MTB/XDR',         codigo: 'XPERT-XDR' },
+    { id: 6, nombre: 'TB-LAM',                codigo: 'TB-LAM' },
 ];
 
 /* ── Accesores de datos (usan _store) ─────────────────────── */
@@ -405,6 +406,38 @@ function _renderIndCard(ind, currentUser) {
                         <span class="ind-res-label">${exNom}</span>
                         <span class="res-cod ${cls2} ind-res-cod-wrap">${lbl}</span>
                         <small class="text-muted">N°${xdr.numero_muestra} · ${_formatDate(xdr.fecha)}</small>
+                    </div>`);
+                } else {
+                    parts.push(`<div class="ind-res-item"><span class="ind-res-label">${exNom}</span><span class="text-muted" style="font-size:.78rem">Pendiente resultado</span></div>`);
+                }
+            } else if (Number(eid) === 4) {
+                const _MFLED_LABELS = {
+                    negativo: 'No se observan BAAR (0)', confirmacion: 'Requiere confirmación (1–2 BAAR)',
+                    positivo_escaso: 'Positivo escaso / paucibacilar', positivo_1: 'Positivo + (1–6 BAAR/campo)',
+                    positivo_2: 'Positivo ++ (7–60 BAAR/campo)', positivo_3: 'Positivo +++ (>60 BAAR/campo)',
+                };
+                const _MFLED_CLS = {
+                    negativo: 'res-neg', confirmacion: 'res-estudio',
+                    positivo_escaso: 'res-pos', positivo_1: 'res-pos', positivo_2: 'res-pos', positivo_3: 'res-pos',
+                };
+                const rm = (_store.res_mf_led || []).find(r => r.recepcion_id === rec.id);
+                if (rm) {
+                    parts.push(`<div class="ind-res-item">
+                        <span class="ind-res-label">${exNom}</span>
+                        <span class="res-cod ${_MFLED_CLS[rm.lectura] || 'res-contam'} ind-res-cod-wrap">${_MFLED_LABELS[rm.lectura] || rm.lectura}</span>
+                        <small class="text-muted">N°${rm.numero_muestra} · ${_formatDate(rm.fecha)}</small>
+                    </div>`);
+                } else {
+                    parts.push(`<div class="ind-res-item"><span class="ind-res-label">${exNom}</span><span class="text-muted" style="font-size:.78rem">Pendiente resultado</span></div>`);
+                }
+            } else if (Number(eid) === 6) {
+                const rl = (_store.res_tb_lam || []).find(r => r.recepcion_id === rec.id);
+                if (rl) {
+                    const cls2 = rl.resultado === 'POSITIVO' ? 'res-pos' : 'res-neg';
+                    parts.push(`<div class="ind-res-item">
+                        <span class="ind-res-label">${exNom}</span>
+                        <span class="res-cod ${cls2}">${rl.resultado}</span>
+                        <small class="text-muted">N°${rl.numero_muestra} · ${_formatDate(rl.fecha)}</small>
                     </div>`);
                 } else {
                     parts.push(`<div class="ind-res-item"><span class="ind-res-label">${exNom}</span><span class="text-muted" style="font-size:.78rem">Pendiente resultado</span></div>`);
