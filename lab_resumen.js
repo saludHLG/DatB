@@ -693,14 +693,24 @@ function _lr_hasResult(recId, eid, baci, cult, xpertU, xpertXDR) {
     if (eid === 1) return baci.some(r => r.recepcion_id === recId);
     if (eid === 2) return cult.some(r => r.recepcion_id === recId);
     if (eid === 3) return xpertU.some(r => r.recepcion_id === recId);
+    if (eid === 4) return _getResMfLed().some(r => r.recepcion_id === recId);
     if (eid === 5) return xpertXDR.some(r => r.recepcion_id === recId);
+    if (eid === 6) return _getResTbLam().some(r => r.recepcion_id === recId);
     return false;
 }
 
-function _lr_isPositive(recId, eid, baci, cult, xpertU, xpertXDR) {
+function _lr_isPositive(recId, eid, baci, cult, xpertU, xpertXDR, indicacionId) {
     if (eid === 1) { const r = baci.find(x => x.recepcion_id === recId);    return !!(r && r.codificacion > 0); }
     if (eid === 2) { const r = cult.find(x => x.recepcion_id === recId);    return !!(r && /^[1-9]$/.test(r.resultado)); }
     if (eid === 3) { const r = xpertU.find(x => x.recepcion_id === recId);  return !!(r && r.resultado === 'MTB DETECTADO'); }
+    if (eid === 4) {
+        const r = _getResMfLed().find(x => x.recepcion_id === recId);
+        if (!r) return false;
+        const _PM = new Set(['positivo_escaso','positivo_1','positivo_2','positivo_3']);
+        if (_PM.has(r.lectura)) return true;
+        if (r.lectura === 'confirmacion' && indicacionId) return _mfLedIsConfirmed(indicacionId);
+        return false;
+    }
     if (eid === 5) {
         const r = xpertXDR.find(x => x.recepcion_id === recId);
         if (!r || r.resultado !== 'MTB DETECTADO') return false;
@@ -708,6 +718,7 @@ function _lr_isPositive(recId, eid, baci, cult, xpertU, xpertXDR) {
                 r.resistencia_kanamicina, r.resistencia_capreomicina, r.resistencia_etionamida]
             .some(v => v && v.includes('DETECTADO') && !v.includes('NO DETECTADO'));
     }
+    if (eid === 6) { const r = _getResTbLam().find(x => x.recepcion_id === recId); return !!(r && r.resultado === 'POSITIVO'); }
     return false;
 }
 
