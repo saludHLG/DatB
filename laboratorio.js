@@ -97,14 +97,14 @@ async function renderLaboratorio(user, el) {
         return;
     }
 
-    /* ── Construir pestañas con el mismo estilo que epidemiología (pills) ── */
+    /* ── Construir pestañas principales con el mismo estilo que epidemiología ── */
     const pills = [];
 
     if (esLabStaff) {
         pills.push(`
             <button class="lab-pill ${_labView === 'resumen' ? 'active' : ''}" data-view="resumen">
-                <i class="bi bi-bar-chart-line lab-pill-icon"></i>
-                Resumen
+                <i class="bi bi-bar-chart-line"></i>
+                <span>Resumen</span>
             </button>
         `);
     }
@@ -112,8 +112,8 @@ async function renderLaboratorio(user, el) {
     if (puedeRecibirAlgo) {
         pills.push(`
             <button class="lab-pill ${_labView === 'pendientes' ? 'active' : ''}" data-view="pendientes">
-                <i class="bi bi-inbox lab-pill-icon"></i>
-                Pendientes
+                <i class="bi bi-inbox"></i>
+                <span>Pendientes</span>
                 ${pendientes.length ? `<span class="lab-pill-badge">${pendientes.length}</span>` : ''}
             </button>
         `);
@@ -122,20 +122,20 @@ async function renderLaboratorio(user, el) {
     if (esLabStaff) {
         pills.push(`
             <button class="lab-pill ${_labView === 'recibidas' ? 'active' : ''}" data-view="recibidas">
-                <i class="bi bi-flask lab-pill-icon"></i>
-                Muestras recibidas
+                <i class="bi bi-flask"></i>
+                <span>Recibidas</span>
             </button>
         `);
         pills.push(`
             <button class="lab-pill ${_labView === 'rechazadas' ? 'active' : ''}" data-view="rechazadas">
-                <i class="bi bi-x-circle lab-pill-icon"></i>
-                Rechazadas
+                <i class="bi bi-x-circle"></i>
+                <span>Rechazadas</span>
                 ${rechazadas.length ? `<span class="lab-pill-badge">${rechazadas.length}</span>` : ''}
             </button>
         `);
     }
 
-    /* Botón de refresco independiente, alineado a la derecha */
+    /* Botón de refresco */
     const refreshButton = `
         <button class="lab-refresh-btn" id="tab-refresh" title="Actualizar datos desde el servidor">
             <i class="bi bi-arrow-clockwise"></i>
