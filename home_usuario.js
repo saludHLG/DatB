@@ -290,6 +290,8 @@ function _hu_computeStats(user, dateFrom, dateTo) {
     const cultF     = cult.filter(r => recIdSet.has(r.recepcion_id));
     const xpertUF   = xpertU.filter(r => recIdSet.has(r.recepcion_id));
     const xpertXDRF = xpertXDR.filter(r => recIdSet.has(r.recepcion_id));
+    const mfLedF    = _getResMfLed().filter(r => recIdSet.has(r.recepcion_id));
+    const tbLamF    = _getResTbLam().filter(r => recIdSet.has(r.recepcion_id));
 
     /* Resultados por examen (barras de progreso) */
     const resultados = {};
@@ -310,9 +312,22 @@ function _hu_computeStats(user, dateFrom, dateTo) {
         resultados[3] = {};
         xpertUF.forEach(r => { resultados[3][r.resultado] = (resultados[3][r.resultado] || 0) + 1; });
     }
+    if (mfLedF.length) {
+        resultados[4] = { 'Positivo': 0, 'Requiere confirmación': 0, 'Negativo': 0 };
+        const _PM = new Set(['positivo_escaso','positivo_1','positivo_2','positivo_3']);
+        mfLedF.forEach(r => {
+            if (_PM.has(r.lectura))           resultados[4].Positivo++;
+            else if (r.lectura === 'confirmacion') resultados[4]['Requiere confirmación']++;
+            else                               resultados[4].Negativo++;
+        });
+    }
     if (xpertXDRF.length) {
         resultados[5] = {};
         xpertXDRF.forEach(r => { resultados[5][r.resultado] = (resultados[5][r.resultado] || 0) + 1; });
+    }
+    if (tbLamF.length) {
+        resultados[6] = { 'Negativo': 0, 'Positivo': 0 };
+        tbLamF.forEach(r => { if (r.resultado === 'POSITIVO') resultados[6].Positivo++; else resultados[6].Negativo++; });
     }
 
     /* Tipos de muestra × positivos/negativos */
@@ -325,7 +340,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
             const eid = Number(eidRaw);
             const rec = getRec(ind.id, eid);
             if (!rec || rec.estado === 'rechazada') return;
-            if (_hu_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR)) hasPos = true;
+            if (_hu_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR, ind.id)) hasPos = true;
             if (_hu_isNegative(rec.id, eid, baci, cult, xpertU, xpertXDR)) hasNeg = true;
         });
         if (!hasPos && !hasNeg) return;
@@ -372,6 +387,22 @@ function _hu_computeStats(user, dateFrom, dateTo) {
             if (rec && rec.estado !== 'rechazada') {
                 const br = baci.find(r => r.recepcion_id === rec.id);
                 if (br && br.codificacion > 0) species = 'BAAR+ (Indeterminado)';
+            }
+        }
+        if (!species) {
+            const rec = getRec(ind.id, 4);
+            if (rec && rec.estado !== 'rechazada') {
+                const mfr = _getResMfLed().find(r => r.recepcion_id === rec.id);
+                const _PM = new Set(['positivo_escaso','positivo_1','positivo_2','positivo_3']);
+                if (mfr && (_PM.has(mfr.lectura) || (mfr.lectura === 'confirmacion' && _mfLedIsConfirmed(ind.id))))
+                    species = 'BAAR+ (Indeterminado)';
+            }
+        }
+        if (!species) {
+            const rec = getRec(ind.id, 6);
+            if (rec && rec.estado !== 'rechazada') {
+                const tlr = _getResTbLam().find(r => r.recepcion_id === rec.id);
+                if (tlr && tlr.resultado === 'POSITIVO') species = 'LAM+ (TB-LAM)';
             }
         }
         if (!species) return;
@@ -472,7 +503,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
                 const eid = Number(eidRaw);
                 const rec = getRec(ind.id, eid);
                 if (!rec || rec.estado === 'rechazada') return;
-                if (_hu_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR)) pPos = true;
+                if (_hu_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR, ind.id)) pPos = true;
                 if (_hu_isNegative(rec.id, eid, baci, cult, xpertU, xpertXDR)) pNeg = true;
             });
         });
@@ -495,7 +526,7 @@ function _hu_computeStats(user, dateFrom, dateTo) {
             const eid = Number(eidRaw);
             const rec = getRec(ind.id, eid);
             if (!rec || rec.estado === 'rechazada') return;
-            if (_hu_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR)) hasPos = true;
+            if (_hu_isPositive(rec.id, eid, baci, cult, xpertU, xpertXDR, ind.id)) hasPos = true;
             if (_hu_isNegative(rec.id, eid, baci, cult, xpertU, xpertXDR)) hasNeg = true;
         });
         if (!hasPos && !hasNeg) return;
@@ -517,15 +548,26 @@ function _hu_hasResult(recId, eid, baci, cult, xpertU, xpertXDR) {
     if (eid === 1) return baci.some(r => r.recepcion_id === recId);
     if (eid === 2) return cult.some(r => r.recepcion_id === recId);
     if (eid === 3) return xpertU.some(r => r.recepcion_id === recId);
+    if (eid === 4) return _getResMfLed().some(r => r.recepcion_id === recId);
     if (eid === 5) return xpertXDR.some(r => r.recepcion_id === recId);
+    if (eid === 6) return _getResTbLam().some(r => r.recepcion_id === recId);
     return false;
 }
 
-function _hu_isPositive(recId, eid, baci, cult, xpertU, xpertXDR) {
+function _hu_isPositive(recId, eid, baci, cult, xpertU, xpertXDR, indicacionId) {
     if (eid === 1) { const r = baci.find(x => x.recepcion_id === recId);    return !!(r && r.codificacion > 0); }
     if (eid === 2) { const r = cult.find(x => x.recepcion_id === recId);    return !!(r && /^[1-9]$/.test(r.resultado)); }
     if (eid === 3) { const r = xpertU.find(x => x.recepcion_id === recId);  return !!(r && r.resultado === 'MTB DETECTADO'); }
+    if (eid === 4) {
+        const r = _getResMfLed().find(x => x.recepcion_id === recId);
+        if (!r) return false;
+        const _PM = new Set(['positivo_escaso','positivo_1','positivo_2','positivo_3']);
+        if (_PM.has(r.lectura)) return true;
+        if (r.lectura === 'confirmacion' && indicacionId) return _mfLedIsConfirmed(indicacionId);
+        return false;
+    }
     if (eid === 5) { const r = xpertXDR.find(x => x.recepcion_id === recId);return !!(r && r.resultado === 'MTB DETECTADO'); }
+    if (eid === 6) { const r = _getResTbLam().find(x => x.recepcion_id === recId); return !!(r && r.resultado === 'POSITIVO'); }
     return false;
 }
 
@@ -533,7 +575,9 @@ function _hu_isNegative(recId, eid, baci, cult, xpertU, xpertXDR) {
     if (eid === 1) { const r = baci.find(x => x.recepcion_id === recId);    return !!(r && r.codificacion === 0); }
     if (eid === 2) { const r = cult.find(x => x.recepcion_id === recId);    return !!(r && r.resultado === '0'); }
     if (eid === 3) { const r = xpertU.find(x => x.recepcion_id === recId);  return !!(r && r.resultado === 'MTB NO DETECTADO'); }
+    if (eid === 4) { const r = _getResMfLed().find(x => x.recepcion_id === recId); return !!(r && r.lectura === 'negativo'); }
     if (eid === 5) { const r = xpertXDR.find(x => x.recepcion_id === recId);return !!(r && r.resultado === 'MTB NO DETECTADO'); }
+    if (eid === 6) { const r = _getResTbLam().find(x => x.recepcion_id === recId); return !!(r && r.resultado === 'NEGATIVO'); }
     return false;
 }
 
