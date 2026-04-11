@@ -856,7 +856,8 @@ function renderLabs() {
             .map(eid => {
                 const ex = [
                     { id:1, codigo:'BACI' }, { id:2, codigo:'CULT' },
-                    { id:3, codigo:'XPERT-U' }, { id:4, codigo:'MF-LED' }, { id:5, codigo:'XPERT-XDR' }
+                    { id:3, codigo:'XPERT-U' }, { id:4, codigo:'MF-LED' }, { id:5, codigo:'XPERT-XDR' },
+                    { id:6, codigo:'TB-LAM' }
                 ].find(e => e.id === Number(eid));
                 return ex ? `<span class="exam-tag" style="font-size:.65rem;padding:.12em .5em">${ex.codigo}</span>` : '';
             }).join(' ');

@@ -205,7 +205,9 @@ function _despacharResModal(exId, rec, user, rootEl, bsModal, puedeEdicion) {
         if      (n === 1) _formBaciloscopia(rec, user, body, onSuccess);
         else if (n === 2) _formCultivo(rec, user, body, onSuccess);
         else if (n === 3) _formXpertUltra(rec, user, body, onSuccess);
+        else if (n === 4) _formMfLed(rec, user, body, onSuccess);
         else if (n === 5) _formXpertXDR(rec, user, body, onSuccess);
+        else if (n === 6) _formTbLam(rec, user, body, onSuccess);
     } else {
         _vistaSoloLectura(n, rec, body);
     }
@@ -680,6 +682,195 @@ function _formXpertXDR(rec, user, body, onSuccess) {
     });
 }
 
+/* ── Formulario MF-LED ───────────────────────────────────── */
+function _formMfLed(rec, user, body, onSuccess) {
+    const existing = _getResMfLed().find(r => r.recepcion_id === rec.id) || null;
+    const hoy = _todayLab();
+
+    const opciones = [
+        { value: 'negativo',        label: '0 BAAR en 1 línea — No se observan BAAR' },
+        { value: 'confirmacion',    label: '1–2 BAAR en 1 línea — Requiere confirmación' },
+        { value: 'positivo_escaso', label: '3–24 BAAR en una línea — Positivo escaso (paucibacilar)' },
+        { value: 'positivo_1',      label: '1–6 BAAR/campo óptico — Positivo +' },
+        { value: 'positivo_2',      label: '7–60 BAAR/campo óptico — Positivo ++' },
+        { value: 'positivo_3',      label: '>60 BAAR/campo óptico — Positivo +++' },
+    ];
+
+    body.innerHTML = `
+    ${existing?.lectura === 'confirmacion' ? `
+    <div class="step-note mb-3" style="border-left-color:#f0a500">
+        <i class="bi bi-exclamation-triangle-fill" style="color:#f0a500"></i>
+        <span>Este resultado <strong>requiere confirmación</strong>.
+        Se considerará positivo automáticamente si existe un Cultivo o Xpert Ultra positivo
+        para la misma indicación.</span>
+    </div>` : ''}
+    <div class="modal-section">
+        <div class="modal-section-title"><i class="bi bi-microscope"></i> Datos del análisis</div>
+        <div class="row g-2">
+            <div class="col-5">
+                <label class="admin-label">N.° de muestra <span class="required">*</span></label>
+                <input type="number" id="mfled-nmuestra" class="form-control" min="1" max="99"
+                       value="${existing?.numero_muestra ?? ''}">
+                <div class="invalid-feedback" id="err-mfled-nmuestra"></div>
+            </div>
+            <div class="col-7">
+                <label class="admin-label">Fecha <span class="required">*</span></label>
+                <input type="date" id="mfled-fecha" class="form-control"
+                       value="${existing?.fecha || hoy}" max="${hoy}">
+                <div class="invalid-feedback" id="err-mfled-fecha"></div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-section">
+        <div class="modal-section-title"><i class="bi bi-clipboard2-pulse"></i> Lectura</div>
+        <div class="d-flex flex-column gap-2" id="mfled-opciones">
+            ${opciones.map(op => `
+            <label class="d-flex align-items-center gap-2 p-2 border rounded mfled-opt"
+                   style="cursor:pointer;font-size:.88rem;border-color:#dce8f5;transition:background .15s;
+                          background:${existing?.lectura === op.value ? '#f0f4fa' : 'transparent'}"
+                   data-value="${op.value}">
+                <input type="radio" name="mfled-lectura" value="${op.value}"
+                       ${existing?.lectura === op.value ? 'checked' : ''}
+                       style="accent-color:#0b1e3d;flex-shrink:0">
+                ${op.label}
+            </label>`).join('')}
+        </div>
+        <div class="invalid-feedback d-block mt-2" id="err-mfled-lectura"></div>
+    </div>
+    <div id="mfled-alert" class="alert-custom d-none"></div>`;
+
+    body.querySelectorAll('.mfled-opt').forEach(lbl => {
+        lbl.addEventListener('click', () => {
+            body.querySelectorAll('.mfled-opt').forEach(l => l.style.background = '');
+            lbl.style.background = '#f0f4fa';
+        });
+    });
+
+    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', async () => {
+        const nMuestra = parseInt(document.getElementById('mfled-nmuestra').value);
+        const fecha    = document.getElementById('mfled-fecha').value;
+        const lectura  = document.querySelector('input[name="mfled-lectura"]:checked')?.value;
+        let ok = true;
+
+        [['mfled-nmuestra','err-mfled-nmuestra',!nMuestra||nMuestra<1,'Requerido (≥ 1).'],
+         ['mfled-fecha','err-mfled-fecha',!fecha,'Fecha requerida.'],
+        ].forEach(([id,errId,cond,msg]) => {
+            const inp=document.getElementById(id), err=document.getElementById(errId);
+            if(cond){inp.classList.add('is-invalid');err.textContent=msg;err.classList.add('show');ok=false;}
+            else{inp.classList.remove('is-invalid');err.classList.remove('show');}
+        });
+        if (!lectura) {
+            const errEl = document.getElementById('err-mfled-lectura');
+            errEl.textContent = 'Seleccione una lectura.'; errEl.style.display = 'block'; ok = false;
+        } else {
+            document.getElementById('err-mfled-lectura').style.display = 'none';
+        }
+        if (!ok) return;
+
+        const arr = _getResMfLed(), idx = arr.findIndex(r => r.recepcion_id === rec.id);
+        const entry = {
+            id: existing?.id || _genId(), recepcion_id: rec.id,
+            numero_muestra: nMuestra, fecha, lectura,
+            registrado_por: user.id,
+            registrado_en: existing?.registrado_en || new Date().toISOString(),
+            ...(existing && { editado_en: new Date().toISOString() })
+        };
+        if (idx !== -1) arr[idx] = entry; else arr.push(entry);
+        _saveResMfLed(arr);
+
+        document.getElementById('lab-modal-save-btn').disabled = true;
+        if (typeof sbUpsertRow === 'function')
+            await sbUpsertRow('resultados_mf_led', entry).catch(e => console.error('mfled upsert:', e));
+
+        await _recalcIndEstado(rec.indicacion_id);
+        _showModalSuccess('mfled-alert');
+        setTimeout(() => onSuccess(), 1400);
+    });
+}
+
+/* ── Formulario TB-LAM ───────────────────────────────────── */
+function _formTbLam(rec, user, body, onSuccess) {
+    const existing = _getResTbLam().find(r => r.recepcion_id === rec.id) || null;
+    const hoy = _todayLab();
+
+    body.innerHTML = `
+    <div class="modal-section">
+        <div class="modal-section-title"><i class="bi bi-droplet-half"></i> Datos del análisis</div>
+        <div class="row g-2">
+            <div class="col-5">
+                <label class="admin-label">N.° de muestra <span class="required">*</span></label>
+                <input type="number" id="tblam-nmuestra" class="form-control" min="1" max="99"
+                       value="${existing?.numero_muestra ?? ''}">
+                <div class="invalid-feedback" id="err-tblam-nmuestra"></div>
+            </div>
+            <div class="col-7">
+                <label class="admin-label">Fecha <span class="required">*</span></label>
+                <input type="date" id="tblam-fecha" class="form-control"
+                       value="${existing?.fecha || hoy}" max="${hoy}">
+                <div class="invalid-feedback" id="err-tblam-fecha"></div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-section">
+        <div class="modal-section-title"><i class="bi bi-clipboard2-pulse"></i> Resultado</div>
+        <div class="res-resultado-group">
+            <label class="res-resultado-opt${!existing || existing?.resultado === 'NEGATIVO' ? ' active' : ''}">
+                <input type="radio" name="tblam-resultado" value="NEGATIVO"
+                       ${!existing || existing?.resultado === 'NEGATIVO' ? 'checked' : ''}>
+                <span><i class="bi bi-check-circle text-success me-1"></i> Negativo</span>
+            </label>
+            <label class="res-resultado-opt${existing?.resultado === 'POSITIVO' ? ' active' : ''}">
+                <input type="radio" name="tblam-resultado" value="POSITIVO"
+                       ${existing?.resultado === 'POSITIVO' ? 'checked' : ''}>
+                <span><i class="bi bi-exclamation-circle text-danger me-1"></i> Positivo</span>
+            </label>
+        </div>
+        <div class="invalid-feedback d-block mt-2" id="err-tblam-resultado"></div>
+    </div>
+    <div id="tblam-alert" class="alert-custom d-none"></div>`;
+
+    document.querySelectorAll('input[name="tblam-resultado"]').forEach(r =>
+        r.addEventListener('change', function () {
+            document.querySelectorAll('.res-resultado-opt').forEach(l => l.classList.remove('active'));
+            this.closest('.res-resultado-opt').classList.add('active');
+        })
+    );
+
+    _activateModalFooter(existing ? 'Actualizar resultado' : 'Guardar resultado', async () => {
+        const nMuestra  = parseInt(document.getElementById('tblam-nmuestra').value);
+        const fecha     = document.getElementById('tblam-fecha').value;
+        const resultado = document.querySelector('input[name="tblam-resultado"]:checked')?.value;
+        let ok = true;
+
+        [['tblam-nmuestra','err-tblam-nmuestra',!nMuestra||nMuestra<1,'Requerido (≥ 1).'],
+         ['tblam-fecha','err-tblam-fecha',!fecha,'Fecha requerida.'],
+        ].forEach(([id,errId,cond,msg]) => {
+            const inp=document.getElementById(id), err=document.getElementById(errId);
+            if(cond){inp.classList.add('is-invalid');err.textContent=msg;err.classList.add('show');ok=false;}
+            else{inp.classList.remove('is-invalid');err.classList.remove('show');}
+        });
+        if (!ok) return;
+
+        const arr = _getResTbLam(), idx = arr.findIndex(r => r.recepcion_id === rec.id);
+        const entry = {
+            id: existing?.id || _genId(), recepcion_id: rec.id,
+            numero_muestra: nMuestra, fecha, resultado,
+            registrado_por: user.id,
+            registrado_en: existing?.registrado_en || new Date().toISOString(),
+        };
+        if (idx !== -1) arr[idx] = entry; else arr.push(entry);
+        _saveResTbLam(arr);
+
+        document.getElementById('lab-modal-save-btn').disabled = true;
+        if (typeof sbUpsertRow === 'function')
+            await sbUpsertRow('resultados_tb_lam', entry).catch(e => console.error('tblam upsert:', e));
+
+        await _recalcIndEstado(rec.indicacion_id);
+        _showModalSuccess('tblam-alert');
+        setTimeout(() => onSuccess(), 1400);
+    });
+}
+
 /* ── Vista solo lectura ───────────────────────────────────── */
 function _vistaSoloLectura(exId, rec, body) {
     const n = Number(exId);
@@ -724,6 +915,27 @@ function _vistaSoloLectura(exId, rec, body) {
             ...(res.modulo ? [['Módulo', res.modulo]] : []),
         ]);
 
+    } else if (n === 4) {
+        const res = _getResMfLed().find(r => r.recepcion_id === rec.id);
+        if (!res) { body.innerHTML = `<div class="lab-prox-notice"><i class="bi bi-hourglass"></i><p>Resultado pendiente.</p></div>`; return; }
+        const _MFLED_LECTURAS = {
+            negativo:         'No se observan BAAR (0)',
+            confirmacion:     'Requiere confirmación (1–2 BAAR)',
+            positivo_escaso:  'Positivo escaso / paucibacilar',
+            positivo_1:       'Positivo + (1–6 BAAR/campo)',
+            positivo_2:       'Positivo ++ (7–60 BAAR/campo)',
+            positivo_3:       'Positivo +++ (>60 BAAR/campo)',
+        };
+        const _MFLED_CLS = {
+            negativo: 'res-neg', confirmacion: 'res-estudio',
+            positivo_escaso: 'res-pos', positivo_1: 'res-pos', positivo_2: 'res-pos', positivo_3: 'res-pos',
+        };
+        body.innerHTML = _grid([
+            ['N.° muestra', res.numero_muestra],
+            ['Fecha',       _fmtDate(res.fecha)],
+            ['Lectura',     `<span class="res-cod ${_MFLED_CLS[res.lectura] || 'res-contam'}">${_MFLED_LECTURAS[res.lectura] || res.lectura}</span>`],
+        ]);
+
     } else if (n === 5) {
         const res = _getResXpertXDR().find(r => r.recepcion_id === rec.id);
         if (!res) { body.innerHTML = `<div class="lab-prox-notice"><i class="bi bi-hourglass"></i><p>Resultado pendiente.</p></div>`; return; }
@@ -739,6 +951,15 @@ function _vistaSoloLectura(exId, rec, body) {
             ['Etionamida',     res.resistencia_etionamida],
             ['Error',          res.tipo_error],
             ...(res.modulo ? [['Módulo', res.modulo]] : []),
+        ]);
+
+    } else if (n === 6) {
+        const res = _getResTbLam().find(r => r.recepcion_id === rec.id);
+        if (!res) { body.innerHTML = `<div class="lab-prox-notice"><i class="bi bi-hourglass"></i><p>Resultado pendiente.</p></div>`; return; }
+        body.innerHTML = _grid([
+            ['N.° muestra', res.numero_muestra],
+            ['Fecha',       _fmtDate(res.fecha)],
+            ['Resultado',   `<span class="res-cod ${res.resultado === 'POSITIVO' ? 'res-pos' : 'res-neg'}">${res.resultado}</span>`],
         ]);
 
     } else {
