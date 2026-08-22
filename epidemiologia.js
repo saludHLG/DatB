@@ -1,160 +1,26 @@
-/**
- * epidemiologia.js
- * Módulo principal de Datos Epidemiológicos.
- *
- * Pills disponibles:
- *   resumen          → Gráficos y estadísticas (en desarrollo)
- *   datos_generales  → Tabla filtrable de indicaciones y resultados
- *   casos_positivos  → Listado de casos positivos (en desarrollo)
- *
- * USO:
- *   _initEpidemiologia('id_del_contenedor');
- *   // o bien pasando el elemento directamente:
- *   _initEpidemiologia(document.getElementById('mi_contenedor'));
- *
- * Dependencias: moderadores_core.js, epi_datos_generales.js, epidemiologia.css
- */
-
-'use strict';
-
-// ─── Configuración de pills ───────────────────────────────────────────────────
-
-const EPI_PILLS = [
-  { id: 'resumen',         label: 'Resumen',         icono: 'bi-bar-chart-line' },
-  { id: 'datos_generales', label: 'Datos generales',  icono: 'bi-clipboard2-data' },
-  { id: 'casos_positivos', label: 'Casos positivos',  icono: 'bi-capsule' },
-];
-
-// ─── Estado interno del módulo ────────────────────────────────────────────────
-
-const _epiState = {
-  pillActual: 'datos_generales',
-};
-
-// ─── Render principal ─────────────────────────────────────────────────────────
-
-function _renderEpidemiologia(contenedor) {
-  const nivel = typeof _getModeradorNivel === 'function' ? _getModeradorNivel() : null;
-  const badgeNivel = nivel
-    ? `<span class="epi-nivel-badge epi-nivel-${nivel}">${_epiLabelNivel(nivel)}</span>`
-    : '';
-
-  contenedor.innerHTML = `
-    <div class="epi-modulo">
-
-      <div class="epi-header">
-        <div class="epi-header-top">
-          <h2 class="epi-title">Datos Epidemiológicos</h2>
-          ${badgeNivel}
-        </div>
-        <nav class="epi-pills" role="tablist" aria-label="Secciones del módulo epidemiológico">
-          ${EPI_PILLS.map(p => `
-            <button
-              class="epi-pill${p.id === _epiState.pillActual ? ' active' : ''}"
-              data-pill="${p.id}"
-              role="tab"
-              aria-selected="${p.id === _epiState.pillActual}"
-              aria-controls="epi_contenido"
-            >
-              <i class="bi ${p.icono} epi-pill-icono" aria-hidden="true"></i>
-              ${p.label}
-            </button>
-          `).join('')}
-        </nav>
-      </div>
-
-      <div class="epi-content" id="epi_contenido" role="tabpanel"></div>
-
-    </div>
-  `;
-
-  contenedor.querySelectorAll('.epi-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pill = btn.dataset.pill;
-      if (pill === _epiState.pillActual) return;
-      _epiState.pillActual = pill;
-
-      contenedor.querySelectorAll('.epi-pill').forEach(b => {
-        const activo = b.dataset.pill === pill;
-        b.classList.toggle('active', activo);
-        b.setAttribute('aria-selected', activo);
-      });
-
-      _renderPillContent(document.getElementById('epi_contenido'), pill);
-    });
-  });
-
-  _renderPillContent(document.getElementById('epi_contenido'), _epiState.pillActual);
-}
-
-// ─── Despacho de pills ────────────────────────────────────────────────────────
-
-function _renderPillContent(contenedor, pill) {
-  if (!contenedor) return;
-  contenedor.innerHTML = '';
-
-  switch (pill) {
-    case 'resumen':
-      contenedor.innerHTML = `
-        <div class="epi-placeholder">
-          <i class="bi bi-bar-chart-line epi-placeholder-icono"></i>
-          <p>El módulo <strong>Resumen</strong> con visualizaciones estadísticas
-             estará disponible próximamente.</p>
-        </div>`;
-      break;
-
-    case 'datos_generales':
-      if (typeof _initEpiDatosGenerales === 'function') {
-        _initEpiDatosGenerales(contenedor);
-      } else {
-        contenedor.innerHTML = `<p class="epi-error">epi_datos_generales.js no está cargado.</p>`;
-        console.error('[Epi] _initEpiDatosGenerales no está disponible. Verificar que epi_datos_generales.js esté incluido antes de epidemiologia.js.');
-      }
-      break;
-
-    case 'casos_positivos':
-      if (typeof _initEpiCasosPositivos === 'function') {
-        _initEpiCasosPositivos(contenedor);
-      } else {
-        contenedor.innerHTML = `<p class="epi-error">epi_casos_positivos.js no está cargado.</p>`;
-        console.error('[Epi] _initEpiCasosPositivos no disponible.');
-      }
-      break;
-
-    default:
-      contenedor.innerHTML = `<p class="epi-error">Sección no reconocida: ${pill}</p>`;
-  }
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function _epiLabelNivel(nivel) {
-  const labels = {
-    institucional: 'Moderador institucional',
-    municipal:     'Moderador municipal',
-    provincial:    'Moderador provincial',
-    nacional:      'Moderador nacional',
+/* DatB compatibility loader. Source moved under assets/js/. */
+(function () {
+  const map = {
+    'config.js': 'assets/js/core/config.js',
+    'supabase_client.js': 'assets/js/core/supabase_client.js',
+    'utils.js': 'assets/js/core/utils.js',
+    'data.js': 'assets/js/core/data.js',
+    'auth.js': 'assets/js/core/auth.js',
+    'app.js': 'assets/js/core/app.js',
+    'indicacion.js': 'assets/js/modules/clinical/indicacion.js',
+    'laboratorio_core.js': 'assets/js/modules/laboratorio/laboratorio_core.js',
+    'lab_resultados.js': 'assets/js/modules/laboratorio/lab_resultados.js',
+    'lab_pendientes.js': 'assets/js/modules/laboratorio/lab_pendientes.js',
+    'lab_recibidas.js': 'assets/js/modules/laboratorio/lab_recibidas.js',
+    'laboratorio.js': 'assets/js/modules/laboratorio/laboratorio.js',
+    'home_lab.js': 'assets/js/modules/laboratorio/home_lab.js',
+    'lab_resumen.js': 'assets/js/modules/laboratorio/lab_resumen.js',
+    'home_usuario.js': 'assets/js/modules/usuarios/home_usuario.js',
+    'moderadores_core.js': 'assets/js/modules/admin/moderadores_core.js',
+    'epi_datos_generales.js': 'assets/js/modules/epidemiologia/epi_datos_generales.js',
+    'epi_casos_positivos.js': 'assets/js/modules/epidemiologia/epi_casos_positivos.js',
+    'epidemiologia.js': 'assets/js/modules/epidemiologia/epidemiologia.js'
   };
-  return labels[nivel] ?? nivel;
-}
-
-// ─── Inicialización pública ───────────────────────────────────────────────────
-
-/**
- * Punto de entrada del módulo epidemiológico.
- * @param {string|HTMLElement} contenedorId - ID del elemento o el elemento mismo.
- */
-function _initEpidemiologia(contenedorId) {
-  const contenedor = typeof contenedorId === 'string'
-    ? document.getElementById(contenedorId)
-    : contenedorId;
-
-  if (!contenedor) {
-    console.error('[Epi] Contenedor no encontrado:', contenedorId);
-    return;
-  }
-
-  _renderEpidemiologia(contenedor);
-}
-
-window._initEpidemiologia = _initEpidemiologia;
+  const file = (document.currentScript?.src || '').split('/').pop().split('?')[0];
+  if (map[file]) document.write('<script src="' + map[file] + '"><\\/script>');
+})();
