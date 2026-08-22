@@ -22,5 +22,5 @@
     'epidemiologia.js': 'assets/js/modules/epidemiologia/epidemiologia.js'
   };
   const file = (document.currentScript?.src || '').split('/').pop().split('?')[0];
-  if (map[file]) document.write('<script src="' + map[file] + '"><\\/script>');
+  if (map[file]) document.write('<script src="' + map[file] + '"><' + '/script>');
 })();
