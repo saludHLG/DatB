@@ -4,21 +4,22 @@
 <body>
 <script>
 (async () => {
-    const res = await fetch('assets/pages/index.html?v=4');
+    const res = await fetch('assets/pages/index.html?v=6');
     if (!res.ok) throw new Error(`No se pudo cargar index.html: ${res.status}`);
     let html = await res.text();
     const replacements = {
-        'href="style.css"': 'href="assets/css/base/style.css?v=4"',
-        'href="modules.css"': 'href="assets/css/base/modules.css?v=4"',
-        'src="config.js"': 'src="assets/js/core/config.js?v=4"',
-        'src="supabase_client.js"': 'src="assets/js/core/supabase_client.js?v=4"',
-        'src="data.js"': 'src="assets/js/core/data.js?v=4"',
-        'src="utils.js"': 'src="assets/js/core/utils.js?v=4"',
-        'src="auth.js"': 'src="assets/js/core/auth.js?v=4"',
-        'src="app.js"': 'src="assets/js/core/app.js?v=4"'
+        'href="style.css"': 'href="assets/css/base/style.css?v=6"',
+        'href="modules.css"': 'href="assets/css/base/modules.css?v=6"',
+        'src="config.js"': 'src="assets/js/core/config.js?v=6"',
+        'src="supabase_client.js"': 'src="assets/js/core/supabase_client.js?v=6"',
+        'src="data.js"': 'src="assets/js/core/data.js?v=6"',
+        'src="utils.js"': 'src="assets/js/core/utils.js?v=6"',
+        'src="auth.js"': 'src="assets/js/core/auth.js?v=6"',
+        'src="app.js"': 'src="assets/js/core/app.js?v=6"'
     };
     for (const [from, to] of Object.entries(replacements)) html = html.replaceAll(from, to);
-    html = html.replace('</body>', '<script src="assets/js/core/auth_bridge.js?v=5"><\\/script></body>');
+    // Keep the closing script tag escaped only in this outer script source; the generated HTML receives a real </script>.
+    html = html.replace('</body>', '<script src="assets/js/core/auth_bridge.js?v=6"><\/script></body>');
     document.open();
     document.write(html);
     document.close();
