@@ -1,38 +1,31 @@
-/* DatB Auth bridge: Supabase Auth is the identity/session authority. */
+/* DatB Auth bridge: Supabase Auth handles login/session directly. */
 (() => {
     const getSb = () => (typeof _client === 'function' ? _client() : null);
     window.__datbSupabaseClient = getSb;
-
-    const authEmail = ci => `${String(ci).trim()}@auth.datb.invalid`;
-    async function derivePassword(ci, pin) {
-        const raw = `${String(ci).trim()}:${String(pin)}`;
-        const bytes = new TextEncoder().encode(raw);
-        const digest = await crypto.subtle.digest('SHA-256', bytes);
-        return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
+    const PROVISION_FUNCTION = 'datb-provision';
+    const authEmail = ci => `${String(ci).trim()}@saludhlg.github.io`;
+    const authPassword = async (ci, pin) => {
+        const text = `DatB:${String(ci).trim()}:${String(pin)}`;
+        const data = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+        return [...new Uint8Array(data)].map(b => b.toString(16).padStart(2, '0')).join('');
+    };
 
     window.sbLogin = async function (ci, pin) {
         const sb = getSb();
         if (!sb) return { user: null, error: 'Sin conexión a Supabase.' };
-
         const email = authEmail(ci);
-        const password = await derivePassword(ci, pin);
+        const password = await authPassword(ci, pin);
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error) return { user: null, error: error.message || 'CI o PIN incorrecto.' };
-
-        const usuarioId = data?.user?.user_metadata?.usuario_id;
-        if (!usuarioId) return { user: null, error: 'La identidad Auth no está vinculada a un usuario DatB.' };
-
-        const { data: user, error: dbError } = await sb
-            .from('usuarios')
-            .select('*')
-            .eq('id', usuarioId)
-            .maybeSingle();
+        const authUser = data?.user;
+        if (!authUser) return { user: null, error: 'Supabase Auth no devolvió usuario.' };
+        const usuarioId = authUser.user_metadata?.usuario_id;
+        if (!usuarioId) return { user: null, error: 'La cuenta Auth no está vinculada a DatB.' };
+        const { data: user, error: dbError } = await sb.from('usuarios').select('*').eq('id', usuarioId).maybeSingle();
         if (dbError) return { user: null, error: dbError.message };
-        if (!user) return { user: null, error: 'No existe el perfil DatB asociado.' };
-        if (!user.activo) return { user: null, error: 'Cuenta desactivada.' };
-        if (!user.aprobado) return { user: null, error: 'La cuenta está pendiente de aprobación.' };
-
+        if (!user) return { user: null, error: 'No existe el perfil DatB para esta cuenta.' };
+        if (!user.activo) { await sb.auth.signOut(); return { user: null, error: 'Cuenta desactivada.' }; }
+        if (!user.aprobado) { await sb.auth.signOut(); return { user: null, error: 'La cuenta está pendiente de aprobación.' }; }
         window._currentUser = user;
         window._adminUser = Number(user.rol_sistema_id) === 6 ? user : null;
         if (typeof sbInitAll === 'function') {
@@ -44,29 +37,23 @@
     window.sbRegister = async function (perfil, pin) {
         const sb = getSb();
         if (!sb) return { error: 'Sin conexión a Supabase.' };
-
-        const ci = String(perfil?.ci || '').trim();
-        if (!ci) return { error: 'El CI es obligatorio.' };
-        const email = authEmail(ci);
-        const password = await derivePassword(ci, pin);
-
-        const { data: authData, error: authError } = await sb.auth.signUp({
-            email,
-            password,
-            options: { data: { usuario_id: perfil.id, ci } }
+        const { data, error } = await sb.functions.invoke(PROVISION_FUNCTION, {
+            body: { perfil, pin: String(pin) }
         });
-        if (authError) return { error: authError.message };
-        if (!authData?.user) return { error: 'Supabase Auth no creó la identidad.' };
-
-        const p = { ...perfil, id: authData.user.id };
-        if (typeof hashPin !== 'function') return { error: 'Componente de seguridad no disponible.' };
-        const { data, error } = await sb.rpc('datb_register_user', {
-            p_profile: p,
-            p_pin_hash: hashPin(String(pin))
-        });
-        if (error) return { error: error.message || 'No se pudo registrar el perfil DatB.' };
-        if (data?.error) return { error: data.error };
-        return { error: null, user: data?.user || null, bootstrap: !!data?.bootstrap, authUser: authData.user };
+        if (error) {
+            let detail = error.message || 'No se pudo registrar la cuenta.';
+            try {
+                const ctx = error.context;
+                if (ctx && typeof ctx.json === 'function') {
+                    const body = await ctx.json();
+                    if (body?.error) detail = body.stage ? `${body.error} [${body.stage}]` : body.error;
+                }
+            } catch (_) {}
+            return { error: detail };
+        }
+        if (data?.error) return { error: data.stage ? `${data.error} [${data.stage}]` : data.error };
+        if (data?.session) await sb.auth.setSession(data.session);
+        return { error: null, user: data?.user || null, bootstrap: !!data?.bootstrap };
     };
 
     window.sbGetSession = async function () {
@@ -90,18 +77,7 @@
         window._adminUser = null;
     };
 
-    window.sbChangePin = async function (userId, newPin) {
-        const sb = getSb();
-        if (!sb) return { error: 'Sin conexión a Supabase.' };
-        const user = await sb.auth.getUser();
-        const ci = user?.data?.user?.user_metadata?.ci || '';
-        if (!ci) return { error: 'No se pudo resolver el CI de la sesión.' };
-        const password = await derivePassword(ci, newPin);
-        const { error } = await sb.auth.updateUser({ password });
-        if (error) return { error: error.message };
-        if (typeof hashPin === 'function') {
-            await sb.from('usuarios').update({ pin_hash: hashPin(String(newPin)) }).eq('id', userId);
-        }
-        return { error: null };
+    window.sbChangePin = async function (_userId, _newPin) {
+        return { error: 'El cambio de PIN se habilitará después de cerrar el flujo de autenticación inicial.' };
     };
 })();
