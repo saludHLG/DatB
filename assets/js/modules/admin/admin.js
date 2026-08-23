@@ -1,5 +1,19 @@
-/* DatB admin entrypoint. Shared context first, then focused modules. */
+/* DatB admin entrypoint. Shared context first, then focused domain modules. */
 document.write('<script src="assets/js/modules/admin/admin_context.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_access.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_render.js"><\/script>');
-document.write('<script src="assets/js/modules/admin/admin_runtime.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_users.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_geo.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_catalogs.js"><\/script>');
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof sbInitAll === 'function') {
+        try { await sbInitAll(); } catch (e) { console.error('Admin sbInitAll:', e); }
+    }
+    initGeoData();
+    seedDemo();
+    adminCheckAccess();
+    adminBindBootstrapPromotion();
+    adminBindTabs();
+    renderAll();
+});
