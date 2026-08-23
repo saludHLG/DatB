@@ -29,3 +29,15 @@ function renderNavigation(user) {
 
     renderModulo(modulos[0].id, user);
 }
+
+/* Puente temporal: activa la implementación extraída sin modificar todavía
+   el bloque equivalente dentro del legacy. Se eliminará al retirar ese bloque. */
+(function installNavigationRenderer() {
+    const legacyLoadDashboard = window.loadDashboard;
+    if (typeof legacyLoadDashboard !== 'function') return;
+
+    window.loadDashboard = function (user) {
+        legacyLoadDashboard(user);
+        renderNavigation(user);
+    };
+})();
