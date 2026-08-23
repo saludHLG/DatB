@@ -4,7 +4,7 @@ Esta fase introduce puntos de entrada pequeños para los módulos que todavía c
 
 ## Estrategia
 
-Los archivos canónicos (`assets/js/core/app.js`, `assets/js/modules/admin/admin.js` y `assets/js/modules/laboratorio/lab_resultados.js`) pasan a ser entrypoints delgados. Las implementaciones existentes se conservan en `legacy/` sin copiar ni alterar su contenido.
+Los archivos canónicos (`assets/js/core/app.js`, `assets/js/modules/admin/admin.js` y `assets/js/modules/laboratorio/lab_resultados.js`) pasan a ser entrypoints delgados. Las implementaciones existentes se conservan en `legacy/` sin duplicar ni alterar su contenido.
 
 ```text
 entrypoint
