@@ -18,7 +18,7 @@ window._store = {
     geo_provincias:     [],
     geo_municipios:     [],
     geo_centros:        [],
-    geo_labs:           [],
+    geo_labs:            [],
     grupos_vulnerables: [],
     tipos_muestra:      [],
     microorganismos:    [],
@@ -43,23 +43,43 @@ window.IS_ONLINE = () => !!_client();
 
 /* ================================================================
    CARGA COMPLETA — sbInitAll
+
+   Importante: el arranque anónimo solo carga catálogos y geografía.
+   Tablas de usuarios/datos operativos se consultan únicamente cuando
+   Supabase Auth ya tiene una sesión válida. Así el login no dispara
+   401 por RLS antes de autenticar al usuario.
    ================================================================ */
 window.sbInitAll = async function () {
     const sb = _client();
     if (!sb) { console.warn('Supabase no configurado — store vacío.'); return; }
 
     try {
-        const [
-            rProv, rMun, rCent, rLabs,
-            rUsers, rPerms, rAccesos,
-            rPacs, rInds, rIndEx, rRecs,
-            rBaci, rCult, rXU, rXDR,
-            rGV, rTM, rMicro
-        ] = await Promise.allSettled([
+        const { data: authData } = await sb.auth.getUser();
+        const authenticated = !!authData?.user;
+
+        const publicLoads = await Promise.allSettled([
             sb.from('provincias').select('*').order('nombre'),
             sb.from('municipios').select('*').order('nombre'),
             sb.from('centros_salud').select('*').order('nombre'),
             sb.from('laboratorios').select('*').order('nombre'),
+            sb.from('grupos_vulnerables').select('*'),
+            sb.from('tipos_muestra').select('*'),
+            sb.from('microorganismos').select('*'),
+        ]);
+
+        const d = r => (r.status === 'fulfilled' && r.value.data) ? r.value.data : null;
+
+        if (d(publicLoads[0])) _store.geo_provincias   = d(publicLoads[0]);
+        if (d(publicLoads[1])) _store.geo_municipios   = d(publicLoads[1]);
+        if (d(publicLoads[2])) _store.geo_centros      = d(publicLoads[2]);
+        if (d(publicLoads[3])) _store.geo_labs         = d(publicLoads[3]);
+        if (d(publicLoads[4])) _store.grupos_vulnerables = d(publicLoads[4]);
+        if (d(publicLoads[5])) _store.tipos_muestra    = d(publicLoads[5]);
+        if (d(publicLoads[6])) _store.microorganismos  = d(publicLoads[6]);
+
+        if (!authenticated) return;
+
+        const protectedLoads = await Promise.allSettled([
             sb.from('usuarios').select('*'),
             sb.from('permisos_lab').select('*'),
             sb.from('accesos_temporales').select('*'),
@@ -71,34 +91,21 @@ window.sbInitAll = async function () {
             sb.from('resultados_cultivo').select('*'),
             sb.from('resultados_xpert_ultra').select('*'),
             sb.from('resultados_xpert_xdr').select('*'),
-            sb.from('grupos_vulnerables').select('*'),
-            sb.from('tipos_muestra').select('*'),
-            sb.from('microorganismos').select('*'),
         ]);
 
-        const d = r => (r.status === 'fulfilled' && r.value.data) ? r.value.data : null;
+        if (d(protectedLoads[0])) _store.usuarios       = d(protectedLoads[0]);
+        if (d(protectedLoads[1])) _store.permisos_lab   = d(protectedLoads[1]);
+        if (d(protectedLoads[2])) _store.accesos_temp   = d(protectedLoads[2]);
+        if (d(protectedLoads[3])) _store.pacientes      = d(protectedLoads[3]);
+        if (d(protectedLoads[6])) _store.recepciones    = d(protectedLoads[6]);
+        if (d(protectedLoads[7])) _store.res_baci       = d(protectedLoads[7]);
+        if (d(protectedLoads[8])) _store.res_cultivo    = d(protectedLoads[8]);
+        if (d(protectedLoads[9])) _store.res_xpert_ultra = d(protectedLoads[9]);
+        if (d(protectedLoads[10])) _store.res_xpert_xdr  = d(protectedLoads[10]);
 
-        if (d(rProv))    _store.geo_provincias     = d(rProv);
-        if (d(rMun))     _store.geo_municipios      = d(rMun);
-        if (d(rCent))    _store.geo_centros          = d(rCent);
-        if (d(rLabs))    _store.geo_labs             = d(rLabs);
-        if (d(rUsers))   _store.usuarios             = d(rUsers);
-        if (d(rPerms))   _store.permisos_lab         = d(rPerms);
-        if (d(rAccesos)) _store.accesos_temp         = d(rAccesos);
-        if (d(rPacs))    _store.pacientes            = d(rPacs);
-        if (d(rRecs))    _store.recepciones          = d(rRecs);
-        if (d(rBaci))    _store.res_baci             = d(rBaci);
-        if (d(rCult))    _store.res_cultivo          = d(rCult);
-        if (d(rXU))      _store.res_xpert_ultra      = d(rXU);
-        if (d(rXDR))     _store.res_xpert_xdr        = d(rXDR);
-        if (d(rGV))      _store.grupos_vulnerables   = d(rGV);
-        if (d(rTM))      _store.tipos_muestra        = d(rTM);
-        if (d(rMicro))   _store.microorganismos      = d(rMicro);
-
-        // Indicaciones: merge examenes_ids desde tabla junction si falta en columna jsonb
-        if (d(rInds)) {
-            const indExams = d(rIndEx) || [];
-            _store.indicaciones = d(rInds).map(ind => ({
+        if (d(protectedLoads[4])) {
+            const indExams = d(protectedLoads[5]) || [];
+            _store.indicaciones = d(protectedLoads[4]).map(ind => ({
                 ...ind,
                 examenes_ids: (ind.examenes_ids && ind.examenes_ids.length > 0)
                     ? ind.examenes_ids
@@ -107,14 +114,14 @@ window.sbInitAll = async function () {
                         .map(ie => ie.examen_id),
             }));
         }
-
     } catch (e) {
         console.error('sbInitAll error:', e);
     }
 };
 
 /* ================================================================
-   AUTH — directo a tabla usuarios (sin Supabase Auth)
+   AUTH — compatibilidad legacy. El bridge Auth (`auth_bridge.js`)
+   reemplaza estas funciones en el runtime principal.
    ================================================================ */
 window.sbLogin = async function (ci, pin) {
     const sb = _client();
@@ -130,7 +137,6 @@ window.sbLogin = async function (ci, pin) {
 
     const idx = _store.usuarios.findIndex(u => u.id === data.id);
     if (idx !== -1) _store.usuarios[idx] = data; else _store.usuarios.push(data);
-    /* Restaurar firma en memoria */
     if (!_store.firmas) _store.firmas = {};
     if (data.firma_perfil) _store.firmas[`sr_firma_${data.id}`] = data.firma_perfil;
     sessionStorage.setItem('sr_active_user', data.id);
@@ -164,20 +170,18 @@ window.sbGetSession = async function () {
     const uid = sessionStorage.getItem('sr_active_user');
     if (!uid) return null;
 
-   let user = _store.usuarios.find(u => u.id === uid && u.activo);
-if (user) {
-    if (!_store.firmas) _store.firmas = {};
-    if (user.firma_perfil) _store.firmas[`sr_firma_${user.id}`] = user.firma_perfil;
-    return user;
-}
+    let user = _store.usuarios.find(u => u.id === uid && u.activo);
+    if (user) {
+        if (!_store.firmas) _store.firmas = {};
+        if (user.firma_perfil) _store.firmas[`sr_firma_${user.id}`] = user.firma_perfil;
+        return user;
+    }
 
-    // Fallback: consulta directa
     if (!sb) return null;
     const { data } = await sb.from('usuarios').select('*').eq('id', uid).single();
     if (data && data.activo) {
         const idx = _store.usuarios.findIndex(u => u.id === uid);
         if (idx !== -1) _store.usuarios[idx] = data; else _store.usuarios.push(data);
-        /* Restaurar firma en memoria */
         if (!_store.firmas) _store.firmas = {};
         if (data.firma_perfil) _store.firmas[`sr_firma_${data.id}`] = data.firma_perfil;
         return data;
@@ -240,7 +244,7 @@ window.sbSyncCatalogo = async function (lsKey, data) {
     const MAP = {
         sr_grupos_vulnerables: { key: 'grupos_vulnerables', store: 'grupos_vulnerables' },
         sr_tipos_muestra:      { key: 'tipos_muestra',      store: 'tipos_muestra' },
-        sr_microorganismos:    { key: 'microorganismos',     store: 'microorganismos' },
+        sr_microorganismos:    { key: 'microorganismos',   store: 'microorganismos' },
     };
     const m = MAP[lsKey]; if (!m) return;
     _store[m.store] = data;
