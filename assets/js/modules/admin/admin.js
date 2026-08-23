@@ -18,18 +18,20 @@ document.write('<script src="assets/js/modules/admin/admin_catalogs_micro.js"><\
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Load the store before checking the admin session.
         if (typeof sbInitAll === 'function') await sbInitAll();
-
         if (typeof initGeoData === 'function') initGeoData();
         if (typeof seedDemo === 'function') seedDemo();
 
-        // Prefer the same session resolver used by the main application.
-        // This avoids relying only on a possibly stale in-memory user list.
-        if (typeof sbGetSession === 'function') {
-            const sessionUser = await sbGetSession();
-            if (sessionUser) window._currentUser = sessionUser;
+        // Resolve identity from Supabase Auth first. This is the source of truth.
+        const sessionUser = typeof sbGetSession === 'function' ? await sbGetSession() : null;
+        if (!sessionUser) {
+            adminCheckAccess();
+            return;
         }
+
+        // Reload protected application data after Auth is established so RLS applies.
+        if (typeof sbInitAll === 'function') await sbInitAll();
+        initGeoData();
 
         adminCheckAccess();
         adminBindBootstrapPromotion();
