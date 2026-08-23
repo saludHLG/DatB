@@ -1,9 +1,8 @@
-/* DatB admin users, permissions and temporary-access domain. */
+/* DatB admin users and account-management domain. */
 
 let _approveUid = null;
 let _editUid = null;
 let _editPerms = [];
-let _accessId = null;
 let _pendingUserDelete = null;
 
 function buildUserCard(u) {
@@ -59,52 +58,6 @@ function rejectUser() {
     bootstrap.Modal.getInstance($a('modal-approve'))?.hide();
     toast(`Cuenta de ${users[idx].nombres} rechazada.`, 'error');
     renderAll();
-}
-
-function populateLabSelect(provId) {
-    const sel = $a('modal-lab-select');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Seleccione laboratorio —</option>';
-    const labs = GEO.getLabs() || DATOS_GEO.laboratorios || [];
-    [...labs].filter(lab => lab.activo !== false)
-        .sort((a,b) => a.provincia_id === provId ? -1 : b.provincia_id === provId ? 1 : 0)
-        .forEach(lab => {
-            const opt = document.createElement('option');
-            opt.value = lab.id;
-            opt.textContent = `${lab.nombre} (${lab.nivel_referencia}) — ${geoName('provincia', lab.provincia_id)}`;
-            sel.appendChild(opt);
-        });
-}
-
-function renderLabList() {
-    const container = $a('lab-perms-list'), emptyMsg = $a('empty-lab-msg');
-    if (!container || !emptyMsg) return;
-    if (!_editPerms.length) {
-        container.innerHTML = '';
-        emptyMsg.classList.remove('d-none');
-        return;
-    }
-    emptyMsg.classList.add('d-none');
-    container.innerHTML = _editPerms.map((p, i) => {
-        const lab = (GEO.getLabs() || DATOS_GEO.laboratorios || []).find(l => l.id === Number(p.laboratorio_id));
-        return `
-        <div class="lab-perm-row">
-            <span class="lab-perm-name">${lab?.nombre || 'Lab #' + p.laboratorio_id}</span>
-            <span class="lab-perm-level">${lab?.nivel_referencia || ''}</span>
-            <div class="perm-checkboxes">
-                <label class="perm-check-label"><input type="checkbox" data-idx="${i}" data-perm="puede_emitir" ${p.puede_emitir ? 'checked' : ''}> Emitir</label>
-                <label class="perm-check-label"><input type="checkbox" data-idx="${i}" data-perm="puede_editar" ${p.puede_editar ? 'checked' : ''}> Editar</label>
-                <label class="perm-check-label"><input type="checkbox" data-idx="${i}" data-perm="puede_eliminar" ${p.puede_eliminar ? 'checked' : ''}> Eliminar</label>
-            </div>
-            <button class="btn-remove-lab" data-idx="${i}" title="Quitar"><i class="bi bi-trash"></i></button>
-        </div>`;
-    }).join('');
-    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', () => { _editPerms[+cb.dataset.idx][cb.dataset.perm] = cb.checked; });
-    });
-    container.querySelectorAll('.btn-remove-lab').forEach(btn => {
-        btn.addEventListener('click', () => { _editPerms.splice(+btn.dataset.idx, 1); renderLabList(); });
-    });
 }
 
 function openEditModal(uid) {
@@ -172,57 +125,9 @@ function saveEditedUser() {
         municipio_id: users[idx].municipio_id, centro_salud_id: users[idx].centro_salud_id,
         centro_texto: users[idx].centro_texto, rol_sistema_id: users[idx].rol_sistema_id
     });
-    savePerms(getPerms().filter(p => p.usuario_id !== _editUid).concat(_editPerms));
-    if (typeof sbReplaceUserPerms === 'function') sbReplaceUserPerms(_editUid, _editPerms).catch(e => console.error('perms sync:', e.message));
+    saveEditedUserPermissions(_editUid);
     bootstrap.Modal.getInstance($a('modal-edit-user'))?.hide();
     toast('Cambios guardados correctamente.', 'success');
-    renderAll();
-}
-
-function openAccessModal(id) {
-    _accessId = id;
-    const a = getAccesos().find(x => x.id === id);
-    if (!a) return;
-    const u = (getUsers() || []).find(x => x.id === a.usuario_id);
-    $a('access-request-card').innerHTML = `
-        <div class="uc-row"><span class="uc-label">Solicitante</span><span class="uc-value">${u ? `${u.nombres} ${u.apellidos}` : '—'}</span></div>
-        <div class="uc-row"><span class="uc-label">Justificación</span><span class="uc-value">${a.justificacion}</span></div>
-        <div class="uc-row"><span class="uc-label">Alcance</span><span class="uc-value">${a.alcance_solicitado}</span></div>`;
-    const hoy = new Date().toISOString().split('T')[0], fin = new Date();
-    fin.setMonth(fin.getMonth() + 6);
-    $a('access-fecha-inicio').value = hoy;
-    $a('access-fecha-fin').value = fin.toISOString().split('T')[0];
-    $a('access-nivel').value = 'provincial';
-    $a('access-alcance').value = a.alcance_solicitado;
-    new bootstrap.Modal($a('modal-access')).show();
-}
-
-function approveAccess() {
-    const accesos = getAccesos(), idx = accesos.findIndex(a => a.id === _accessId);
-    if (idx === -1) return;
-    Object.assign(accesos[idx], {
-        estado:'aprobada', fecha_inicio:$a('access-fecha-inicio').value, fecha_fin:$a('access-fecha-fin').value,
-        nivel_aprobado:$a('access-nivel').value, alcance_aprobado:$a('access-alcance').value,
-        revisado_en:new Date().toISOString()
-    });
-    saveAccesos(accesos);
-    if (typeof sbUpsertRow === 'function') sbUpsertRow('accesos_temporales', accesos[idx]);
-    bootstrap.Modal.getInstance($a('modal-access'))?.hide();
-    toast('Acceso temporal aprobado.', 'success');
-    renderAll();
-}
-
-function rejectAccess() {
-    const accesos = getAccesos(), idx = accesos.findIndex(a => a.id === _accessId);
-    if (idx === -1) return;
-    accesos[idx].estado = 'rechazada';
-    accesos[idx].revisado_en = new Date().toISOString();
-    saveAccesos(accesos);
-    if (typeof sbUpdateRow === 'function') sbUpdateRow('accesos_temporales', _accessId, {
-        estado:'rechazada', revisado_en:accesos[idx].revisado_en
-    });
-    bootstrap.Modal.getInstance($a('modal-access'))?.hide();
-    toast('Solicitud rechazada.', 'error');
     renderAll();
 }
 
@@ -235,15 +140,6 @@ function toggleUserActive() {
     toast(`Cuenta ${users[idx].activo ? 'reactivada' : 'desactivada'}.`, users[idx].activo ? 'success' : 'info');
     bootstrap.Modal.getInstance($a('modal-edit-user'))?.hide();
     renderAll();
-}
-
-function addLabPermission() {
-    const labId = Number($a('modal-lab-select').value);
-    if (!labId) return;
-    if (_editPerms.some(p => Number(p.laboratorio_id) === labId)) return toast('Este laboratorio ya está en la lista.', 'info');
-    _editPerms.push({usuario_id:_editUid,laboratorio_id:labId,puede_emitir:false,puede_editar:false,puede_eliminar:false,activo:true});
-    renderLabList();
-    $a('modal-lab-select').value = '';
 }
 
 function requestUserDelete(btn) {
@@ -280,12 +176,11 @@ function seedDemo() {
 document.addEventListener('DOMContentLoaded', () => {
     $a('btn-approve-user')?.addEventListener('click', approveUser);
     $a('btn-reject-user')?.addEventListener('click', rejectUser);
-    $a('modal-rol-sistema')?.addEventListener('change', function () { $a('modal-rol-hint').textContent = ROL_SIS_HINTS[Number(this.value)] || ''; });
-    $a('btn-add-lab')?.addEventListener('click', addLabPermission);
+    $a('modal-rol-sistema')?.addEventListener('change', function () {
+        $a('modal-rol-hint').textContent = ROL_SIS_HINTS[Number(this.value)] || '';
+    });
     $a('btn-toggle-active')?.addEventListener('click', toggleUserActive);
     $a('btn-save-user')?.addEventListener('click', saveEditedUser);
-    $a('btn-approve-access')?.addEventListener('click', approveAccess);
-    $a('btn-reject-access')?.addEventListener('click', rejectAccess);
     ['filter-search','filter-rol-prof','filter-rol-sis','filter-estado'].forEach(id => {
         $a(id)?.addEventListener('input', renderUsers);
         $a(id)?.addEventListener('change', renderUsers);
