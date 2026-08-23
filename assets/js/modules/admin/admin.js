@@ -12,7 +12,9 @@ document.write('<script src="assets/js/modules/admin/admin_geo_location_render.j
 document.write('<script src="assets/js/modules/admin/admin_geo_location_editor.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_geo_labs.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_geo_delete.js"><\/script>');
-document.write('<script src="assets/js/modules/admin/admin_catalogs.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_catalogs_core.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_catalogs_basic.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_catalogs_micro.js"><\/script>');
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (typeof sbInitAll === 'function') {
