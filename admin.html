@@ -10,10 +10,10 @@
     const replacements = {
         'href="style.css"': 'href="assets/css/base/style.css"',
         'href="admin.css"': 'href="assets/css/admin/admin.css"',
-        'src="config.js"': 'src="assets/js/core/config.js"',
-        'src="supabase_client.js"': 'src="assets/js/core/supabase_client.js"',
-        'src="data.js"': 'src="assets/js/core/data.js"',
-        'src="utils.js"': 'src="assets/js/core/utils.js"',
+        'src="config.js?v=5"': 'src="assets/js/core/config.js?v=5"',
+        'src="supabase_client.js?v=5"': 'src="assets/js/core/supabase_client.js?v=5"',
+        'src="data.js?v=5"': 'src="assets/js/core/data.js?v=5"',
+        'src="utils.js?v=5"': 'src="assets/js/core/utils.js?v=5"',
         'src="admin.js?v=5"': 'src="assets/js/modules/admin/admin.js?v=7"'
     };
     for (const [from, to] of Object.entries(replacements)) html = html.replaceAll(from, to);
