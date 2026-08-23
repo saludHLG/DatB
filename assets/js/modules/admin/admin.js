@@ -20,8 +20,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof sbInitAll === 'function') {
         try { await sbInitAll(); } catch (e) { console.error('Admin sbInitAll:', e); }
     }
-    initGeoData();
-    seedDemo();
+    if (typeof initGeoData === 'function') initGeoData();
+    // seedDemo belonged to the old prototype bootstrap. Keep it optional so
+    // a missing legacy helper cannot prevent the real admin panel from booting.
+    if (typeof seedDemo === 'function') seedDemo();
     adminCheckAccess();
     adminBindBootstrapPromotion();
     adminBindTabs();
