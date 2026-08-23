@@ -45,25 +45,7 @@ function loadDashboard(user) {
         <div class="meta-row"><i class="bi bi-shield-half"></i><span>${rolSis}</span></div>
     `;
 
-    const nav    = $('app-nav');
-    nav.innerHTML = '';
-    const modulos = buildModulos(user);
-    modulos.forEach((m, i) => {
-        const li  = document.createElement('li');
-        const btn = document.createElement('button');
-        btn.className      = `app-nav-btn${i === 0 ? ' active' : ''}`;
-        btn.dataset.modulo = m.id;
-        btn.innerHTML      = `<i class="bi ${m.icon}"></i><span>${m.label}</span>`;
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('.app-nav-btn[data-modulo]').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            renderModulo(m.id, user);
-        });
-        li.appendChild(btn);
-        nav.appendChild(li);
-    });
-
-    renderModulo(modulos[0].id, user);
+    renderNavigation(user);
 }
 
 /* ── Módulos disponibles según rol y permisos ───────────── */
