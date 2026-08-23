@@ -39,4 +39,4 @@ jobs:
           git diff --cached --quiet || git commit -m 'refactor: point admin to canonical assets'
           git push
 
-# force workflow execution
+# force workflow execution: canonical admin asset migration
