@@ -8,14 +8,32 @@ const ADMIN_TAB_META={
 };
 
 function adminCheckAccess(){
-    const uid=sessionStorage.getItem('sr_active_user'),users=getUsers()||[],hasAdmin=users.some(u=>u.rol_sistema_id===6&&u.activo);
-    if(!hasAdmin){$a('bootstrap-bar').classList.remove('d-none');$a('admin-app').classList.remove('d-none');$a('sidebar-admin-name').textContent='Modo bootstrap';return;}
-    const me=users.find(u=>u.id===uid);if(!me||me.rol_sistema_id!==6||!me.activo){$a('access-denied').classList.remove('d-none');return;}
-    window._adminUser=me;$a('sidebar-admin-name').textContent=`${me.nombres} ${me.apellidos}`;$a('admin-app').classList.remove('d-none');
+    const me=window._currentUser;
+    const denied=$a('access-denied');
+    const app=$a('admin-app');
+    const bootstrap=$a('bootstrap-bar');
+
+    if(bootstrap) bootstrap.classList.add('d-none');
+
+    if(!me || Number(me.rol_sistema_id)!==6 || !me.activo || !me.aprobado){
+        if(app) app.classList.add('d-none');
+        if(denied) denied.classList.remove('d-none');
+        return false;
+    }
+
+    if(denied) denied.classList.add('d-none');
+    if(app) app.classList.remove('d-none');
+    window._adminUser=me;
+    const name=$a('sidebar-admin-name');
+    if(name) name.textContent=`${me.nombres} ${me.apellidos}`.trim();
+    return true;
 }
+
 function adminBindBootstrapPromotion(){
-    $a('btn-make-admin')?.addEventListener('click',()=>{const uid=sessionStorage.getItem('sr_active_user');if(!uid){alert('Primero inicie sesión en index.html y vuelva aquí.');return;}const users=getUsers()||[],idx=users.findIndex(u=>u.id===uid);if(idx===-1){alert('Usuario no encontrado.');return;}users[idx].rol_sistema_id=6;users[idx].aprobado=users[idx].activo=true;saveUsers(users);window._adminUser=users[idx];$a('bootstrap-bar').classList.add('d-none');$a('sidebar-admin-name').textContent=`${users[idx].nombres} ${users[idx].apellidos}`;if(typeof sbUpdateRow==='function')sbUpdateRow('usuarios',uid,{rol_sistema_id:6,aprobado:true,activo:true});toast('Cuenta promovida a Administrador.','success');renderAll();});
+    const bootstrap=$a('bootstrap-bar');
+    if(bootstrap) bootstrap.classList.add('d-none');
 }
+
 function adminBindTabs(){
     document.querySelectorAll('.snav-btn[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{
         document.querySelectorAll('.snav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.admin-tab').forEach(t=>t.classList.add('d-none'));
