@@ -18,6 +18,7 @@
         'src="app.js"': 'src="assets/js/core/app.js"'
     };
     for (const [from, to] of Object.entries(replacements)) html = html.replaceAll(from, to);
+    html = html.replace('</body>', '<script src="assets/js/core/auth_bridge.js?v=1"><\/script></body>');
     document.open();
     document.write(html);
     document.close();
