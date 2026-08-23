@@ -38,3 +38,5 @@ jobs:
           git add admin.html
           git diff --cached --quiet || git commit -m 'refactor: point admin to canonical assets'
           git push
+
+# force workflow execution
