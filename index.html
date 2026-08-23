@@ -7,23 +7,21 @@
     <script>
     (async function () {
         try {
-            const res = await fetch('assets/pages/index.html?v=7', { cache: 'no-store' });
+            const res = await fetch('assets/pages/index.html?v=8', { cache: 'no-store' });
             if (!res.ok) throw new Error('No se pudo cargar index.html: ' + res.status);
             let html = await res.text();
             const replacements = {
-                'href="style.css"': 'href="assets/css/base/style.css?v=7"',
-                'href="modules.css"': 'href="assets/css/base/modules.css?v=7"',
-                'src="config.js"': 'src="assets/js/core/config.js?v=7"',
-                'src="supabase_client.js"': 'src="assets/js/core/supabase_client.js?v=7"',
-                'src="data.js"': 'src="assets/js/core/data.js?v=7"',
-                'src="utils.js"': 'src="assets/js/core/utils.js?v=7"',
-                'src="auth.js"': 'src="assets/js/core/auth.js?v=7"',
-                'src="app.js"': 'src="assets/js/core/app.js?v=7"'
+                'href="style.css"': 'href="assets/css/base/style.css?v=8"',
+                'href="modules.css"': 'href="assets/css/base/modules.css?v=8"',
+                'src="config.js"': 'src="assets/js/core/config.js?v=8"',
+                'src="supabase_client.js"': 'src="assets/js/core/supabase_client.js?v=8"',
+                'src="data.js"': 'src="assets/js/core/data.js?v=8"',
+                'src="utils.js"': 'src="assets/js/core/utils.js?v=8"',
+                'src="auth.js"': 'src="assets/js/core/auth.js?v=8"',
+                'src="app.js"': 'src="assets/js/core/app.js?v=8"'
             };
-            for (const from in replacements) {
-                html = html.split(from).join(replacements[from]);
-            }
-            const bridge = '<script src="assets/js/core/auth_bridge.js?v=7"></' + 'script>';
+            for (const from in replacements) html = html.split(from).join(replacements[from]);
+            const bridge = '<script src="assets/js/core/auth_bridge.js?v=8"></' + 'script>';
             html = html.replace('</body>', bridge + '</body>');
             document.open();
             document.write(html);
