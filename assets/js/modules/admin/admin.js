@@ -7,7 +7,10 @@ document.write('<script src="assets/js/modules/admin/admin_user_editor.js"><\/sc
 document.write('<script src="assets/js/modules/admin/admin_user_approval.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_users.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_access_requests.js"><\/script>');
-document.write('<script src="assets/js/modules/admin/admin_geo.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_geo_core.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_geo_locations.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_geo_labs.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_geo_delete.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_catalogs.js"><\/script>');
 
 document.addEventListener('DOMContentLoaded', async () => {
