@@ -1,0 +1,40 @@
+name: Migrate admin entrypoint
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-admin:
+    if: github.event.head_commit.message != 'refactor: point admin to canonical assets'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migrate admin.html to canonical assets
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('admin.html')
+          s = p.read_text(encoding='utf-8')
+          replacements = {
+              'href="style.css"': 'href="assets/css/base/style.css"',
+              'href="admin.css"': 'href="assets/css/admin/admin.css"',
+              'src="config.js?v=5"': 'src="assets/js/core/config.js"',
+              'src="supabase_client.js?v=5"': 'src="assets/js/core/supabase_client.js"',
+              'src="data.js?v=5"': 'src="assets/js/core/data.js"',
+              'src="utils.js?v=5"': 'src="assets/js/core/utils.js"',
+              'src="admin.js?v=5"': 'src="assets/js/modules/admin/admin.js"',
+          }
+          for old, new in replacements.items():
+              s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+      - name: Commit migration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin.html
+          git diff --cached --quiet || git commit -m 'refactor: point admin to canonical assets'
+          git push
