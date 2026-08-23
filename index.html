@@ -6,7 +6,7 @@
     <title>DatB — Acceso</title>
     <script>
     (async function () {
-        const BUILD = '20260823-10';
+        const BUILD = '20260823-11';
         try {
             const res = await fetch('assets/pages/index.html?build=' + BUILD, { cache: 'no-store' });
             if (!res.ok) throw new Error('No se pudo cargar index.html: ' + res.status);
