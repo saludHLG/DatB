@@ -6,6 +6,7 @@ window._store = window._store || {
 };
 
 window.$admin = window.$admin || (id => document.getElementById(id));
+window.$a = window.$a || window.$admin;
 window.getPerms = window.getPerms || (() => window._store.permisos_lab || []);
 window.getAccesos = window.getAccesos || (() => window._store.accesos_temp || []);
 
@@ -33,6 +34,7 @@ window.adminToast = window.adminToast || function toast(msg, type='success') {
     clearTimeout(t._t);
     t._t = setTimeout(() => t.classList.add('d-none'), 3200);
 };
+window.toast = window.toast || window.adminToast;
 
 window.geoName = window.geoName || function geoName(type, id) {
     if (!id) return '—';
@@ -47,10 +49,12 @@ window.geoName = window.geoName || function geoName(type, id) {
 window.fmtAdminDate = window.fmtAdminDate || (iso =>
     iso ? new Date(iso).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' }) : '—'
 );
+window.fmt = window.fmt || window.fmtAdminDate;
 
 window.iniAdminUser = window.iniAdminUser || (u =>
     ((u.nombres?.[0]||'')+(u.apellidos?.[0]||'')).toUpperCase()
 );
+window.ini = window.ini || window.iniAdminUser;
 
 window.rolProfName = window.rolProfName || (u =>
     u.rol_profesional_nom || ROLES_PROFESIONALES[u.rol_profesional_id]?.nombre || '—'
