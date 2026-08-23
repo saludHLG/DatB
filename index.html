@@ -6,7 +6,7 @@
     <title>DatB — Acceso</title>
     <script>
     (async function () {
-        const BUILD = '20260823-09';
+        const BUILD = '20260823-10';
         try {
             const res = await fetch('assets/pages/index.html?build=' + BUILD, { cache: 'no-store' });
             if (!res.ok) throw new Error('No se pudo cargar index.html: ' + res.status);
@@ -28,8 +28,7 @@
             document.write(html);
             document.close();
         } catch (err) {
-            document.body.innerHTML = '<pre style="font-family:monospace;padding:2rem">Error cargando acceso: ' +
-                String(err && err.message ? err.message : err) + '</pre>';
+            document.body.innerHTML = '<pre style="font-family:monospace;padding:2rem">Error cargando acceso: ' + String(err && err.message ? err.message : err) + '</pre>';
         }
     })();
     </script>
