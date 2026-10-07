@@ -3,6 +3,7 @@
     const getSb = () => (typeof _client === 'function' ? _client() : null);
     window.__datbSupabaseClient = getSb;
     const AUTH_FUNCTION = 'datb-provision';
+    const LOGIN_FUNCTION = 'datb-login-user';
     const IDLE_LIMIT_MS = 30 * 60 * 1000;
     const LAST_ACTIVITY_KEY = 'datb:last_activity';
     let idleTimer = null;
@@ -62,10 +63,10 @@
         }, 15000);
     };
 
-    const invokeAuth = async (body) => {
+    const invokeAuth = async (body, functionName = AUTH_FUNCTION) {
         const sb = getSb();
         if (!sb) return { error: 'Sin conexión a Supabase.' };
-        const { data, error } = await sb.functions.invoke(AUTH_FUNCTION, { body });
+        const { data, error } = await sb.functions.invoke(functionName, { body });
         if (error) {
             let detail = error.message || 'No se pudo completar la autenticación.';
             try {
@@ -81,13 +82,43 @@
         return data || {};
     };
 
+    window.sbVerifyCredentials = async function (nombreUsuario, pin) {
+        return invokeAuth({
+            action: 'login',
+            nombre_usuario: String(nombreUsuario).trim().toLowerCase(),
+            pin: String(pin)
+        }, LOGIN_FUNCTION);
+    };
+
+    const shaHex = async value => {
+        const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+        return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    const authPasswordFor = (username, pin) => shaHex('DatB:' + username + ':' + pin);
+
+    window.sbSetUsernameAuth = async function (newUsername, currentPin) {
+        const sb = getSb();
+        if (!sb) return { error: 'Sin conexión a Supabase.' };
+        const username = String(newUsername).trim().toLowerCase();
+        if (!/^[a-z0-9]{5,24}$/.test(username) || !/^\d{4}$/.test(String(currentPin))) {
+            return { error: 'Nombre de usuario o PIN inválido.' };
+        }
+        const password = await authPasswordFor(username, String(currentPin));
+        const { data, error } = await sb.auth.updateUser({
+            password,
+            data: { ...(sb.auth.getUser ? {} : {}), nombre_usuario: username }
+        });
+        return error ? { error: error.message } : { user: data?.user || null, error: null };
+    };
+
     window.sbLogin = async function (nombreUsuario, pin) {
         const sb = getSb();
         const result = await invokeAuth({
             action: 'login',
             nombre_usuario: String(nombreUsuario).trim().toLowerCase(),
             pin: String(pin)
-        });
+        }, LOGIN_FUNCTION);
         if (result.error) return { user: null, error: result.error };
         if (!result.session) return { user: null, error: 'Supabase Auth no devolvió una sesión.' };
         const { error: sessionError } = await sb.auth.setSession(result.session);
@@ -153,7 +184,19 @@
         clearActivity();
     };
 
-    window.sbChangePin = async function () {
-        return { error: 'El cambio de PIN se habilitará en el módulo de seguridad de cuenta.' };
+    window.sbChangePin = async function (oldPin, newPin) {
+        const sb = getSb();
+        if (!sb) return { error: 'Sin conexión a Supabase.' };
+        const current = window._currentUser;
+        const username = String(current?.nombre_usuario || '').trim().toLowerCase();
+        if (!username) return { error: 'No se pudo identificar la cuenta actual.' };
+        if (!/^\d{4}$/.test(String(oldPin)) || !/^\d{4}$/.test(String(newPin))) {
+            return { error: 'Los PIN deben tener exactamente 4 dígitos.' };
+        }
+        const verified = await window.sbVerifyCredentials(username, String(oldPin));
+        if (verified.error || !verified.session) return { error: verified.error || 'El PIN actual es incorrecto.' };
+        const password = await authPasswordFor(username, String(newPin));
+        const { data, error } = await sb.auth.updateUser({ password, data: { nombre_usuario: username } });
+        return error ? { error: error.message } : { user: data?.user || null, error: null };
     };
 })();
