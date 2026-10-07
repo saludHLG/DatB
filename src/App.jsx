@@ -76,38 +76,10 @@ export default function App(){
  },[])
 
  useEffect(()=>{
-   if(!user)return
-   markDatbActivity()
-   let lastWrite=Date.now()
-
-   const activity=()=>{
-     const now=Date.now()
-     if(now-lastWrite >= 15000){
-       lastWrite=now
-       markDatbActivity()
-     }
-   }
-   const events=['mousemove','mousedown','keydown','touchstart','scroll','click']
-   events.forEach(evt=>window.addEventListener(evt,activity,{passive:true}))
-   const timer=window.setInterval(async()=>{
-     try{
-       if(datbSessionExpired()){
-         window.clearInterval(timer)
-         await window.sbLogout?.()
-         clearDatbActivity()
-         if(document.visibilityState!=='hidden') window.dispatchEvent(new CustomEvent('datb:idle-logout'))
-         setUser(null)
-       }
-     }catch(e){
-       console.error('DatB idle timeout',e)
-     }
-   },15000)
-
-   return()=>{
-     events.forEach(evt=>window.removeEventListener(evt,activity))
-     window.clearInterval(timer)
-   }
- },[user])
+   const onIdleLogout=()=>setUser(null)
+   window.addEventListener('datb:idle-logout',onIdleLogout)
+   return()=>window.removeEventListener('datb:idle-logout',onIdleLogout)
+ },[])
 
  if(checking)return <div className="react-loading">Cargando DatB…</div>
  if(!user)return <Auth onLogin={user=>{markDatbActivity();setUser(user)}}/>
