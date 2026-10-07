@@ -142,11 +142,11 @@ function renderPerfil(user, el) {
             }).catch(e => console.error('profile save:', e));
         }
 
-        $('sp-name').textContent = `${nom} ${ap}`;
-        $('topbar-name').textContent = `${nom} ${ap}`;
+        $('sp-name')?.textContent = `${nom} ${ap}`;
+        $('topbar-name')?.textContent = `${nom} ${ap}`;
         const initials = (nom[0] + ap[0]).toUpperCase();
-        $('sp-avatar').textContent = initials;
-        $('topbar-avatar').textContent = initials;
+        $('sp-avatar')?.textContent = initials;
+        $('topbar-avatar')?.textContent = initials;
         showToastApp('Datos actualizados correctamente.', 'success');
     });
 
