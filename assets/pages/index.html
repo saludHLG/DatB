@@ -64,13 +64,13 @@
 
                 <form id="form-login" novalidate>
                     <div class="mb-4">
-                        <label for="login-ci" class="form-label">Carnet de Identidad</label>
+                        <label for="login-username" class="form-label">Nombre de usuario</label>
                         <div class="input-group-custom">
                             <i class="bi bi-person-badge input-icon"></i>
-                            <input type="text" id="login-ci" class="form-control ctrl-mono"
-                                   placeholder="Ej: 90012345678" autocomplete="off" maxlength="20">
+                            <input type="text" id="login-username" class="form-control ctrl-mono"
+                                   placeholder="Ej: usuario123" autocomplete="username" maxlength="24" autocapitalize="none" spellcheck="false">
                         </div>
-                        <div class="invalid-feedback" id="err-login-ci"></div>
+                        <div class="invalid-feedback" id="err-login-username"></div>
                     </div>
 
                     <div class="mb-4">
@@ -105,7 +105,7 @@
             <div class="form-card form-card-wide">
                 <div class="form-card-header">
                     <h1 class="form-title">Crear cuenta</h1>
-                    <p class="form-subtitle">Complete los datos. La cuenta quedará pendiente de aprobación.</p>
+                    <p class="form-subtitle">Complete los datos. El CI se conservará para identificación y auditoría; el acceso usará nombre de usuario + PIN.</p>
                 </div>
 
                 <!-- Indicador de pasos -->
@@ -131,6 +131,17 @@
                     <!-- PASO 1: Datos personales -->
                     <div class="form-step" id="step-1">
                         <div class="row g-3">
+                            <div class="col-12">
+                                <label for="reg-username" class="form-label">Nombre de usuario <span class="required">*</span></label>
+                                <div class="input-group-custom">
+                                    <i class="bi bi-person input-icon"></i>
+                                    <input type="text" id="reg-username" class="form-control ctrl-mono"
+                                           placeholder="Ej: usuario123" maxlength="24" autocomplete="username"
+                                           autocapitalize="none" spellcheck="false">
+                                </div>
+                                <div class="invalid-feedback" id="err-reg-username"></div>
+                            </div>
+
                             <div class="col-12">
                                 <label for="reg-ci" class="form-label">Carnet de Identidad <span class="required">*</span></label>
                                 <div class="input-group-custom">
