@@ -30,8 +30,88 @@ function Auth({onLogin}){
  useEffect(()=>{let alive=true;(async()=>{try{await loadLegacyScripts(['assets/js/core/config.js','assets/js/core/supabase_client.js','assets/js/core/auth_bridge.js']);await window.sbInitAll?.();if(alive)setProvs(window._store?.geo_provincias||[])}catch(e){console.error('DatB auth bootstrap',e);if(alive)setError('No se pudo conectar con Supabase.')}})();return()=>{alive=false}},[])
  const update=(k,v)=>setReg(r=>({...r,[k]:v}))
  const validate=()=>{if(!/^[a-z0-9]{5,24}$/.test(reg.username))return'El nombre de usuario debe usar minúsculas y dígitos (5–24).';if(!reg.ci)return'El CI es obligatorio.';if(!reg.nombres||!reg.apellidos)return'Nombres y apellidos son obligatorios.';if(step===2&&(!reg.rol||!reg.provincia||!reg.municipio||!reg.centro))return'Complete rol, provincia, municipio y centro.';if(step===3&&(reg.pin.length!==4||reg.confirm.length!==4||reg.pin!==reg.confirm))return'El PIN debe tener 4 dígitos y coincidir.';return''}
- async function login(e){e.preventDefault();setError('');const u=username.trim().toLowerCase();if(!/^[a-z0-9]{5,24}$/.test(u)||pin.length!==4){setError('El usuario debe tener 5–24 caracteres y el PIN exactamente 4 dígitos.');return}setBusy(true);try{if(typeof window.sbLogin!=='function')throw new Error('El servicio de autenticación no está disponible.');const r=await window.sbLogin(u,pin);if(!r||r.error){setError(r?.error||'No se pudo iniciar sesión.');return}onLogin(r.user)}catch(e){console.error('DatB login',e);setError('No se pudo completar el acceso.')}finally{setBusy(false)}}
- async function register(e){e.preventDefault();setError('');const v=validate();if(v){setError(v);return}setBusy(true);const cid=reg.centro==='__otro__'?null:Number(reg.centro);const perfil={id:crypto.randomUUID(),nombre_usuario:reg.username.toLowerCase(),ci:reg.ci.trim(),nombres:reg.nombres.trim(),apellidos:reg.apellidos.trim(),rol_profesional_id:Number(reg.rol),rol_profesional_nom:ROLES[Number(reg.rol)],registro_profesional:reg.registro||null,provincia_id:Number(reg.provincia),municipio_id:Number(reg.municipio),centro_salud_id:cid,centro_texto:reg.centro==='__otro__'?'Otro':centros.find(x=>x.id===cid)?.nombre};try{if(typeof window.sbRegister!=='function')throw new Error('El servicio de registro no está disponible.');const r=await window.sbRegister(perfil,reg.pin);if(r?.error){setError(r.error);return}if(r?.bootstrap&&r?.user){onLogin(r.user);return}setMode('success')}catch(e){console.error('DatB register',e);setError('No se pudo completar el registro.')}finally{setBusy(false)}}
+ async function login(e){
+  e.preventDefault();
+  setError('');
+  const u=username.trim().toLowerCase();
+
+  if(!/^[a-z0-9]{5,24}$/.test(u)||pin.length!==4){
+    setError('El usuario debe tener 5–24 caracteres y el PIN exactamente 4 dígitos.');
+    return;
+  }
+
+  setBusy(true);
+
+  try{
+    const sb=window.__datbReactSupabase;
+    if(!sb) throw new Error('El cliente de Supabase no está disponible.');
+
+    const digest=await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode('DatB:'+u+':'+pin)
+    );
+    const password=[...new Uint8Array(digest)]
+      .map(b=>b.toString(16).padStart(2,'0'))
+      .join('');
+
+    const {data:authData,error:authError}=await sb.auth.signInWithPassword({
+      email:u+'@auth.datb.invalid',
+      password
+    });
+
+    if(authError||!authData?.user){
+      console.error('DatB Auth signInWithPassword',authError);
+      setError(authError?.message||'Nombre de usuario o PIN incorrecto.');
+      return;
+    }
+
+    const usuarioId=authData.user.user_metadata?.usuario_id;
+    if(!usuarioId){
+      await sb.auth.signOut();
+      setError('La identidad Auth no está vinculada a un usuario DatB.');
+      return;
+    }
+
+    const {data:user,error:userError}=await sb
+      .from('usuarios')
+      .select('*')
+      .eq('id',usuarioId)
+      .maybeSingle();
+
+    if(userError||!user){
+      console.error('DatB perfil después del login',userError);
+      await sb.auth.signOut();
+      setError(userError?.message||'No se pudo cargar el perfil de usuario.');
+      return;
+    }
+
+    if(!user.activo){
+      await sb.auth.signOut();
+      setError('Cuenta desactivada.');
+      return;
+    }
+
+    if(!user.aprobado){
+      await sb.auth.signOut();
+      setError('La cuenta está pendiente de aprobación.');
+      return;
+    }
+
+    window._currentUser=user;
+    window._activeUserId=user.id;
+    window._adminUser=Number(user.rol_sistema_id)===6?user:null;
+
+    Promise.resolve(window.sbStartRealtime?.())
+      .catch(err=>console.error('DatB realtime',err));
+
+    onLogin(user);
+  }catch(err){
+    console.error('DatB login exception',err);
+    setError(err?.message||'No se pudo completar el acceso.');
+  }finally{
+    setBusy(false);
+  }
+} async function register(e){e.preventDefault();setError('');const v=validate();if(v){setError(v);return}setBusy(true);const cid=reg.centro==='__otro__'?null:Number(reg.centro);const perfil={id:crypto.randomUUID(),nombre_usuario:reg.username.toLowerCase(),ci:reg.ci.trim(),nombres:reg.nombres.trim(),apellidos:reg.apellidos.trim(),rol_profesional_id:Number(reg.rol),rol_profesional_nom:ROLES[Number(reg.rol)],registro_profesional:reg.registro||null,provincia_id:Number(reg.provincia),municipio_id:Number(reg.municipio),centro_salud_id:cid,centro_texto:reg.centro==='__otro__'?'Otro':centros.find(x=>x.id===cid)?.nombre};try{if(typeof window.sbRegister!=='function')throw new Error('El servicio de registro no está disponible.');const r=await window.sbRegister(perfil,reg.pin);if(r?.error){setError(r.error);return}if(r?.bootstrap&&r?.user){onLogin(r.user);return}setMode('success')}catch(e){console.error('DatB register',e);setError('No se pudo completar el registro.')}finally{setBusy(false)}}
  if(mode==='success')return <div className="react-auth"><AuthSide/><main className="react-main"><section className="react-card"><h2>Solicitud enviada</h2><p className="react-muted">Puede volver al inicio de sesión.</p><button className="react-submit" onClick={()=>setMode('login')}>Ir al login</button></section></main></div>
  const AuthSide=()=> <aside className="react-side"><div className="react-side-inner"><div className="react-brand">DatB</div><h1>Gestión remota de muestras y resultados.</h1><p>Acceso directo al sistema DatB.</p></div></aside>
  return <div className="react-auth"><AuthSide/><main className="react-main"><section className="react-card"><h2>{mode==='login'?'Iniciar sesión':'Crear cuenta'}</h2><p className="react-muted">{mode==='login'?'Ingrese sus credenciales de acceso.':'Complete el registro en tres pasos.'}</p>{error&&<div className="react-error">{error}</div>}{mode==='login'?<form className="react-form" onSubmit={login}><label>Nombre de usuario<input autoComplete="username" value={username} onChange={e=>setUsername(e.target.value.toLowerCase())}/></label><label>PIN de acceso<Pin value={pin} onChange={setPin}/></label><button className="react-submit" disabled={busy}>{busy?'Verificando…':'Entrar'}</button><div className="react-actions"><span className="react-muted" style={{margin:0}}>¿No tiene cuenta?</span><button type="button" className="react-link" onClick={()=>{setMode('register');setError('')}}>Registrarse</button></div></form>:<form className="react-form" onSubmit={register}>{step===1&&<><label>Nombre de usuario<input value={reg.username} onChange={e=>update('username',e.target.value.toLowerCase())}/></label><label>CI<input value={reg.ci} onChange={e=>update('ci',e.target.value)}/></label><label>Nombres<input value={reg.nombres} onChange={e=>update('nombres',e.target.value)}/></label><label>Apellidos<input value={reg.apellidos} onChange={e=>update('apellidos',e.target.value)}/></label></>}{step===2&&<><label>Rol profesional<select value={reg.rol} onChange={e=>update('rol',e.target.value)}><option value="">Seleccione</option>{Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label><label>Provincia<select value={reg.provincia} onChange={e=>{const id=Number(e.target.value);update('provincia',e.target.value);update('municipio','');update('centro','');setMuns((window._store?.geo_municipios||[]).filter(x=>x.provincia_id===id));setCentros([])}}><option value="">Seleccione</option>{provs.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label><label>Municipio<select value={reg.municipio} disabled={!muns.length} onChange={e=>{const id=Number(e.target.value);update('municipio',e.target.value);update('centro','');setCentros((window._store?.geo_centros||[]).filter(x=>x.municipio_id===id))}}><option value="">Seleccione</option>{muns.map(m=><option key={m.id} value={m.id}>{m.nombre}</option>)}</select></label><label>Centro de salud<select value={reg.centro} disabled={!centros.length} onChange={e=>update('centro',e.target.value)}><option value="">Seleccione</option>{centros.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}<option value="__otro__">Otro</option></select></label></>}{step===3&&<><label>PIN<Pin value={reg.pin} onChange={v=>update('pin',v)}/></label><label>Confirmar PIN<Pin value={reg.confirm} onChange={v=>update('confirm',v)}/></label><div className="react-success">Revise los datos antes de crear la cuenta.</div></>}<div className="react-actions"><button type="button" className="react-link" onClick={()=>step===1?setMode('login'):setStep(s=>s-1)}>← Volver</button>{step<3?<button type="button" className="react-submit" onClick={()=>{const v=validate();if(v)setError(v);else setStep(s=>s+1)}}>Siguiente</button>:<button className="react-submit" disabled={busy}>{busy?'Registrando…':'Crear cuenta'}</button>}</div></form>}</section></main></div>
