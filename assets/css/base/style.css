@@ -1677,3 +1677,68 @@ button, input, select, textarea {
         /* opcional: ocultar texto en pantallas muy pequeñas */
     }
 }
+
+
+/* ============================================================
+   AUTH MOBILE — pantalla completa y texto lineal
+   ============================================================ */
+@media (max-width: 480px) {
+    .main-area {
+        padding: 0;
+        min-height: 100vh;
+        align-items: stretch;
+        justify-content: stretch;
+        background: #fff;
+    }
+
+    .form-view.active {
+        width: 100%;
+        min-height: 100vh;
+        align-items: stretch;
+        justify-content: stretch;
+    }
+
+    .form-card,
+    .form-card-wide {
+        width: 100%;
+        max-width: none;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom));
+    }
+
+    /* La instrucción es una oración, no un conjunto de columnas.
+       El problema original venía de display:flex + nodo de texto + <strong>. */
+    .pin-instructions {
+        display: block;
+        line-height: 1.5;
+    }
+
+    .pin-instructions i {
+        display: inline-block;
+        margin-right: .45rem;
+    }
+
+    .pin-instructions strong {
+        white-space: nowrap;
+    }
+
+    /* En teléfono, etiqueta y valor ocupan líneas completas. */
+    .summary-box .summary-row {
+        display: block;
+    }
+
+    .summary-label {
+        display: block;
+        min-width: 0;
+        margin-bottom: .12rem;
+    }
+
+    .summary-value {
+        display: block;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+}
