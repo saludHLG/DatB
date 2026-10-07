@@ -35,7 +35,7 @@ function openEditModal(uid) {
     _editPerms = getPerms().filter(p => p.usuario_id === uid && p.activo).map(p => ({...p}));
     populateLabSelect(u.provincia_id);
     renderLabList();
-    new bootstrap.Modal($a('modal-edit-user')).show();
+    bootstrap.Offcanvas.getOrCreateInstance($a('modal-edit-user')).show();
 }
 
 function saveEditedUser() {
@@ -69,7 +69,7 @@ function saveEditedUser() {
         centro_texto: users[idx].centro_texto, rol_sistema_id: users[idx].rol_sistema_id
     });
     saveEditedUserPermissions(_editUid);
-    bootstrap.Modal.getInstance($a('modal-edit-user'))?.hide();
+    bootstrap.Offcanvas.getInstance($a('modal-edit-user'))?.hide();
     toast('Cambios guardados correctamente.', 'success');
     renderAll();
 }
