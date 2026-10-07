@@ -29,6 +29,10 @@ window._store = {
 /* ── Cliente singleton ──────────────────────────────────────── */
 let _sb = null;
 function _client() {
+    if (window.__datbReactSupabase) {
+        _sb = window.__datbReactSupabase;
+        return _sb;
+    }
     if (_sb) return _sb;
     if (
         typeof supabase    === 'undefined' ||
