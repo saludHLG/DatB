@@ -40,6 +40,7 @@
         if (typeof sbInitAll === 'function') {
             try { await sbInitAll(); } catch (e) { console.error('sbInitAll after login:', e); }
         }
+        if (typeof sbStartRealtime === 'function') await sbStartRealtime();
         return { user, error: null };
     };
 
@@ -50,6 +51,7 @@
         if (result.session && sb) {
             const { error } = await sb.auth.setSession(result.session);
             if (error) return { error: error.message };
+            if (typeof sbStartRealtime === 'function') await sbStartRealtime();
         }
         return { error: null, user: result.user || null, bootstrap: !!result.bootstrap };
     };
@@ -64,13 +66,17 @@
         const { data: user, error: dbError } = await sb.from('usuarios').select('*').eq('id', usuarioId).maybeSingle();
         if (dbError || !user || !user.activo || !user.aprobado) { window._currentUser = null; return null; }
         window._currentUser = user;
+        window._activeUserId = user.id;
         window._adminUser = Number(user.rol_sistema_id) === 6 ? user : null;
+        if (typeof sbStartRealtime === 'function') await sbStartRealtime();
         return user;
     };
 
     window.sbLogout = async function () {
         const sb = getSb();
+        if (typeof sbStopRealtime === 'function') await sbStopRealtime();
         if (sb) await sb.auth.signOut();
+        window._activeUserId = null;
         window._currentUser = null;
         window._adminUser = null;
     };
