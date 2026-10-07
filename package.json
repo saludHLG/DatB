@@ -1,0 +1,16 @@
+{
+  "name":"datb-react",
+  "private":true,
+  "version":"1.0.0",
+  "type":"module",
+  "scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},
+  "dependencies":{
+    "@supabase/supabase-js":"2.117.1",
+    "react":"19.3.0",
+    "react-dom":"19.3.0"
+  },
+  "devDependencies":{
+    "@vitejs/plugin-react":"6.1.2",
+    "vite":"8.3.3"
+  }
+}
