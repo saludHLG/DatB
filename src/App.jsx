@@ -23,14 +23,14 @@ function Dashboard({user,onLogout}){
  const [active,setActive]=useState('home'),[ready,setReady]=useState(false);const host=useRef(null)
  useEffect(()=>{let alive=true;(async()=>{try{await loadLegacyScripts(LEGACY);await window.sbInitAll?.();if(alive)setReady(true)}catch(e){console.error('DatB legacy bootstrap',e)}})();return()=>{alive=false}},[])
  const mods=useMemo(()=>ready?(window.buildModulos?.(user)||[{id:'home',icon:'bi-house',label:'Inicio'},{id:'perfil',icon:'bi-person-circle',label:'Mi perfil'}]):[],[ready,user])
- useEffect(()=>{if(!ready||!host.current)return;try{host.current.innerHTML='';window.renderModulo?.(active,user)}catch(e){console.error('DatB module',active,e)}},[ready,active,user])
+ useEffect(()=>{if(!ready||!host.current)return;try{host.current.innerHTML='';if(typeof window.renderModulo!=='function')throw new Error('El router de módulos no está disponible.');window.renderModulo(active,user)}catch(e){console.error('DatB module',active,e);host.current.innerHTML='<div class="react-error"><strong>No se pudo abrir este módulo.</strong><br>'+String(e?.message||'Error de inicialización.')+'</div>'}},[ready,active,user])
  const initials=((user.nombres?.[0]||'')+(user.apellidos?.[0]||'')).toUpperCase()
- return <div className="react-shell"><header className="react-topbar"><div className="react-topbar-title">DatB · {mods.find(m=>m.id===active)?.label||'Inicio'}</div><div className="react-user"><span>{user.nombres} {user.apellidos}</span><span className="react-avatar">{initials}</span></div></header><div className="react-layout"><aside className="react-sidebar"><div className="react-brand">DatB</div><nav className="react-nav">{mods.map(m=><button key={m.id} className={active===m.id?'active':''} onClick={()=>setActive(m.id)}><i className={`bi ${m.icon}`}/> {m.label}</button>)}</nav><button className="react-logout" onClick={onLogout}>Cerrar sesión</button></aside><main className="react-content"><div id="app-content-inner" ref={host} className="react-module-host">{!ready&&<div className="react-loading">Inicializando módulos…</div>}</div></main></div></div>
+ return <div className="react-shell"><header className="react-topbar"><div id="topbar-title" className="react-topbar-title">DatB · {mods.find(m=>m.id===active)?.label||'Inicio'}</div><div className="react-user"><span id="topbar-name">{user.nombres} {user.apellidos}</span><span id="topbar-avatar" className="react-avatar">{initials}</span></div></header><div className="react-layout"><aside className="react-sidebar"><div className="react-brand">DatB</div><nav className="react-nav">{mods.map(m=><button key={m.id} className={active===m.id?'active':''} onClick={()=>m.id==='admin'?(window.location.href='admin.html'):setActive(m.id)}><i className={`bi ${m.icon}`}/> {m.label}</button>)}</nav><button className="react-logout" onClick={onLogout}>Cerrar sesión</button></aside><main className="react-content"><div id="app-content-inner" ref={host} className="react-module-host">{!ready&&<div className="react-loading">Inicializando módulos…</div>}</div></main></div></div>
 }
 
 export default function App(){
  const [user,setUser]=useState(null),[checking,setChecking]=useState(false)
  if(checking)return <div className="react-loading">Cargando DatB…</div>
  if(!user)return <Auth onLogin={setUser}/>
- return <Dashboard user={user} onLogout={()=>setUser(null)}/>
+ return <Dashboard user={user} onLogout={async()=>{try{await window.sbLogout?.()}finally{setUser(null)}}}/>
 }
