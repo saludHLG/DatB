@@ -1746,3 +1746,65 @@ button, input, select, textarea {
         word-break: normal;
     }
 }
+
+
+/* =========================================================
+   PERFIL APP — ajuste fino y diseño responsive
+   ========================================================= */
+.perfil-page{width:100%;max-width:none}
+.perfil-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:1rem;align-items:start}
+.perfil-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 5px 22px rgba(15,23,42,.06);overflow:hidden}
+.perfil-card-header{min-height:48px;padding:.72rem 1rem;font-size:.88rem}
+.perfil-edit-form-app{padding:1rem}
+.perfil-field-label{font-size:.68rem;letter-spacing:.055em;margin-bottom:.28rem}
+.perfil-field-help{font-size:.68rem;color:#64748b;margin-top:.3rem;line-height:1.35}
+.perfil-edit-form-app .form-control,.perfil-edit-form-app .form-select{min-width:0;font-size:.86rem;padding:.58rem .72rem;border-radius:9px}
+.perfil-data-row{padding:.48rem 0}
+.perfil-account-meta{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;padding:.65rem .75rem;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;color:#475569;font-size:.75rem}
+.perfil-account-meta>span:first-child{font-weight:600}
+.perfil-status{display:inline-flex;align-items:center;gap:.3rem}
+.perfil-status.ok{color:#15803d}
+.perfil-status.pending{color:#b45309}
+.perfil-actions{display:flex;justify-content:flex-end;margin-top:.9rem}
+.perfil-actions .btn-primary-custom{padding:.62rem 1rem;font-size:.82rem}
+.perfil-security-note{display:flex;align-items:flex-start;gap:.55rem;padding:.65rem .75rem;margin-bottom:.85rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#64748b;font-size:.72rem;line-height:1.4}
+.perfil-security-note i{margin-top:.05rem;color:#0369a1}
+.perfil-pin{letter-spacing:.18em}
+.perfil-card-signature{grid-column:1 / -1}
+.firma-wrap{padding:.9rem 1rem 1rem}
+.firma-hint{font-size:.72rem;margin:0 0 .6rem;color:#64748b}
+.canvas-container{margin-bottom:.7rem;border-radius:9px;background:#fff}
+#firma-canvas{width:100%;height:auto;min-height:150px;display:block;position:relative;z-index:1;background:#fff}
+.canvas-placeholder{z-index:0;font-size:.78rem}
+.canvas-placeholder i{font-size:1.55rem}
+.firma-actions{gap:.55rem;align-items:center}
+.firma-tools{gap:.65rem;min-width:0}
+.firma-tool-label{font-size:.7rem;white-space:nowrap}
+.firma-tool-label input[type=range]{width:70px}
+.firma-tool-label input[type=color]{width:32px;height:24px}
+.btn-firma-clear,.btn-firma-save{padding:.48rem .72rem;font-size:.78rem;border-radius:8px}
+.firma-saved-wrap{margin-top:.65rem;padding:.6rem .7rem;gap:.55rem}
+.firma-saved-img{max-width:240px;width:100%;height:auto}
+.perfil-card .alert-custom{margin-bottom:0;padding:.55rem .7rem;font-size:.76rem}
+@media(max-width:960px){
+  .react-content{padding:.85rem .75rem 5.5rem}
+  .perfil-layout{grid-template-columns:1fr;gap:.75rem}
+  .perfil-card-signature{grid-column:auto}
+  .perfil-card{border-radius:12px;box-shadow:0 3px 14px rgba(15,23,42,.05)}
+  .perfil-edit-form-app{padding:.8rem}
+  .perfil-card-header{padding:.68rem .85rem;min-height:44px}
+  .perfil-edit-form-app .row{--bs-gutter-x:.75rem;--bs-gutter-y:.65rem}
+  .perfil-edit-form-app .form-control,.perfil-edit-form-app .form-select{font-size:.84rem;padding:.55rem .68rem}
+  .perfil-actions{margin-top:.75rem}
+  .perfil-actions .btn-primary-custom{width:auto;max-width:100%;padding:.58rem .9rem}
+  .firma-wrap{padding:.75rem .8rem .85rem}
+  .firma-actions{display:grid;grid-template-columns:auto 1fr auto}
+  .firma-tools{justify-content:center}
+}
+@media(max-width:480px){
+  .perfil-edit-form-app{padding:.72rem}
+  .perfil-account-meta{font-size:.7rem}
+  .firma-actions{grid-template-columns:auto 1fr}
+  .firma-actions .btn-firma-save{grid-column:1 / -1;justify-self:end}
+  .firma-tools{justify-content:flex-start}
+}
