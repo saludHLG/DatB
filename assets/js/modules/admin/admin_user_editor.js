@@ -16,6 +16,7 @@ function openEditModal(uid) {
     const btn = $a('btn-toggle-active');
     btn.innerHTML = u.activo ? '<i class="bi bi-slash-circle"></i> Desactivar cuenta' : '<i class="bi bi-arrow-clockwise"></i> Reactivar cuenta';
     btn.className = 'btn-toggle-active' + (u.activo ? ' is-deactivate' : '');
+    $a('modal-nombre-usuario').value = u.nombre_usuario || '';
     $a('modal-nombres').value = u.nombres || '';
     $a('modal-apellidos').value = u.apellidos || '';
     $a('modal-rol-prof-edit').value = String(u.rol_profesional_id || 1);
@@ -38,11 +39,37 @@ function openEditModal(uid) {
     bootstrap.Offcanvas.getOrCreateInstance($a('modal-edit-user')).show();
 }
 
-function saveEditedUser() {
+async function saveEditedUser() {
     const users = getUsers() || [], idx = users.findIndex(u => u.id === _editUid);
     if (idx === -1) return;
+    const usernameVal = $a('modal-nombre-usuario').value.trim().toLowerCase();
     const nomVal = $a('modal-nombres').value.trim(), apVal = $a('modal-apellidos').value.trim();
+    if (!/^[a-z0-9]{5,24}$/.test(usernameVal)) {
+        return toast('El nombre de usuario debe usar minúsculas y dígitos (5–24).', 'error');
+    }
     if (!nomVal || !apVal) return toast('Nombres y apellidos son obligatorios.', 'error');
+
+    const localDuplicate = users.some((u, i) => i !== idx && String(u.nombre_usuario || '').toLowerCase() === usernameVal);
+    if (localDuplicate) return toast('Ese nombre de usuario ya está en uso.', 'error');
+
+    if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON !== 'undefined') {
+        try {
+            const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+            const { data: existing, error: usernameError } = await sb
+                .from('usuarios')
+                .select('id')
+                .eq('nombre_usuario', usernameVal)
+                .neq('id', _editUid)
+                .maybeSingle();
+            if (usernameError) return toast('No se pudo verificar el nombre de usuario.', 'error');
+            if (existing) return toast('Ese nombre de usuario ya está en uso.', 'error');
+        } catch (e) {
+            console.error('username availability check:', e);
+            return toast('No se pudo verificar el nombre de usuario.', 'error');
+        }
+    }
+
+    users[idx].nombre_usuario = usernameVal;
     users[idx].nombres = nomVal;
     users[idx].apellidos = apVal;
     const rpId = Number($a('modal-rol-prof-edit').value);
@@ -62,6 +89,7 @@ function saveEditedUser() {
     users[idx].rol_sistema_id = Number($a('modal-rol-sistema').value);
     saveUsers(users);
     if (typeof sbUpdateRow === 'function') sbUpdateRow('usuarios', _editUid, {
+        nombre_usuario: users[idx].nombre_usuario,
         nombres: users[idx].nombres, apellidos: users[idx].apellidos,
         rol_profesional_id: users[idx].rol_profesional_id, rol_profesional_nom: users[idx].rol_profesional_nom,
         registro_profesional: users[idx].registro_profesional, provincia_id: users[idx].provincia_id,
@@ -81,7 +109,7 @@ function toggleUserActive() {
     saveUsers(users);
     if (typeof sbUpdateRow === 'function') sbUpdateRow('usuarios', _editUid, { activo: users[idx].activo });
     toast(`Cuenta ${users[idx].activo ? 'reactivada' : 'desactivada'}.`, users[idx].activo ? 'success' : 'info');
-    bootstrap.Modal.getInstance($a('modal-edit-user'))?.hide();
+    bootstrap.Offcanvas.getInstance($a('modal-edit-user'))?.hide();
     renderAll();
 }
 
@@ -90,5 +118,5 @@ document.addEventListener('DOMContentLoaded', () => {
         $a('modal-rol-hint').textContent = ROL_SIS_HINTS[Number(this.value)] || '';
     });
     $a('btn-toggle-active')?.addEventListener('click', toggleUserActive);
-    $a('btn-save-user')?.addEventListener('click', saveEditedUser);
+    $a('btn-save-user')?.addEventListener('click', () => { saveEditedUser(); });
 });
