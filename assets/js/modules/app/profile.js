@@ -1,10 +1,23 @@
 /* =========================================================
-   profile.js — perfil del usuario y cambio de PIN
-   Requiere: $(), getGeoProvs(), getGeoMuns(), getGeoCentros(),
-             ROLES_PROFESIONALES, ROLES_SISTEMA, getUsers(),
-             saveUsers(), hashPin(), sbUpdateRow(), showToastApp(),
-             initFirmaCanvas()
+   profile.js — perfil DatB
+   Persistencia real en Supabase + actualización de Auth.
    ======================================================== */
+
+function _perfilSetError(id, msg) {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('d-none', !msg);
+}
+
+function _perfilApplyUser(updated) {
+    if (!updated) return;
+    const users = window._store.usuarios || [];
+    const idx = users.findIndex(u => u.id === updated.id);
+    if (idx !== -1) users[idx] = { ...users[idx], ...updated };
+    window._currentUser = { ...(window._currentUser || {}), ...updated };
+    window.dispatchEvent(new CustomEvent('datb:user-updated', { detail: { user: updated } }));
+}
 
 function renderPerfil(user, el) {
     const provOpts = getGeoProvs()
@@ -24,160 +37,306 @@ function renderPerfil(user, el) {
 
     const rolSisLabel = ROLES_SISTEMA[user.rol_sistema_id] || '—';
     const estadoHtml = user.aprobado
-        ? '<i class="bi bi-check-circle-fill" style="color:var(--success)"></i> Aprobado'
-        : '<i class="bi bi-hourglass-split" style="color:var(--warning)"></i> Pendiente aprobación';
+        ? '<i class="bi bi-check-circle-fill"></i> Aprobado'
+        : '<i class="bi bi-hourglass-split"></i> Pendiente aprobación';
 
     el.innerHTML = `
-        <div class="modulo-header">
-            <h2 class="modulo-title">Mi perfil</h2>
-            <p class="modulo-sub">Edite sus datos personales y cambie su PIN de acceso.</p>
-        </div>
-        <div class="perfil-layout">
-            <div class="perfil-card">
-                <div class="perfil-card-header"><i class="bi bi-person-badge"></i> Datos de la cuenta</div>
-                <div class="perfil-edit-form-app" style="padding:1.1rem">
-                    <div class="perfil-data-row"><span class="perfil-data-label">Carnet identidad</span><span class="perfil-data-val mono">${user.ci}</span></div>
-                    <div class="perfil-data-row"><span class="perfil-data-label">Rol de sistema</span><span class="perfil-data-val">${rolSisLabel}</span></div>
-                    <div class="perfil-data-row" style="margin-bottom:.85rem"><span class="perfil-data-label">Estado</span><span class="perfil-data-val">${estadoHtml}</span></div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-12 col-sm-6"><label class="perfil-field-label">Nombres <span style="color:var(--danger)">*</span></label><input type="text" id="app-perfil-nombres" class="form-control form-control-sm" value="${user.nombres || ''}"></div>
-                        <div class="col-12 col-sm-6"><label class="perfil-field-label">Apellidos <span style="color:var(--danger)">*</span></label><input type="text" id="app-perfil-apellidos" class="form-control form-control-sm" value="${user.apellidos || ''}"></div>
+        <div class="perfil-page">
+            <div class="perfil-layout">
+                <section class="perfil-card perfil-card-account">
+                    <div class="perfil-card-header"><i class="bi bi-person-badge"></i><span>Datos de la cuenta</span></div>
+
+                    <div class="perfil-edit-form-app">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="perfil-field-label">Nombre de usuario <span class="required">*</span></label>
+                                <input type="text" id="app-perfil-username" class="form-control"
+                                       value="${user.nombre_usuario || ''}" maxlength="24"
+                                       autocomplete="username" autocapitalize="none" spellcheck="false">
+                                <div class="perfil-field-help">Para cambiarlo, confirme con su PIN actual.</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="perfil-field-label">Carnet de identidad</label>
+                                <input type="text" class="form-control ctrl-mono" value="${user.ci || ''}" readonly>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="perfil-field-label">Nombres <span class="required">*</span></label>
+                                <input type="text" id="app-perfil-nombres" class="form-control" value="${user.nombres || ''}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="perfil-field-label">Apellidos <span class="required">*</span></label>
+                                <input type="text" id="app-perfil-apellidos" class="form-control" value="${user.apellidos || ''}">
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="perfil-field-label">Rol profesional</label>
+                                <select id="app-perfil-rol-prof" class="form-select">${rpOpts}</select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="perfil-field-label">Registro profesional</label>
+                                <input type="text" id="app-perfil-registro" class="form-control ctrl-mono"
+                                       value="${user.registro_profesional || ''}" placeholder="RM-00000">
+                            </div>
+
+                            <div class="col-12 col-md-4">
+                                <label class="perfil-field-label">Provincia</label>
+                                <select id="app-perfil-prov" class="form-select">
+                                    <option value="">— Seleccione —</option>${provOpts}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="perfil-field-label">Municipio</label>
+                                <select id="app-perfil-mun" class="form-select" ${!user.provincia_id ? 'disabled' : ''}>
+                                    <option value="">— Seleccione —</option>${munOpts}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="perfil-field-label">Centro de salud</label>
+                                <select id="app-perfil-centro" class="form-select" ${!user.municipio_id ? 'disabled' : ''}>
+                                    <option value="">— Seleccione —</option>${centroOpts}
+                                    <option value="__otro__" ${!user.centro_salud_id ? 'selected' : ''}>Otro / no listado</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="perfil-account-meta">
+                                    <span><i class="bi bi-shield-half"></i> ${rolSisLabel}</span>
+                                    <span class="perfil-status ${user.aprobado ? 'ok' : 'pending'}">${estadoHtml}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="app-perfil-err" class="alert-custom alert-danger d-none mt-3"></div>
+
+                        <div class="perfil-actions">
+                            <button class="btn-primary-custom" id="btn-app-save-perfil">
+                                <i class="bi bi-floppy"></i> Guardar datos
+                            </button>
+                        </div>
                     </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-12 col-sm-6"><label class="perfil-field-label">Rol profesional</label><select id="app-perfil-rol-prof" class="form-select form-select-sm">${rpOpts}</select></div>
-                        <div class="col-12 col-sm-6"><label class="perfil-field-label">Registro profesional</label><input type="text" id="app-perfil-registro" class="form-control form-control-sm" style="font-family:var(--font-mono)" value="${user.registro_profesional || ''}" placeholder="RM-00000"></div>
+                </section>
+
+                <section class="perfil-card perfil-card-security">
+                    <div class="perfil-card-header"><i class="bi bi-key"></i><span>Seguridad de acceso</span></div>
+                    <div class="perfil-edit-form-app">
+                        <div class="perfil-security-note">
+                            <i class="bi bi-info-circle"></i>
+                            <span>El PIN actual también se utiliza para confirmar cambios del nombre de usuario.</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="perfil-field-label">PIN actual</label>
+                                <input type="password" id="app-pin-actual" class="form-control perfil-pin"
+                                       maxlength="4" inputmode="numeric" autocomplete="current-password" placeholder="••••">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="perfil-field-label">PIN nuevo</label>
+                                <input type="password" id="app-pin-nuevo" class="form-control perfil-pin"
+                                       maxlength="4" inputmode="numeric" autocomplete="new-password" placeholder="••••">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="perfil-field-label">Confirmar PIN</label>
+                                <input type="password" id="app-pin-confirm" class="form-control perfil-pin"
+                                       maxlength="4" inputmode="numeric" autocomplete="new-password" placeholder="••••">
+                            </div>
+                        </div>
+
+                        <div id="app-pin-err" class="alert-custom alert-danger d-none mt-3"></div>
+
+                        <div class="perfil-actions">
+                            <button class="btn-primary-custom" id="btn-app-save-pin">
+                                <i class="bi bi-key"></i> Cambiar PIN
+                            </button>
+                        </div>
                     </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-12 col-sm-4"><label class="perfil-field-label">Provincia</label><select id="app-perfil-prov" class="form-select form-select-sm"><option value="">— Seleccione —</option>${provOpts}</select></div>
-                        <div class="col-12 col-sm-4"><label class="perfil-field-label">Municipio</label><select id="app-perfil-mun" class="form-select form-select-sm" ${!user.provincia_id ? 'disabled' : ''}><option value="">— Seleccione —</option>${munOpts}</select></div>
-                        <div class="col-12 col-sm-4"><label class="perfil-field-label">Centro de salud</label><select id="app-perfil-centro" class="form-select form-select-sm" ${!user.municipio_id ? 'disabled' : ''}><option value="">— Seleccione —</option>${centroOpts}<option value="__otro__" ${!user.centro_salud_id ? 'selected' : ''}>Otro / no listado</option></select></div>
+                </section>
+
+                <section class="perfil-card perfil-card-signature">
+                    <div class="perfil-card-header"><i class="bi bi-pen"></i><span>Firma digital</span></div>
+                    <div class="firma-wrap">
+                        <p class="firma-hint">Dibuje su firma con el dedo o el ratón.</p>
+                        <div class="canvas-container">
+                            <canvas id="firma-canvas" width="800" height="300"></canvas>
+                            <div class="canvas-placeholder" id="canvas-placeholder">
+                                <i class="bi bi-vector-pen"></i>
+                                <span>Trace su firma aquí</span>
+                            </div>
+                        </div>
+
+                        <div class="firma-actions">
+                            <button class="btn-firma-clear" id="btn-firma-clear">
+                                <i class="bi bi-eraser"></i> Limpiar
+                            </button>
+                            <div class="firma-tools">
+                                <label class="firma-tool-label">Grosor
+                                    <input type="range" id="firma-grosor" min="1" max="8" value="2.5" step="0.5">
+                                </label>
+                                <label class="firma-tool-label">Color
+                                    <input type="color" id="firma-color" value="#0b1e3d">
+                                </label>
+                            </div>
+                            <button class="btn-firma-save" id="btn-firma-save">
+                                <i class="bi bi-floppy"></i> Guardar
+                            </button>
+                        </div>
+
+                        <div id="firma-saved-wrap" class="firma-saved-wrap d-none">
+                            <span class="firma-saved-label">Guardada</span>
+                            <img id="firma-saved-img" alt="Firma guardada" class="firma-saved-img">
+                            <button class="btn-firma-clear" id="btn-firma-delete">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        </div>
+                        <div id="firma-err" class="alert-custom alert-danger d-none mt-3"></div>
                     </div>
-                    <div id="app-perfil-err" class="alert-custom alert-danger mt-2 d-none"></div>
-                    <div style="display:flex;justify-content:flex-end;margin-top:.75rem"><button class="btn-primary-custom" id="btn-app-save-perfil" style="font-size:.85rem;padding:.5rem 1.1rem"><i class="bi bi-floppy"></i> Guardar datos</button></div>
-                </div>
-                <div style="border-top:1.5px solid var(--silver-pale);margin:0 1.1rem;padding:1rem 0">
-                    <p style="font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.06em"><i class="bi bi-key"></i> Cambiar PIN de acceso</p>
-                    <div class="row g-2 mb-2">
-                        <div class="col-12 col-sm-4"><label class="perfil-field-label">PIN actual</label><input type="password" id="app-pin-actual" class="form-control form-control-sm" style="font-family:var(--font-mono);letter-spacing:.25em" maxlength="4" inputmode="numeric" placeholder="••••"></div>
-                        <div class="col-12 col-sm-4"><label class="perfil-field-label">PIN nuevo</label><input type="password" id="app-pin-nuevo" class="form-control form-control-sm" style="font-family:var(--font-mono);letter-spacing:.25em" maxlength="4" inputmode="numeric" placeholder="••••"></div>
-                        <div class="col-12 col-sm-4"><label class="perfil-field-label">Confirmar PIN</label><input type="password" id="app-pin-confirm" class="form-control form-control-sm" style="font-family:var(--font-mono);letter-spacing:.25em" maxlength="4" inputmode="numeric" placeholder="••••"></div>
-                    </div>
-                    <div id="app-pin-err" class="alert-custom alert-danger mt-2 d-none"></div>
-                    <div style="display:flex;justify-content:flex-end;margin-top:.75rem"><button class="btn-primary-custom" id="btn-app-save-pin" style="font-size:.85rem;padding:.5rem 1.1rem"><i class="bi bi-key"></i> Cambiar PIN</button></div>
-                </div>
-            </div>
-            <div class="perfil-card">
-                <div class="perfil-card-header"><i class="bi bi-pen"></i> Firma digital</div>
-                <div class="firma-wrap">
-                    <p class="firma-hint">Dibuje su firma con el ratón o con el dedo.</p>
-                    <div class="canvas-container"><canvas id="firma-canvas" width="440" height="180"></canvas><div class="canvas-placeholder" id="canvas-placeholder"><i class="bi bi-vector-pen"></i><span>Trace su firma aquí</span></div></div>
-                    <div class="firma-actions">
-                        <button class="btn-firma-clear" id="btn-firma-clear"><i class="bi bi-eraser"></i> Limpiar</button>
-                        <div class="firma-tools"><label class="firma-tool-label">Grosor <input type="range" id="firma-grosor" min="1" max="6" value="2" step="0.5"></label><label class="firma-tool-label">Color <input type="color" id="firma-color" value="#0b1e3d"></label></div>
-                        <button class="btn-firma-save" id="btn-firma-save"><i class="bi bi-floppy"></i> Guardar</button>
-                    </div>
-                    <div id="firma-saved-wrap" class="firma-saved-wrap d-none"><span class="firma-saved-label">Guardada:</span><img id="firma-saved-img" alt="Firma guardada" class="firma-saved-img"><button class="btn-firma-clear" id="btn-firma-delete"><i class="bi bi-trash"></i> Eliminar</button></div>
-                </div>
+                </section>
             </div>
         </div>`;
 
     $('app-perfil-prov')?.addEventListener('change', function () {
         const selM = $('app-perfil-mun'), selC = $('app-perfil-centro');
         selM.innerHTML = '<option value="">— Seleccione —</option>';
-        getGeoMuns().filter(m => m.provincia_id === Number(this.value)).forEach(m => selM.appendChild(new Option(m.nombre, m.id)));
+        getGeoMuns()
+            .filter(m => m.provincia_id === Number(this.value))
+            .forEach(m => selM.appendChild(new Option(m.nombre, m.id)));
         selM.disabled = !this.value;
-        selC.innerHTML = '<option value="">— Seleccione —</option><option value="__otro__" selected>Otro / no listado</option>';
+        selC.innerHTML = '<option value="">— Seleccione —</option><option value="__otro__">Otro / no listado</option>';
         selC.disabled = true;
     });
 
     $('app-perfil-mun')?.addEventListener('change', function () {
         const selC = $('app-perfil-centro');
         selC.innerHTML = '<option value="">— Seleccione —</option>';
-        getGeoCentros().filter(c => c.municipio_id === Number(this.value)).forEach(c => selC.appendChild(new Option(`${c.nombre}${c.tipo ? ` (${c.tipo})` : ''}`, c.id)));
+        getGeoCentros()
+            .filter(c => c.municipio_id === Number(this.value))
+            .forEach(c => selC.appendChild(new Option(`${c.nombre}${c.tipo ? ` (${c.tipo})` : ''}`, c.id)));
         selC.appendChild(new Option('Otro / no listado', '__otro__'));
         selC.disabled = !this.value;
     });
 
-    $('btn-app-save-perfil')?.addEventListener('click', () => {
-        const errEl = $('app-perfil-err');
-        errEl.classList.add('d-none');
+    $('btn-app-save-perfil')?.addEventListener('click', async () => {
+        const btn = $('btn-app-save-perfil');
+        const errId = 'app-perfil-err';
+        _perfilSetError(errId, '');
+
+        const username = $('app-perfil-username').value.trim().toLowerCase();
+        const oldUsername = String(user.nombre_usuario || '').trim().toLowerCase();
         const nom = $('app-perfil-nombres').value.trim();
         const ap = $('app-perfil-apellidos').value.trim();
-        if (!nom || !ap) {
-            errEl.textContent = 'Nombres y apellidos son obligatorios.';
-            errEl.classList.remove('d-none');
+
+        if (!/^[a-z0-9]{5,24}$/.test(username)) {
+            _perfilSetError(errId, 'El nombre de usuario debe usar minúsculas y dígitos (5–24).');
             return;
         }
-        const users = getUsers(), idx = users.findIndex(u => u.id === user.id);
-        if (idx === -1) return;
+        if (!nom || !ap) {
+            _perfilSetError(errId, 'Nombres y apellidos son obligatorios.');
+            return;
+        }
 
-        const rpId = Number($('app-perfil-rol-prof').value);
+        const users = getUsers() || [];
+        const idx = users.findIndex(u => u.id === user.id);
+        if (idx === -1) {
+            _perfilSetError(errId, 'No se encontró la cuenta en memoria.');
+            return;
+        }
+
+        if (username !== oldUsername) {
+            const pinActual = $('app-pin-actual').value;
+            if (!/^\d{4}$/.test(pinActual)) {
+                _perfilSetError(errId, 'Para cambiar el nombre de usuario debe introducir el PIN actual.');
+                return;
+            }
+
+            if (typeof sbVerifyCredentials !== 'function') {
+                _perfilSetError(errId, 'El servicio de autenticación no está disponible.');
+                return;
+            }
+
+            const verified = await sbVerifyCredentials(oldUsername, pinActual);
+            if (verified.error) {
+                _perfilSetError(errId, verified.error);
+                return;
+            }
+        }
+
+        btn.disabled = true;
+        const changes = {
+            nombre_usuario: username,
+            nombres: nom,
+            apellidos: ap,
+            rol_profesional_id: Number($('app-perfil-rol-prof').value),
+            rol_profesional_nom: ROLES_PROFESIONALES[Number($('app-perfil-rol-prof').value)]?.nombre || '',
+            registro_profesional: $('app-perfil-registro').value.trim() || null,
+            provincia_id: Number($('app-perfil-prov').value) || null,
+            municipio_id: Number($('app-perfil-mun').value) || null,
+            centro_salud_id: null,
+            centro_texto: null
+        };
+
         const centroVal = $('app-perfil-centro').value;
-        users[idx].nombres = nom;
-        users[idx].apellidos = ap;
-        users[idx].rol_profesional_id = rpId;
-        users[idx].rol_profesional_nom = ROLES_PROFESIONALES[rpId]?.nombre || '';
-        users[idx].registro_profesional = $('app-perfil-registro').value.trim() || null;
-        users[idx].provincia_id = Number($('app-perfil-prov').value) || null;
-        users[idx].municipio_id = Number($('app-perfil-mun').value) || null;
         if (centroVal && centroVal !== '__otro__') {
-            users[idx].centro_salud_id = Number(centroVal);
-            users[idx].centro_texto = $('app-perfil-centro').selectedOptions[0]?.text?.replace(/ \(.*\)$/, '') || null;
-        } else {
-            users[idx].centro_salud_id = null;
-            users[idx].centro_texto = null;
-        }
-        saveUsers(users);
-        if (typeof sbUpdateRow === 'function') {
-            sbUpdateRow('usuarios', user.id, {
-                nombres: nom,
-                apellidos: ap,
-                rol_profesional_id: rpId,
-                rol_profesional_nom: ROLES_PROFESIONALES[rpId]?.nombre || '',
-                registro_profesional: users[idx].registro_profesional,
-                provincia_id: users[idx].provincia_id,
-                municipio_id: users[idx].municipio_id,
-                centro_salud_id: users[idx].centro_salud_id,
-                centro_texto: users[idx].centro_texto
-            }).catch(e => console.error('profile save:', e));
+            changes.centro_salud_id = Number(centroVal);
+            changes.centro_texto = $('app-perfil-centro').selectedOptions[0]?.text?.replace(/ \(.*\)$/, '') || null;
+        } else if (centroVal === '__otro__') {
+            changes.centro_texto = 'Otro';
         }
 
-        const spName = $('sp-name');
-        const topbarName = $('topbar-name');
-        spName && (spName.textContent = `${nom} ${ap}`);
-        topbarName && (topbarName.textContent = `${nom} ${ap}`);
-        const initials = (nom[0] + ap[0]).toUpperCase();
-        const spAvatar = $('sp-avatar');
-        const topbarAvatar = $('topbar-avatar');
-        spAvatar && (spAvatar.textContent = initials);
-        topbarAvatar && (topbarAvatar.textContent = initials);
-        showToastApp('Datos actualizados correctamente.', 'success');
+        try {
+            if (typeof sbUpdateRow !== 'function') throw new Error('Sin conexión con Supabase.');
+            const saved = await sbUpdateRow('usuarios', user.id, changes);
+
+            if (username !== oldUsername) {
+                const pinActual = $('app-pin-actual').value;
+                const authResult = await sbSetUsernameAuth(username, pinActual);
+                if (authResult?.error) {
+                    try { await sbUpdateRow('usuarios', user.id, { nombre_usuario: oldUsername }); } catch (_) {}
+                    throw new Error(authResult.error);
+                }
+            }
+
+            Object.assign(user, saved);
+            Object.assign(user, changes);
+            _perfilApplyUser({ ...user, ...saved, ...changes });
+            _perfilSetError(errId, '');
+            showToastApp('Datos actualizados correctamente.', 'success');
+        } catch (e) {
+            console.error('profile save:', e);
+            _perfilSetError(errId, e.message || 'No se pudieron guardar los cambios.');
+        } finally {
+            btn.disabled = false;
+        }
     });
 
-    $('btn-app-save-pin')?.addEventListener('click', () => {
-        const errEl = $('app-pin-err');
-        errEl.classList.add('d-none');
-        const actual = $('app-pin-actual').value;
-        const nuevo = $('app-pin-nuevo').value;
+    $('btn-app-save-pin')?.addEventListener('click', async () => {
+        const btn = $('btn-app-save-pin');
+        const errId = 'app-pin-err';
+        _perfilSetError(errId, '');
+
+        const oldPin = $('app-pin-actual').value;
+        const newPin = $('app-pin-nuevo').value;
         const confirm = $('app-pin-confirm').value;
 
-        if (!/^\d{4}$/.test(actual)) { errEl.textContent = 'Ingrese su PIN actual (4 dígitos).'; errEl.classList.remove('d-none'); return; }
-        if (!/^\d{4}$/.test(nuevo)) { errEl.textContent = 'El PIN nuevo debe tener exactamente 4 dígitos numéricos.'; errEl.classList.remove('d-none'); return; }
-        if (nuevo !== confirm) { errEl.textContent = 'El PIN nuevo y la confirmación no coinciden.'; errEl.classList.remove('d-none'); return; }
+        if (!/^\d{4}$/.test(oldPin)) return _perfilSetError(errId, 'Ingrese su PIN actual (4 dígitos).');
+        if (!/^\d{4}$/.test(newPin)) return _perfilSetError(errId, 'El PIN nuevo debe tener exactamente 4 dígitos.');
+        if (newPin !== confirm) return _perfilSetError(errId, 'El PIN nuevo y la confirmación no coinciden.');
 
-        const users = getUsers(), idx = users.findIndex(u => u.id === user.id);
-        if (idx === -1) return;
-        if (users[idx].pin_hash !== hashPin(actual)) {
-            errEl.textContent = 'El PIN actual es incorrecto.';
-            errEl.classList.remove('d-none');
-            return;
+        btn.disabled = true;
+        try {
+            if (typeof sbChangePin !== 'function') throw new Error('El servicio de autenticación no está disponible.');
+            const result = await sbChangePin(oldPin, newPin);
+            if (result?.error) throw new Error(result.error);
+            _perfilSetError(errId, '');
+            $('app-pin-actual').value = '';
+            $('app-pin-nuevo').value = '';
+            $('app-pin-confirm').value = '';
+            showToastApp('PIN cambiado correctamente.', 'success');
+        } catch (e) {
+            console.error('pin change:', e);
+            _perfilSetError(errId, e.message || 'No se pudo cambiar el PIN.');
+        } finally {
+            btn.disabled = false;
         }
-        users[idx].pin_hash = hashPin(nuevo);
-        saveUsers(users);
-        $('app-pin-actual').value = '';
-        $('app-pin-nuevo').value = '';
-        $('app-pin-confirm').value = '';
-        showToastApp('PIN cambiado correctamente.', 'success');
     });
 
     requestAnimationFrame(() => initFirmaCanvas(user));
