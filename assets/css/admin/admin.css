@@ -801,3 +801,68 @@
     border-radius: 4px;
     padding: .1em .45em;
 }
+
+
+/* Editor de usuario: panel lateral compacto */
+.admin-user-offcanvas {
+    --bs-offcanvas-width: min(560px, 100vw);
+    border: 0;
+    box-shadow: -10px 0 30px rgba(11,30,61,.12);
+}
+.admin-user-offcanvas .offcanvas-body {
+    padding: 1.25rem 1.35rem;
+    overflow-y: auto;
+}
+.admin-user-offcanvas .modal-header {
+    flex-shrink: 0;
+}
+.admin-user-offcanvas .offcanvas-footer {
+    flex-shrink: 0;
+}
+.admin-modal-footer {
+    flex-wrap: nowrap;
+}
+.admin-modal-footer > div {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
+}
+.admin-modal-footer > div:last-child {
+    margin-left: auto;
+}
+.admin-modal-footer button,
+.admin-modal-footer .btn-toggle-active {
+    white-space: nowrap;
+    flex: 0 0 auto;
+    line-height: 1.15;
+    padding-top: .42rem;
+    padding-bottom: .42rem;
+}
+.admin-modal-footer .btn-toggle-active {
+    padding-left: .7rem;
+    padding-right: .7rem;
+    font-size: .78rem;
+}
+.admin-modal-footer .btn-secondary-custom,
+.admin-modal-footer .btn-primary-custom,
+.admin-modal-footer .btn-danger-custom,
+.admin-modal-footer .btn-success-custom {
+    padding-left: .7rem;
+    padding-right: .7rem;
+    font-size: .8rem;
+}
+@media (max-width: 480px) {
+    .admin-user-offcanvas .offcanvas-body { padding: 1rem; }
+    .admin-modal-footer { padding: .7rem .85rem; gap: .35rem; }
+    .admin-modal-footer > div { gap: .3rem; }
+    .admin-modal-footer .btn-toggle-active,
+    .admin-modal-footer .btn-secondary-custom,
+    .admin-modal-footer .btn-primary-custom,
+    .admin-modal-footer .btn-danger-custom,
+    .admin-modal-footer .btn-success-custom {
+        padding-left: .55rem;
+        padding-right: .55rem;
+        font-size: .74rem;
+    }
+}
