@@ -17,7 +17,7 @@ function clearDatbActivity(){
 function datbSessionExpired(){
   try {
     const last = Number(localStorage.getItem(LAST_ACTIVITY_KEY))
-    return !last || Date.now() - last >= IDLE_LIMIT_MS
+    return !!last && Date.now() - last >= IDLE_LIMIT_MS
   } catch (_) {
     return false
   }
