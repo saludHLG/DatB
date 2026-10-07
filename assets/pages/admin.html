@@ -143,9 +143,8 @@
             </div>
         </section>
 
-<div class="modal fade" id="modal-edit-user" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content admin-modal">
+<div class="offcanvas offcanvas-end admin-user-offcanvas" tabindex="-1" id="modal-edit-user" aria-labelledby="modal-edit-name">
+        <div class="offcanvas-header admin-modal-header">
             <div class="modal-header admin-modal-header">
                 <div class="modal-user-info">
                     <div class="modal-avatar" id="modal-avatar"></div>
@@ -155,9 +154,9 @@
                         <span class="modal-prof-badge" id="modal-prof-badge"></span>
                     </div>
                 </div>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
             </div>
-            <div class="modal-body">
+            <div class="offcanvas-body">
 
                 <div class="modal-section">
                     <div class="modal-section-title"><i class="bi bi-person"></i> Datos personales
@@ -237,19 +236,17 @@
                 </div>
 
             </div>
-            <div class="modal-footer admin-modal-footer">
+            <div class="offcanvas-footer admin-modal-footer">
                 <div>
                     <button type="button" class="btn-toggle-active" id="btn-toggle-active"></button>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas">Cancelar</button>
                     <button type="button" class="btn-primary-custom" id="btn-save-user">
                         <i class="bi bi-check-lg"></i> Guardar
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
 </div>
 
 <div class="modal fade" id="modal-approve" tabindex="-1" aria-hidden="true">
