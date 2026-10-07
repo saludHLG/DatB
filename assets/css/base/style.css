@@ -1691,6 +1691,10 @@ button, input, select, textarea {
         background: #fff;
     }
 
+    .main-area::before {
+        display: none;
+    }
+
     .form-view.active {
         width: 100%;
         min-height: 100vh;
