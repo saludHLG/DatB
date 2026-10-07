@@ -41,7 +41,7 @@ const LEGACY=['assets/js/core/config.js','assets/js/core/data.js','assets/js/cor
 
 function Dashboard({user,onLogout}){
  const [active,setActive]=useState('home'),[ready,setReady]=useState(false);const host=useRef(null)
- useEffect(()=>{let alive=true;(async()=>{try{await loadLegacyScripts(LEGACY);await window.sbInitAll?.();if(alive)setReady(true)}catch(e){console.error('DatB legacy bootstrap',e)}})();return()=>{alive=false}},[])
+ useEffect(()=>{let alive=true;(async()=>{try{await loadLegacyScripts(LEGACY);if(!alive)return;setReady(true);Promise.resolve(window.sbInitAll?.()).catch(e=>console.error('DatB data bootstrap',e))}catch(e){console.error('DatB legacy bootstrap',e)}})();return()=>{alive=false}},[])
  const mods=useMemo(()=>ready?(window.buildModulos?.(user)||[{id:'home',icon:'bi-house',label:'Inicio'},{id:'perfil',icon:'bi-person-circle',label:'Mi perfil'}]):[],[ready,user])
  useEffect(()=>{if(!ready||!host.current)return;try{host.current.innerHTML='';if(typeof window.renderModulo!=='function')throw new Error('El router de módulos no está disponible.');window.renderModulo(active,user)}catch(e){console.error('DatB module',active,e);host.current.innerHTML='<div class="react-error"><strong>No se pudo abrir este módulo.</strong><br>'+String(e?.message||'Error de inicialización.')+'</div>'}},[ready,active,user])
  const initials=((user.nombres?.[0]||'')+(user.apellidos?.[0]||'')).toUpperCase()
