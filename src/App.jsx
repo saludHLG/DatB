@@ -77,8 +77,10 @@ export default function App(){
 
  useEffect(()=>{
    const onIdleLogout=()=>setUser(null)
+   const onUserUpdated=e=>{if(e.detail?.user)setUser(u=>({...u,...e.detail.user}))}
    window.addEventListener('datb:idle-logout',onIdleLogout)
-   return()=>window.removeEventListener('datb:idle-logout',onIdleLogout)
+   window.addEventListener('datb:user-updated',onUserUpdated)
+   return()=>{window.removeEventListener('datb:idle-logout',onIdleLogout);window.removeEventListener('datb:user-updated',onUserUpdated)}
  },[])
 
  if(checking)return <div className="react-loading">Cargando DatB…</div>
