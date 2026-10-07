@@ -70,3 +70,7 @@ const ROLES_SISTEMA = {
     5: "Moderador nacional",
     6: "Administrador"
 };
+
+window.DATOS_GEO=DATOS_GEO;
+window.ROLES_PROFESIONALES=ROLES_PROFESIONALES;
+window.ROLES_SISTEMA=ROLES_SISTEMA;
