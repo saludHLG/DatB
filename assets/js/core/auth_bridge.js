@@ -106,21 +106,65 @@
         return result?.error ? { error: result.error } : { user: result?.user || null, error: null };
     };
 
+    /*
+     * Login directo contra Supabase Auth.
+     * El nombre de usuario se transforma de forma determinista en el email
+     * técnico interno y el PIN en la contraseña interna. No dependemos de
+     * una Edge Function pública para autenticar.
+     */
     window.sbLogin = async function (nombreUsuario, pin) {
         const sb = getSb();
-        const result = await invokeAuth({
-            action: 'login',
-            nombre_usuario: String(nombreUsuario).trim().toLowerCase(),
-            pin: String(pin)
-        }, LOGIN_FUNCTION);
-        if (result.error) return { user: null, error: result.error };
-        if (!result.session) return { user: null, error: 'Supabase Auth no devolvió una sesión.' };
-        const { error: sessionError } = await sb.auth.setSession(result.session);
-        if (sessionError) return { user: null, error: sessionError.message };
-        const user = result.user;
+        if (!sb) return { user: null, error: 'Sin conexión a Supabase.' };
+
+        const username = String(nombreUsuario).trim().toLowerCase();
+        const technicalEmail = username + '@auth.datb.invalid';
+        const password = await authPasswordFor(username, String(pin));
+
+        const { data: authData, error: authError } =
+            await sb.auth.signInWithPassword({
+                email: technicalEmail,
+                password
+            });
+
+        if (authError || !authData?.user) {
+            return {
+                user: null,
+                error: authError?.message || 'Nombre de usuario o PIN incorrecto.'
+            };
+        }
+
+        const usuarioId = authData.user.user_metadata?.usuario_id;
+        if (!usuarioId) {
+            await sb.auth.signOut();
+            return { user: null, error: 'La identidad de autenticación no está vinculada a DatB.' };
+        }
+
+        const { data: user, error: dbError } = await sb
+            .from('usuarios')
+            .select('*')
+            .eq('id', usuarioId)
+            .maybeSingle();
+
+        if (dbError || !user) {
+            await sb.auth.signOut();
+            return { user: null, error: 'No se pudo cargar el perfil de usuario.' };
+        }
+
+        if (!user.activo) {
+            await sb.auth.signOut();
+            return { user: null, error: 'Cuenta desactivada.' };
+        }
+
+        if (!user.aprobado) {
+            await sb.auth.signOut();
+            return { user: null, error: 'La cuenta está pendiente de aprobación.' };
+        }
+
         window._currentUser = user;
+        window._activeUserId = user.id;
         window._adminUser = Number(user?.rol_sistema_id) === 6 ? user : null;
         startIdleWatchdog();
+
         return { user, error: null };
     };
 
