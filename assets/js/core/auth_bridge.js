@@ -120,10 +120,6 @@
         const user = result.user;
         window._currentUser = user;
         window._adminUser = Number(user?.rol_sistema_id) === 6 ? user : null;
-        if (typeof sbInitAll === 'function') {
-            try { await sbInitAll(); } catch (e) { console.error('sbInitAll after login:', e); }
-        }
-        if (typeof sbStartRealtime === 'function') await sbStartRealtime();
         startIdleWatchdog();
         return { user, error: null };
     };
