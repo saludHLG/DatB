@@ -3,6 +3,64 @@
     const getSb = () => (typeof _client === 'function' ? _client() : null);
     window.__datbSupabaseClient = getSb;
     const AUTH_FUNCTION = 'datb-provision';
+    const IDLE_LIMIT_MS = 30 * 60 * 1000;
+    const LAST_ACTIVITY_KEY = 'datb:last_activity';
+    let idleTimer = null;
+    let lastActivityWrite = 0;
+
+    const markActivity = () => {
+        try {
+            const now = Date.now();
+            if (now - lastActivityWrite >= 15000) {
+                localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+                lastActivityWrite = now;
+            }
+        } catch (_) {}
+    };
+
+    const clearActivity = () => {
+        try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch (_) {}
+    };
+
+    const isIdleExpired = () => {
+        try {
+            const last = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
+            return !last || (Date.now() - last) >= IDLE_LIMIT_MS;
+        } catch (_) {
+            return false;
+        }
+    };
+
+    const stopIdleWatchdog = () => {
+        if (idleTimer) {
+            clearInterval(idleTimer);
+            idleTimer = null;
+        }
+        ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt =>
+            window.removeEventListener(evt, markActivity)
+        );
+    };
+
+    const startIdleWatchdog = () => {
+        stopIdleWatchdog();
+        markActivity();
+        const events = ['mousemove','mousedown','keydown','touchstart','scroll','click'];
+        events.forEach(evt => window.addEventListener(evt, markActivity, { passive: true }));
+        idleTimer = setInterval(async () => {
+            if (!isIdleExpired()) return;
+            stopIdleWatchdog();
+            try {
+                const sb = getSb();
+                if (sb) await sb.auth.signOut();
+            } finally {
+                clearActivity();
+                window._activeUserId = null;
+                window._currentUser = null;
+                window._adminUser = null;
+                window.dispatchEvent(new CustomEvent('datb:idle-logout'));
+            }
+        }, 15000);
+    };
 
     const invokeAuth = async (body) => {
         const sb = getSb();
@@ -41,6 +99,7 @@
             try { await sbInitAll(); } catch (e) { console.error('sbInitAll after login:', e); }
         }
         if (typeof sbStartRealtime === 'function') await sbStartRealtime();
+        startIdleWatchdog();
         return { user, error: null };
     };
 
@@ -52,6 +111,7 @@
             const { error } = await sb.auth.setSession(result.session);
             if (error) return { error: error.message };
             if (typeof sbStartRealtime === 'function') await sbStartRealtime();
+            startIdleWatchdog();
         }
         return { error: null, user: result.user || null, bootstrap: !!result.bootstrap };
     };
@@ -59,6 +119,15 @@
     window.sbGetSession = async function () {
         const sb = getSb();
         if (!sb) return null;
+        if (isIdleExpired()) {
+            stopIdleWatchdog();
+            await sb.auth.signOut();
+            clearActivity();
+            window._activeUserId = null;
+            window._currentUser = null;
+            window._adminUser = null;
+            return null;
+        }
         const { data: authData, error } = await sb.auth.getUser();
         if (error || !authData?.user) { window._currentUser = null; return null; }
         const usuarioId = authData.user.user_metadata?.usuario_id;
@@ -69,16 +138,19 @@
         window._activeUserId = user.id;
         window._adminUser = Number(user.rol_sistema_id) === 6 ? user : null;
         if (typeof sbStartRealtime === 'function') await sbStartRealtime();
+        startIdleWatchdog();
         return user;
     };
 
     window.sbLogout = async function () {
+        stopIdleWatchdog();
         const sb = getSb();
         if (typeof sbStopRealtime === 'function') await sbStopRealtime();
         if (sb) await sb.auth.signOut();
         window._activeUserId = null;
         window._currentUser = null;
         window._adminUser = null;
+        clearActivity();
     };
 
     window.sbChangePin = async function () {
