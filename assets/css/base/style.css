@@ -1808,3 +1808,208 @@ button, input, select, textarea {
   .firma-actions .btn-firma-save{grid-column:1 / -1;justify-self:end}
   .firma-tools{justify-content:flex-start}
 }
+
+
+/* =========================================================
+   PERFIL APP — contenido directo sobre el fondo
+   ========================================================= */
+.perfil-page{
+    width:100%;
+    max-width:none;
+}
+.perfil-layout{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+}
+.perfil-section{
+    padding:0 0 1.35rem;
+    margin:0 0 1.35rem;
+    border-bottom:1px solid rgba(148,163,184,.28);
+}
+.perfil-section:last-child{
+    border-bottom:0;
+    margin-bottom:0;
+    padding-bottom:0;
+}
+.perfil-section-title{
+    display:flex;
+    align-items:center;
+    gap:.45rem;
+    margin:0 0 1rem;
+    color:var(--navy);
+    font-family:var(--font-display);
+    font-size:1rem;
+    font-weight:700;
+}
+.perfil-section-title i{
+    font-size:1rem;
+    color:var(--navy-mid);
+}
+.perfil-form{
+    padding:0;
+}
+.perfil-grid{
+    display:grid;
+    gap:.8rem 1rem;
+}
+.perfil-grid-2{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.perfil-grid-3{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    margin-top:.8rem;
+}
+.perfil-field{
+    min-width:0;
+}
+.perfil-edit-form-app .form-control,
+.perfil-edit-form-app .form-select{
+    min-width:0;
+    height:40px;
+    font-size:.86rem;
+    padding:.48rem .7rem;
+    border-radius:8px;
+}
+.perfil-field-label{
+    font-size:.68rem;
+    letter-spacing:.045em;
+    margin:0 0 .26rem;
+}
+.perfil-field-help{
+    font-size:.67rem;
+    line-height:1.3;
+    margin-top:.25rem;
+    color:var(--text-muted,#64748b);
+}
+.perfil-meta-line{
+    display:flex;
+    align-items:center;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin-top:.9rem;
+    color:var(--text-muted,#64748b);
+    font-size:.74rem;
+}
+.perfil-meta-line>span{
+    display:inline-flex;
+    align-items:center;
+    gap:.3rem;
+}
+.perfil-status.ok{color:#15803d}
+.perfil-status.pending{color:#b45309}
+.perfil-actions{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:.9rem;
+}
+.perfil-actions .btn-primary-custom{
+    padding:.58rem .9rem;
+    font-size:.8rem;
+}
+.perfil-security-note{
+    display:flex;
+    align-items:flex-start;
+    gap:.45rem;
+    margin:0 0 .8rem;
+    color:var(--text-muted,#64748b);
+    font-size:.7rem;
+    line-height:1.4;
+}
+.perfil-security-note i{
+    color:#0369a1;
+    margin-top:.05rem;
+}
+.perfil-pin{
+    letter-spacing:.18em;
+}
+.perfil-section .alert-custom{
+    margin-top:.75rem !important;
+    margin-bottom:0;
+    padding:.5rem .7rem;
+    font-size:.75rem;
+}
+.firma-wrap{
+    padding:0;
+}
+.firma-hint{
+    font-size:.72rem;
+    margin:0 0 .55rem;
+    color:#64748b;
+}
+.canvas-container{
+    margin-bottom:.65rem;
+    border-radius:9px;
+}
+#firma-canvas{
+    width:100%;
+    height:auto;
+    min-height:150px;
+    display:block;
+    position:relative;
+    z-index:1;
+    background:#fff;
+}
+.canvas-placeholder{
+    z-index:0;
+    font-size:.76rem;
+}
+.canvas-placeholder i{
+    font-size:1.5rem;
+}
+.firma-actions{
+    gap:.55rem;
+}
+.firma-tools{
+    gap:.6rem;
+}
+.firma-tool-label{
+    font-size:.69rem;
+}
+.firma-tool-label input[type=range]{
+    width:70px;
+}
+.firma-tool-label input[type=color]{
+    width:32px;
+    height:24px;
+}
+.btn-firma-clear,
+.btn-firma-save{
+    padding:.46rem .72rem;
+    font-size:.77rem;
+    border-radius:8px;
+}
+.firma-saved-wrap{
+    margin-top:.6rem;
+    padding:.55rem 0;
+    gap:.5rem;
+}
+.firma-saved-img{
+    max-width:240px;
+    width:100%;
+    height:auto;
+}
+@media(max-width:960px){
+    .react-content{padding:.85rem .75rem 5.5rem}
+    .perfil-section{padding-bottom:1.05rem;margin-bottom:1.05rem}
+    .perfil-grid{gap:.65rem .75rem}
+    .perfil-grid-2,
+    .perfil-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .perfil-edit-form-app .form-control,
+    .perfil-edit-form-app .form-select{
+        height:38px;
+        font-size:.83rem;
+    }
+    .perfil-actions .btn-primary-custom{
+        padding:.56rem .82rem;
+        font-size:.78rem;
+    }
+}
+@media(max-width:560px){
+    .perfil-grid-2,
+    .perfil-grid-3{grid-template-columns:1fr}
+    .perfil-section-title{font-size:.94rem;margin-bottom:.8rem}
+    .perfil-meta-line{font-size:.7rem}
+    .firma-actions{display:grid;grid-template-columns:auto 1fr}
+    .firma-actions .btn-firma-save{grid-column:1 / -1;justify-self:end}
+}
