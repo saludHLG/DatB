@@ -158,7 +158,8 @@
         window._currentUser = user;
         window._activeUserId = user.id;
         window._adminUser = Number(user.rol_sistema_id) === 6 ? user : null;
-        if (typeof sbStartRealtime === 'function') await sbStartRealtime();
+        Promise.resolve(typeof sbStartRealtime === 'function' ? sbStartRealtime() : null)
+            .catch(e => console.error('sbStartRealtime restore:', e));
         startIdleWatchdog();
         return user;
     };
