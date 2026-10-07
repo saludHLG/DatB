@@ -3,6 +3,26 @@ import {loadLegacyScripts} from './legacy.js'
 
 const ROLES={1:'Médico/a',2:'Enfermero/a',3:'Licenciado/a de Lab.',4:'Técnico/a de Lab.'}
 
+const IDLE_LIMIT_MS = 30 * 60 * 1000
+const LAST_ACTIVITY_KEY = 'datb:last_activity'
+
+function markDatbActivity(){
+  try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())) } catch (_) {}
+}
+
+function clearDatbActivity(){
+  try { localStorage.removeItem(LAST_ACTIVITY_KEY) } catch (_) {}
+}
+
+function datbSessionExpired(){
+  try {
+    const last = Number(localStorage.getItem(LAST_ACTIVITY_KEY))
+    return !last || Date.now() - last >= IDLE_LIMIT_MS
+  } catch (_) {
+    return false
+  }
+}
+
 function Pin({value,onChange}){const refs=useRef([]);const chars=Array.from({length:4},(_,i)=>(value||'')[i]||'');const set=(i,v)=>{const digit=String(v??'').replace(/\D/g,'').slice(-1);const next=[...chars];next[i]=digit;onChange(next.join('').replace(/\D/g,'').slice(0,4));if(digit&&i<3)refs.current[i+1]?.focus()};return <div className="react-pin">{[0,1,2,3].map(i=><input key={i} ref={el=>refs.current[i]=el} type="text" inputMode="numeric" autoComplete="one-time-code" maxLength="1" value={chars[i]} onChange={e=>set(i,e.target.value)} onKeyDown={e=>{if(e.key==='Backspace'&&!chars[i]&&i>0)refs.current[i-1]?.focus()}} aria-label={`Dígito ${i+1}`}/>)}</div>}
 
 function Auth({onLogin}){
@@ -29,8 +49,67 @@ function Dashboard({user,onLogout}){
 }
 
 export default function App(){
- const [user,setUser]=useState(null),[checking,setChecking]=useState(false)
+ const [user,setUser]=useState(null),[checking,setChecking]=useState(true)
+
+ useEffect(()=>{
+   let alive=true
+   ;(async()=>{
+     try{
+       await loadLegacyScripts(['assets/js/core/config.js','assets/js/core/supabase_client.js','assets/js/core/auth_bridge.js'])
+       if(typeof window.sbGetSession==='function' && !datbSessionExpired()){
+         const restored=await window.sbGetSession()
+         if(alive && restored){
+           markDatbActivity()
+           setUser(restored)
+         }
+       }else if(datbSessionExpired()){
+         await window.sbLogout?.()
+         clearDatbActivity()
+       }
+     }catch(e){
+       console.error('DatB session restore',e)
+     }finally{
+       if(alive)setChecking(false)
+     }
+   })()
+   return()=>{alive=false}
+ },[])
+
+ useEffect(()=>{
+   if(!user)return
+   markDatbActivity()
+   let lastWrite=Date.now()
+
+   const activity=()=>{
+     const now=Date.now()
+     if(now-lastWrite >= 15000){
+       lastWrite=now
+       markDatbActivity()
+     }
+   }
+   const events=['mousemove','mousedown','keydown','touchstart','scroll','click']
+   events.forEach(evt=>window.addEventListener(evt,activity,{passive:true}))
+   const timer=window.setInterval(async()=>{
+     try{
+       if(datbSessionExpired()){
+         window.clearInterval(timer)
+         await window.sbLogout?.()
+         clearDatbActivity()
+         if(document.visibilityState!=='hidden') window.dispatchEvent(new CustomEvent('datb:idle-logout'))
+         setUser(null)
+       }
+     }catch(e){
+       console.error('DatB idle timeout',e)
+     }
+   },15000)
+
+   return()=>{
+     events.forEach(evt=>window.removeEventListener(evt,activity))
+     window.clearInterval(timer)
+   }
+ },[user])
+
  if(checking)return <div className="react-loading">Cargando DatB…</div>
- if(!user)return <Auth onLogin={setUser}/>
- return <Dashboard user={user} onLogout={async()=>{try{await window.sbLogout?.()}finally{setUser(null)}}}/>
+ if(!user)return <Auth onLogin={user=>{markDatbActivity();setUser(user)}}/>
+ return <Dashboard user={user} onLogout={async()=>{try{await window.sbLogout?.()}finally{clearDatbActivity();setUser(null)}}}/>
 }
