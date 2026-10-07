@@ -1,0 +1,1 @@
+const loaded=new Set();export async function loadLegacyScripts(paths){for(const path of paths){if(loaded.has(path))continue;await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='/'+path;s.async=false;s.onload=resolve;s.onerror=()=>reject(new Error('No se pudo cargar '+path));document.head.appendChild(s)});loaded.add(path)}}
