@@ -40,7 +40,7 @@ function _client() {
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
             auth: {
                 persistSession: true,
-                storage: window.sessionStorage,
+                storage: window.localStorage,
                 autoRefreshToken: true,
                 detectSessionInUrl: false,
             },
