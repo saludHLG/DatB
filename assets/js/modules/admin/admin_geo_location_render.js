@@ -1,5 +1,11 @@
 /* DatB admin geography location rendering and tab wiring. */
-function renderLocPanel(panel){({provincias:renderProvs,municipios:renderMuns,centros:renderCentros,laboratorios:renderLabs}[panel]||(()=>{}))();}
+function renderLocPanel(panel){
+    ({provincias:renderProvs,municipios:renderMuns,centros:renderCentros,laboratorios:renderLabs}[panel]||(()=>{}))();
+    /* Tras rellenar los filtros, convertir los selects en combobox de
+       busqueda. Es idempotente: no re-envuelve los ya convertidos. */
+    if(typeof upgradeCombos==='function')
+        upgradeCombos($a('tab-locations') || document);
+}
 
 function renderProvs(){
     const p=GEO.getProvs(),m=GEO.getMuns(),c=GEO.getCentros(),l=GEO.getLabs(),tb=$a('tbody-provincias');if(!tb)return;

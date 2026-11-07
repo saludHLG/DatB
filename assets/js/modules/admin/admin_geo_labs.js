@@ -24,7 +24,7 @@ function openLabModal(id){
     const a=document.querySelector(`input[name="lab-activo"][value="${x.activo}"]`);if(a)a.checked=true;
     const ids=x.examenes_ids?.length?x.examenes_ids.map(Number):[1,2,3,4,5];
     document.querySelectorAll('.lab-ex-chk').forEach(c=>c.checked=ids.includes(parseInt(c.value)));
-    hideLabExErr();$a('lab-err').classList.add('d-none');bootstrap.Modal.getOrCreateInstance($a('modal-laboratorio')).show();
+    hideLabExErr();$a('lab-err').classList.add('d-none');if(typeof upgradeCombos==='function')upgradeCombos($a('modal-laboratorio'));bootstrap.Offcanvas.getOrCreateInstance($a('modal-laboratorio')).show();
 }
 
 function saveLab(){
@@ -35,11 +35,11 @@ function saveLab(){
     const a=GEO.getLabs(),id=Number($a('lab-edit-id').value);
     if(id){const i=a.findIndex(x=>x.id===id);a[i]={...a[i],nombre:n,nivel_referencia:nivel,provincia_id:p,municipio_id:m,activo,examenes_ids:ids};}
     else a.push({id:nextGeoId(a),nombre:n,nivel_referencia:nivel,provincia_id:p,municipio_id:m,activo,examenes_ids:ids});
-    GEO.saveLabs(a);bootstrap.Modal.getInstance($a('modal-laboratorio'))?.hide();renderLabs();toast(id?'Laboratorio actualizado.':'Laboratorio creado.');
+    GEO.saveLabs(a);bootstrap.Offcanvas.getInstance($a('modal-laboratorio'))?.hide();renderLabs();toast(id?'Laboratorio actualizado.':'Laboratorio creado.');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-    $a('btn-new-lab')?.addEventListener('click',()=>{$a('modal-lab-title').innerHTML='<i class="bi bi-flask"></i> Nuevo laboratorio';$a('lab-edit-id').value='';$a('lab-nombre').value='';$a('lab-nivel').value='local';fillProvSelect($a('lab-provincia'));$a('lab-municipio').innerHTML='<option value="">— Seleccione provincia —</option>';$a('lab-municipio').disabled=true;document.querySelector('input[name="lab-activo"][value="true"]')?.click();document.querySelectorAll('.lab-ex-chk').forEach(c=>c.checked=true);hideLabExErr();$a('lab-err').classList.add('d-none');bootstrap.Modal.getOrCreateInstance($a('modal-laboratorio')).show();});
+    $a('btn-new-lab')?.addEventListener('click',()=>{$a('modal-lab-title').innerHTML='<i class="bi bi-flask"></i> Nuevo laboratorio';$a('lab-edit-id').value='';$a('lab-nombre').value='';$a('lab-nivel').value='local';fillProvSelect($a('lab-provincia'));$a('lab-municipio').innerHTML='<option value="">— Seleccione provincia —</option>';$a('lab-municipio').disabled=true;document.querySelector('input[name="lab-activo"][value="true"]')?.click();document.querySelectorAll('.lab-ex-chk').forEach(c=>c.checked=true);hideLabExErr();$a('lab-err').classList.add('d-none');if(typeof upgradeCombos==='function')upgradeCombos($a('modal-laboratorio'));bootstrap.Offcanvas.getOrCreateInstance($a('modal-laboratorio')).show();});
     $a('lab-provincia')?.addEventListener('change',function(){fillMunSelect($a('lab-municipio'),this.value);$a('lab-municipio').disabled=!this.value;});
     $a('btn-save-lab')?.addEventListener('click',saveLab);
     $a('filter-lab')?.addEventListener('input',renderLabs);$a('filter-lab-prov')?.addEventListener('change',renderLabs);$a('filter-lab-nivel')?.addEventListener('change',renderLabs);

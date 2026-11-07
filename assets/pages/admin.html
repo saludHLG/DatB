@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="admin.css">
     <link rel="stylesheet" href="combo.css">
+    <link rel="stylesheet" href="loc.css">
 </head>
 <body class="admin-body">
 
@@ -283,8 +284,6 @@
                     <i class="bi bi-check-circle"></i><span class="btn-txt">Aprobar</span>
                 </button>
             </div>
-        </div>
-    </div>
 </div>
 
 <div class="modal fade" id="modal-access" tabindex="-1" aria-hidden="true">
@@ -329,8 +328,6 @@
                     <i class="bi bi-calendar-check"></i><span class="btn-txt">Aprobar acceso</span>
                 </button>
             </div>
-        </div>
-    </div>
 </div>
 
         <section id="tab-locations" class="admin-tab d-none">
@@ -358,7 +355,7 @@
                         <i class="bi bi-search filter-icon"></i>
                         <input type="text" id="filter-mun" class="filter-input" placeholder="Buscar municipio…">
                     </div>
-                    <select id="filter-mun-prov" class="filter-select">
+                    <select id="filter-mun-prov" data-combo class="filter-select">
                         <option value="">Todas las provincias</option>
                     </select>
                     <span class="loc-count" id="count-municipios"></span>
@@ -377,10 +374,10 @@
                         <i class="bi bi-search filter-icon"></i>
                         <input type="text" id="filter-centro" class="filter-input" placeholder="Buscar centro…">
                     </div>
-                    <select id="filter-centro-prov" class="filter-select">
+                    <select id="filter-centro-prov" data-combo class="filter-select">
                         <option value="">Todas las provincias</option>
                     </select>
-                    <select id="filter-centro-mun" class="filter-select">
+                    <select id="filter-centro-mun" data-combo class="filter-select">
                         <option value="">Todos los municipios</option>
                     </select>
                     <span class="loc-count" id="count-centros"></span>
@@ -399,10 +396,10 @@
                         <i class="bi bi-search filter-icon"></i>
                         <input type="text" id="filter-lab" class="filter-input" placeholder="Buscar laboratorio…">
                     </div>
-                    <select id="filter-lab-prov" class="filter-select">
+                    <select id="filter-lab-prov" data-combo class="filter-select">
                         <option value="">Todas las provincias</option>
                     </select>
-                    <select id="filter-lab-nivel" class="filter-select">
+                    <select id="filter-lab-nivel" data-combo class="filter-select">
                         <option value="">Todo nivel</option>
                         <option value="local">Local</option>
                         <option value="municipal">Municipal</option>
@@ -467,9 +464,8 @@
     </main>
 </div>
 
-<div class="modal fade" id="modal-provincia" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content admin-modal">
+<div class="offcanvas offcanvas-end admin-geo-offcanvas" tabindex="-1" id="modal-provincia" aria-labelledby="modal-provincia-title">
+    
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-provincia-title"><i class="bi bi-map"></i> Provincia</h5>
                 <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
@@ -492,13 +488,10 @@
                 <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-provincia"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
-        </div>
-    </div>
 </div>
 
-<div class="modal fade" id="modal-municipio" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content admin-modal">
+<div class="offcanvas offcanvas-end admin-geo-offcanvas" tabindex="-1" id="modal-municipio" aria-labelledby="modal-municipio-title">
+    
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-municipio-title"><i class="bi bi-signpost-split"></i> Municipio</h5>
                 <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
@@ -512,7 +505,7 @@
                     </div>
                     <div class="col-12">
                         <label class="admin-label">Provincia <span class="required">*</span></label>
-                        <select id="mun-provincia" class="form-select admin-select">
+                        <select id="mun-provincia" data-combo class="form-select admin-select">
                             <option value="">— Seleccione —</option>
                         </select>
                     </div>
@@ -523,13 +516,10 @@
                 <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-municipio"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
-        </div>
-    </div>
 </div>
 
-<div class="modal fade" id="modal-centro" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content admin-modal">
+<div class="offcanvas offcanvas-end admin-geo-offcanvas" tabindex="-1" id="modal-centro" aria-labelledby="modal-centro-title">
+    
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-centro-title"><i class="bi bi-hospital"></i> Centro de salud</h5>
                 <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
@@ -543,7 +533,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="admin-label">Tipo <span class="required">*</span></label>
-                        <select id="centro-tipo" class="form-select admin-select">
+                        <select id="centro-tipo" data-combo class="form-select admin-select">
                             <option value="">— Seleccione —</option>
                             <option value="hospital">Hospital</option>
                             <option value="área de salud">Área de salud</option>
@@ -552,13 +542,13 @@
                     </div>
                     <div class="col-md-6">
                         <label class="admin-label">Provincia <span class="required">*</span></label>
-                        <select id="centro-provincia" class="form-select admin-select">
+                        <select id="centro-provincia" data-combo class="form-select admin-select">
                             <option value="">— Seleccione —</option>
                         </select>
                     </div>
                     <div class="col-12">
                         <label class="admin-label">Municipio <span class="required">*</span></label>
-                        <select id="centro-municipio" class="form-select admin-select" disabled>
+                        <select id="centro-municipio" data-combo class="form-select admin-select" disabled>
                             <option value="">— Seleccione provincia —</option>
                         </select>
                     </div>
@@ -569,13 +559,10 @@
                 <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-centro"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
-        </div>
-    </div>
 </div>
 
-<div class="modal fade" id="modal-laboratorio" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content admin-modal">
+<div class="offcanvas offcanvas-end admin-geo-offcanvas" tabindex="-1" id="modal-laboratorio" aria-labelledby="modal-laboratorio-title">
+    
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-lab-title"><i class="bi bi-flask"></i> Laboratorio</h5>
                 <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
@@ -589,7 +576,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="admin-label">Nivel de referencia <span class="required">*</span></label>
-                        <select id="lab-nivel" class="form-select admin-select">
+                        <select id="lab-nivel" data-combo class="form-select admin-select">
                             <option value="local">Local</option>
                             <option value="municipal">Municipal</option>
                             <option value="provincial">Provincial</option>
@@ -598,19 +585,18 @@
                     </div>
                     <div class="col-md-6">
                         <label class="admin-label">Provincia <span class="required">*</span></label>
-                        <select id="lab-provincia" class="form-select admin-select">
+                        <select id="lab-provincia" data-combo class="form-select admin-select">
                             <option value="">— Seleccione —</option>
                         </select>
                     </div>
                     <div class="col-12">
                         <label class="admin-label">Municipio <span class="required">*</span></label>
-                        <select id="lab-municipio" class="form-select admin-select" disabled>
+                        <select id="lab-municipio" data-combo class="form-select admin-select" disabled>
                             <option value="">— Seleccione provincia —</option>
                         </select>
                     </div>
                     <div class="col-12">
                         <label class="admin-label">Exámenes disponibles <span class="required">*</span></label>
-                        <p class="modal-hint mb-2">Seleccione los exámenes que puede realizar este laboratorio.</p>
                         <div class="lab-examenes-grid" id="lab-examenes-grid">
                             <label class="perm-check-label lab-ex-item">
                                 <input type="checkbox" class="lab-ex-chk" value="1"> Baciloscopia <code class="exam-cod ms-1">BACI</code>
@@ -651,8 +637,6 @@
                 <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-lab"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
-        </div>
-    </div>
 </div>
 
 <div class="modal fade" id="modal-delete" tabindex="-1" aria-hidden="true">
@@ -669,8 +653,6 @@
                 <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-danger-custom" id="btn-confirm-delete"><i class="bi bi-trash"></i><span class="btn-txt">Eliminar</span></button>
             </div>
-        </div>
-    </div>
 </div>
 
 <div class="modal fade" id="modal-cat-item" tabindex="-1" aria-hidden="true">
@@ -706,8 +688,6 @@
                 <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-cat"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
-        </div>
-    </div>
 </div>
 
 <div id="admin-toast" class="admin-toast d-none">
