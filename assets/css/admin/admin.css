@@ -124,7 +124,7 @@
 /* ------------------------------------------------------------
    TABLET (481px - 768px): sidebar compacto vertical
 ------------------------------------------------------------ */
-@media (min-width: 481px) and (max-width: 768px) {
+@media (min-width: 821px) and (max-width: 1024px) {
     .admin-sidebar {
         width: 62px;
         min-width: 62px;
@@ -171,7 +171,7 @@
 /* ------------------------------------------------------------
    MÓVIL (≤480px): barra inferior fija
 ------------------------------------------------------------ */
-@media (max-width: 480px) {
+@media (max-width: 820px) {
     #admin-app {
         flex-direction: column;
         height: auto;               /* elimina restricciones de altura */
@@ -317,10 +317,64 @@
     .sidebar-nav {
         order: 1;
     }
+    /* Pulsos tactiles: objetivo minimo comodo ~44px */
+    .btn-table-action {
+        width: 2.55rem;
+        height: 2.55rem;
+        font-size: 1rem;
+    }
+    .table-actions { gap: .5rem; }
+
+    /* Filtros: una columna, ancho completo y altura tactil */
+    .filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: .5rem;
+    }
+    .filter-search-wrap { min-width: 0; }
+    .filter-input,
+    .filter-select {
+        min-height: 2.75rem;
+        width: 100%;
+        font-size: .9rem;
+        box-sizing: border-box;
+    }
+
+    /* Tablas: desplaza el contenedor, la pagina no */
+    .table-card {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+    .admin-table { min-width: 40rem; }
+    .admin-table th,
+    .admin-table td { padding: .6rem .7rem; font-size: .82rem; }
+
+    /* Subtabs y botones de alta: fila desplazable */
+    .loc-subtabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: .15rem;
+    }
+    .loc-subtabs::-webkit-scrollbar { display: none; }
+    .loc-subtab { flex: 0 0 auto; }
+    .btn-add-loc,
+    .btn-add-lab { min-height: 2.75rem; }
+
+    /* Pie del modal: reparto uniforme, sin desbordar */
+    .admin-modal-footer { flex-wrap: wrap; }
+    .admin-modal-footer > div {
+        margin-left: auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
 }
 
 /* Portrait más compacto (opcional) */
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 820px) and (orientation: portrait) {
     .admin-sidebar {
         max-height: 4rem;
     }
@@ -852,7 +906,7 @@
     padding-right: .7rem;
     font-size: .8rem;
 }
-@media (max-width: 480px) {
+@media (max-width: 820px) {
     .admin-user-offcanvas .offcanvas-body { padding: 1rem; }
     .admin-modal-footer { padding: .7rem .85rem; gap: .35rem; }
     .admin-modal-footer > div { gap: .3rem; }
