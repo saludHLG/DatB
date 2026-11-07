@@ -1,0 +1,140 @@
+/* ------------------------------------------------------------------
+   Seccion Variables (catalogos)
+   Pestanas del mismo estilo que Localizacion. Los paneles usan .cat-panel
+   para no interferir con los .loc-panel de la otra pestana.
+   ------------------------------------------------------------------ */
+#cat-subtabs {
+    display: flex;
+    gap: .35rem;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: .75rem;
+    padding-bottom: .1rem;
+}
+
+#cat-subtabs::-webkit-scrollbar {
+    display: none;
+}
+
+#cat-subtabs .loc-subtab {
+    flex: 0 0 auto;
+}
+
+.cat-panel {
+    display: block;
+}
+
+.cat-panel.d-none {
+    display: none;
+}
+
+/* Cabecera del panel: contador a la izquierda, boton de alta a la derecha. */
+.cat-panel .loc-panel-header {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin-bottom: .5rem;
+}
+
+.cat-panel .loc-count {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cat-panel .btn-add-loc {
+    flex: 0 0 auto;
+}
+
+/* Lista de items: fila compacta, acciones a la derecha. */
+.cat-list {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+}
+
+.cat-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-height: 2.6rem;
+    padding: .35rem .6rem;
+    background: var(--a-surface);
+    border: 1px solid var(--a-border);
+    border-radius: 8px;
+    min-width: 0;
+}
+
+.cat-item-nombre {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: .88rem;
+    color: var(--a-navy);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cat-item-actions {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    flex: 0 0 auto;
+}
+
+.cat-item-actions button {
+    width: 2.1rem;
+    height: 2.1rem;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--a-muted);
+    font-size: .95rem;
+}
+
+.cat-item-actions button:hover {
+    background: #eef6fd;
+    color: var(--a-navy);
+}
+
+.cat-item-actions .cat-del-btn:hover,
+.cat-item-actions .micro-del-btn:hover {
+    background: #ffeef1;
+    color: var(--a-danger);
+}
+
+.cat-badge {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: .66rem;
+    padding: .1rem .4rem;
+    border-radius: 4px;
+    background: #eef3fb;
+    color: var(--a-navy-mid);
+    white-space: nowrap;
+}
+
+.cat-badge-inactive {
+    background: #f5f5f5;
+    color: #888;
+}
+
+@media (max-width: 520px) {
+    /* En pantallas estrechas el item pierde la insignia antes que el nombre. */
+    .cat-item {
+        min-height: 2.45rem;
+        padding: .3rem .45rem;
+    }
+
+    .cat-badge {
+        display: none;
+    }
+
+    .cat-item-actions button {
+        width: 2rem;
+        height: 2rem;
+    }
+}

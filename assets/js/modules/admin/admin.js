@@ -16,6 +16,7 @@ document.write('<script src="assets/js/modules/admin/admin_geo_delete.js"><\/scr
 document.write('<script src="assets/js/modules/admin/admin_catalogs_core.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_catalogs_basic.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_catalogs_micro.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_catalogos_tabs.js"><\/script>');
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {

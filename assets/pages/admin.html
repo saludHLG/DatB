@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="admin.css">
     <link rel="stylesheet" href="combo.css">
     <link rel="stylesheet" href="loc.css">
+    <link rel="stylesheet" href="catalogos.css">
 </head>
 <body class="admin-body">
 
@@ -423,46 +424,35 @@
         </section>
 
         <section id="tab-catalogos" class="admin-tab d-none">
+            <div class="loc-subtabs" id="cat-subtabs">
+                <button class="loc-subtab active" data-cat="grupos"><i class="bi bi-exclamation-triangle"></i> Grupos de riesgo</button>
+                <button class="loc-subtab" data-cat="muestras"><i class="bi bi-droplet-half"></i> Tipos de muestra</button>
+                <button class="loc-subtab" data-cat="microorganismos"><i class="bi bi-bug"></i> Microorganismos</button>
+            </div>
 
-            <div class="table-card mb-4">
-                <div class="table-card-header">
-                    <div>
-                        <h3 class="table-card-title"><i class="bi bi-exclamation-triangle me-2"></i>Grupos de vulnerabilidad</h3>
-                        <p class="table-card-sub">Factores de riesgo que pueden asignarse a un paciente en la indicación.</p>
-                    </div>
-                    <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-gv">
-                        <i class="bi bi-plus-circle"></i><span class="btn-txt">Agregar</span>
-                    </button>
+            <div id="cat-grupos" class="cat-panel">
+                <div class="loc-panel-header">
+                    <span class="loc-count" id="count-grupos"></span>
+                    <button class="btn-add-loc" id="btn-nuevo-gv" title="Agregar grupo" aria-label="Agregar grupo"><i class="bi bi-plus-lg"></i><span class="btn-txt">Agregar</span></button>
                 </div>
                 <div id="gv-admin-list" class="cat-list"></div>
             </div>
 
-            <div class="table-card mb-4">
-                <div class="table-card-header">
-                    <div>
-                        <h3 class="table-card-title"><i class="bi bi-droplet-half me-2"></i>Tipos de muestra</h3>
-                        <p class="table-card-sub">Muestras biológicas disponibles para las indicaciones de laboratorio.</p>
-                    </div>
-                    <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-tm">
-                        <i class="bi bi-plus-circle"></i><span class="btn-txt">Agregar</span>
-                    </button>
+            <div id="cat-muestras" class="cat-panel d-none">
+                <div class="loc-panel-header">
+                    <span class="loc-count" id="count-muestras"></span>
+                    <button class="btn-add-loc" id="btn-nuevo-tm" title="Agregar tipo de muestra" aria-label="Agregar tipo de muestra"><i class="bi bi-plus-lg"></i><span class="btn-txt">Agregar</span></button>
                 </div>
                 <div id="tm-admin-list" class="cat-list"></div>
             </div>
 
-            <div class="table-card">
-                <div class="table-card-header">
-                    <div>
-                        <h3 class="table-card-title"><i class="bi bi-bug me-2"></i>Microorganismos</h3>
-                        <p class="table-card-sub">Identificaciones disponibles en resultados de cultivo. Las entradas marcadas como <em>Sistema</em> no pueden eliminarse.</p>
-                    </div>
-                    <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-micro">
-                        <i class="bi bi-plus-circle"></i><span class="btn-txt">Agregar</span>
-                    </button>
+            <div id="cat-microorganismos" class="cat-panel d-none">
+                <div class="loc-panel-header">
+                    <span class="loc-count" id="count-micro"></span>
+                    <button class="btn-add-loc" id="btn-nuevo-micro" title="Agregar microorganismo" aria-label="Agregar microorganismo"><i class="bi bi-plus-lg"></i><span class="btn-txt">Agregar</span></button>
                 </div>
                 <div id="micro-admin-list" class="cat-list"></div>
             </div>
-
         </section>
 
     </main>
@@ -472,7 +462,7 @@
     
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-provincia-title"><i class="bi bi-map"></i> Provincia</h5>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="prov-edit-id">
@@ -489,7 +479,7 @@
                 <div id="prov-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-provincia"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
@@ -500,7 +490,7 @@
     
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-municipio-title"><i class="bi bi-signpost-split"></i> Municipio</h5>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="mun-edit-id">
@@ -519,7 +509,7 @@
                 <div id="mun-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-municipio"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
@@ -530,7 +520,7 @@
     
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-centro-title"><i class="bi bi-hospital"></i> Centro de salud</h5>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="centro-edit-id">
@@ -564,7 +554,7 @@
                 <div id="centro-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-centro"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
@@ -575,7 +565,7 @@
     
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-lab-title"><i class="bi bi-flask"></i> Laboratorio</h5>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="lab-edit-id">
@@ -644,7 +634,7 @@
                 <div id="lab-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-lab"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
@@ -669,12 +659,11 @@
     </div>
 </div>
 
-<div class="modal fade" id="modal-cat-item" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content admin-modal">
+<div class="offcanvas offcanvas-end admin-geo-offcanvas" tabindex="-1" id="modal-cat-item" aria-labelledby="modal-cat-title">
+    
             <div class="modal-header admin-modal-header">
                 <h5 class="modal-title" id="modal-cat-title"><i class="bi bi-tag"></i> Ítem</h5>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="cat-edit-id">
@@ -699,12 +688,12 @@
                 <div id="cat-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
                 <button type="button" class="btn-primary-custom" id="btn-save-cat"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
-    </div>
-</div>
+    
+
 
 <div id="admin-toast" class="admin-toast d-none">
     <i class="bi" id="toast-icon"></i>

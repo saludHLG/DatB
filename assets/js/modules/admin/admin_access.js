@@ -38,6 +38,6 @@ function adminBindTabs(){
     document.querySelectorAll('.snav-btn[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{
         document.querySelectorAll('.snav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.admin-tab').forEach(t=>t.classList.add('d-none'));
         const id=btn.dataset.tab;$a(id)?.classList.remove('d-none');const meta=ADMIN_TAB_META[id]||{title:id,sub:''};$a('admin-page-title').textContent=meta.title;$a('admin-page-sub').textContent=meta.sub;
-        if(id==='tab-locations'){initGeoData();renderLocPanel('provincias');}if(id==='tab-catalogos'){renderCatGV();renderCatTM();renderCatMicro();}
+        if(id==='tab-locations'){initGeoData();renderLocPanel('provincias');}if(id==='tab-catalogos'){typeof renderCatPanel==='function'?renderCatPanel('grupos'):(renderCatGV(),renderCatTM(),renderCatMicro());}
     }));
 }
