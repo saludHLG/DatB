@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="loc.css">
     <link rel="stylesheet" href="catalogos.css">
     <link rel="stylesheet" href="acceso.css">
+    <link rel="stylesheet" href="usuarios.css">
 </head>
 <body class="admin-body">
 
@@ -93,14 +94,14 @@
                     <i class="bi bi-search filter-icon"></i>
                     <input type="text" id="filter-search" class="filter-input" placeholder="Buscar nombre, CI…">
                 </div>
-                <select id="filter-rol-prof" class="filter-select">
+                <select id="filter-rol-prof" data-combo class="filter-select">
                     <option value="">Todos los roles prof.</option>
                     <option value="1">Médico/a</option>
                     <option value="2">Enfermero/a</option>
                     <option value="3">Licenciado/a Lab.</option>
                     <option value="4">Técnico/a Lab.</option>
                 </select>
-                <select id="filter-rol-sis" class="filter-select">
+                <select id="filter-rol-sis" data-combo class="filter-select">
                     <option value="">Todos los sistemas</option>
                     <option value="1">Usuario común</option>
                     <option value="2">Mod. institucional</option>
@@ -109,7 +110,7 @@
                     <option value="5">Mod. nacional</option>
                     <option value="6">Administrador</option>
                 </select>
-                <select id="filter-estado" class="filter-select">
+                <select id="filter-estado" data-combo class="filter-select">
                     <option value="">Todos</option>
                     <option value="aprobado">Aprobados</option>
                     <option value="pendiente">Pendientes aprobación</option>
@@ -147,223 +148,13 @@
             </div>
         </section>
 
-<div class="offcanvas offcanvas-end admin-user-offcanvas" tabindex="-1" id="modal-edit-user" aria-labelledby="modal-edit-name">
-            <div class="modal-header admin-modal-header">
-                <div class="modal-user-info">
-                    <div class="modal-avatar" id="modal-avatar"></div>
-                    <div>
-                        <h5 class="modal-title mb-0" id="modal-edit-name"></h5>
-                        <span class="modal-ci" id="modal-ci"></span>
-                        <span class="modal-prof-badge" id="modal-prof-badge"></span>
-                    </div>
-                </div>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
-            </div>
-            <div class="offcanvas-body">
 
-                <div class="modal-section">
-                    <div class="modal-section-title"><i class="bi bi-person"></i> Datos personales
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <label class="admin-label">Nombre de usuario <span class="required">*</span></label>
-                            <input type="text" id="modal-nombre-usuario" class="form-control ctrl-mono" minlength="5" maxlength="24" pattern="[a-z0-9]{5,24}" autocomplete="username">
 
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="admin-label">Nombres <span class="required">*</span></label>
-                            <input type="text" id="modal-nombres" class="form-control">
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="admin-label">Apellidos <span class="required">*</span></label>
-                            <input type="text" id="modal-apellidos" class="form-control">
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="admin-label">Rol profesional</label>
-                            <select id="modal-rol-prof-edit" data-combo class="form-select admin-select">
-                                <option value="1">Médico/a</option>
-                                <option value="2">Enfermero/a</option>
-                                <option value="3">Licenciado/a de Lab.</option>
-                                <option value="4">Técnico/a de Lab.</option>
-                            </select>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="admin-label">Registro profesional</label>
-                            <input type="text" id="modal-registro" class="form-control ctrl-mono" placeholder="RM-00000">
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="admin-label">Provincia</label>
-                            <select id="modal-prov-edit" data-combo class="form-select admin-select">
-                                <option value="">— Seleccione —</option>
-                            </select>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="admin-label">Municipio</label>
-                            <select id="modal-mun-edit" data-combo class="form-select admin-select" disabled>
-                                <option value="">— Seleccione —</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="admin-label">Centro de salud</label>
-                            <select id="modal-centro-edit" data-combo class="form-select admin-select" disabled>
-                                <option value="">— Seleccione municipio primero —</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="modal-section">
-                    <div class="modal-section-title"><i class="bi bi-shield-half"></i> Rol de sistema
-                    </div>
-                    <select id="modal-rol-sistema" data-combo class="form-select admin-select">
-                        <option value="1">Usuario común</option>
-                        <option value="2">Moderador institucional</option>
-                        <option value="3">Moderador municipal</option>
-                        <option value="4">Moderador provincial</option>
-                        <option value="5">Moderador nacional</option>
-                        <option value="6">Administrador</option>
-                    </select>
-                    <p class="modal-hint" id="modal-rol-hint"></p>
-                </div>
 
-                <div class="modal-section">
-                    <div class="modal-section-title">
-                        <i class="bi bi-flask"></i> Permisos de laboratorio
-                    </div>
-                    <div class="lab-add-row">
-                        <select id="modal-lab-select" data-combo class="form-select admin-select" style="flex:1">
-                            <option value="">— Seleccione laboratorio —</option>
-                        </select>
-                        <button class="btn-add-lab" id="btn-add-lab" title="Agregar laboratorio" aria-label="Agregar laboratorio"><i class="bi bi-plus-lg"></i></button>
-                    </div>
-                    <div id="lab-perms-list"></div>
-                    <p class="empty-lab-msg d-none" id="empty-lab-msg">Sin permisos de laboratorio asignados.</p>
-                </div>
 
-            
-                <div class="modal-section" id="sec-acceso-firma">
-                    <div class="modal-section-title"><i class="bi bi-shield-lock"></i> Acceso y firma</div>
+    
 
-                    <div class="admin-row">
-                        <div class="admin-row-info">
-                            <span class="admin-row-label">PIN de acceso</span>
-                            <span class="admin-row-hint">Restablézcalo si el usuario no puede entrar.</span>
-                        </div>
-                        <button type="button" class="btn-row-action" id="btn-reset-pin"
-                                title="Restablecer PIN" aria-label="Restablecer PIN">
-                            <i class="bi bi-key"></i>
-                        </button>
-                    </div>
-
-                    <div class="admin-row">
-                        <div class="admin-row-info">
-                            <span class="admin-row-label">Firma digital</span>
-                            <span class="admin-row-hint" id="firma-estado">Sin firma registrada.</span>
-                        </div>
-                        <div class="admin-row-actions">
-                            <img id="firma-preview" class="firma-mini" alt="Firma actual" hidden>
-                            <button type="button" class="btn-row-action danger" id="btn-del-firma"
-                                    title="Borrar firma" aria-label="Borrar firma" disabled>
-                                <i class="bi bi-eraser"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-</div>
-            <div class="offcanvas-footer admin-modal-footer">
-                <div>
-                    <button type="button" class="btn-toggle-active" id="btn-toggle-active"></button>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas" title="Cancelar" aria-label="Cancelar"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
-                    <button type="button" class="btn-primary-custom" id="btn-save-user" title="Guardar" aria-label="Guardar"><i class="bi bi-check-lg"></i><span class="btn-txt">Guardar</span></button>
-                </div>
-            </div>
-</div>
-
-<div class="modal fade" id="modal-approve" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content admin-modal">
-            <div class="modal-header admin-modal-header">
-                <h5 class="modal-title">Revisar solicitud de registro</h5>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-            </div>
-            <div class="modal-body">
-                <div id="approve-user-card" class="approve-user-card"></div>
-                <div class="mt-3">
-                    <label class="admin-label">Rol de sistema inicial</label>
-                    <select id="approve-rol-sistema" class="form-select admin-select">
-                        <option value="1">Usuario común</option>
-                        <option value="2">Moderador institucional</option>
-                        <option value="3">Moderador municipal</option>
-                        <option value="4">Moderador provincial</option>
-                        <option value="5">Moderador nacional</option>
-                        <option value="6">Administrador</option>
-                    </select>
-                </div>
-                <div class="mt-3 d-none" id="reject-reason-wrap">
-                    <label class="admin-label">Motivo del rechazo (opcional)</label>
-                    <textarea id="approve-reject-reason" class="form-control" rows="2"
-                              placeholder="Ej: Registro profesional no verificado…"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-danger-custom" id="btn-reject-user">
-                    <i class="bi bi-x-circle"></i><span class="btn-txt">Rechazar</span>
-                </button>
-                <button type="button" class="btn-success-custom" id="btn-approve-user">
-                    <i class="bi bi-check-circle"></i><span class="btn-txt">Aprobar</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modal-access" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content admin-modal">
-            <div class="modal-header admin-modal-header">
-                <h5 class="modal-title">Solicitud de acceso temporal</h5>
-                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-            </div>
-            <div class="modal-body">
-                <div id="access-request-card" class="approve-user-card"></div>
-                <div class="row g-3 mt-1">
-                    <div class="col-6">
-                        <label class="admin-label">Fecha inicio</label>
-                        <input type="date" id="access-fecha-inicio" class="form-control">
-                    </div>
-                    <div class="col-6">
-                        <label class="admin-label">Fecha fin</label>
-                        <input type="date" id="access-fecha-fin" class="form-control">
-                    </div>
-                    <div class="col-12">
-                        <label class="admin-label">Nivel aprobado</label>
-                        <select id="access-nivel" class="form-select admin-select">
-                            <option value="institucional">Institucional</option>
-                            <option value="municipal">Municipal</option>
-                            <option value="provincial">Provincial</option>
-                            <option value="nacional">Nacional</option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label class="admin-label">Alcance aprobado</label>
-                        <textarea id="access-alcance" class="form-control" rows="2"
-                                  placeholder="Especifique el alcance exacto…"></textarea>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-danger-custom" id="btn-reject-access">
-                    <i class="bi bi-x-circle"></i><span class="btn-txt">Rechazar</span>
-                </button>
-                <button type="button" class="btn-success-custom" id="btn-approve-access">
-                    <i class="bi bi-calendar-check"></i><span class="btn-txt">Aprobar acceso</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
         <section id="tab-locations" class="admin-tab d-none">
             <div class="loc-subtabs">
@@ -754,6 +545,221 @@
         <button type="button" class="btn-primary-custom" id="btn-do-reset-pin" title="Restablecer" aria-label="Restablecer"><i class="bi bi-check-lg"></i><span class="btn-txt">Restablecer</span></button>
     </div>
 </div>
+
+<div class="offcanvas offcanvas-end admin-user-offcanvas" tabindex="-1" id="modal-edit-user" aria-labelledby="modal-edit-name">
+            <div class="modal-header admin-modal-header">
+                <div class="modal-user-info">
+                    <div class="modal-avatar" id="modal-avatar"></div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="modal-edit-name"></h5>
+                        <span class="modal-ci" id="modal-ci"></span>
+                        <span class="modal-prof-badge" id="modal-prof-badge"></span>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="offcanvas-body">
+
+                <div class="modal-section">
+                    <div class="modal-section-title"><i class="bi bi-person"></i> Datos personales
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="admin-label">Nombre de usuario <span class="required">*</span></label>
+                            <input type="text" id="modal-nombre-usuario" class="form-control ctrl-mono" minlength="5" maxlength="24" pattern="[a-z0-9]{5,24}" autocomplete="username">
+
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Nombres <span class="required">*</span></label>
+                            <input type="text" id="modal-nombres" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Apellidos <span class="required">*</span></label>
+                            <input type="text" id="modal-apellidos" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Rol profesional</label>
+                            <select id="modal-rol-prof-edit" data-combo class="form-select admin-select">
+                                <option value="1">Médico/a</option>
+                                <option value="2">Enfermero/a</option>
+                                <option value="3">Licenciado/a de Lab.</option>
+                                <option value="4">Técnico/a de Lab.</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Registro profesional</label>
+                            <input type="text" id="modal-registro" class="form-control ctrl-mono" placeholder="RM-00000">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Provincia</label>
+                            <select id="modal-prov-edit" data-combo class="form-select admin-select">
+                                <option value="">— Seleccione —</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="admin-label">Municipio</label>
+                            <select id="modal-mun-edit" data-combo class="form-select admin-select" disabled>
+                                <option value="">— Seleccione —</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="admin-label">Centro de salud</label>
+                            <select id="modal-centro-edit" data-combo class="form-select admin-select" disabled>
+                                <option value="">— Seleccione municipio primero —</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title"><i class="bi bi-shield-half"></i> Rol de sistema
+                    </div>
+                    <select id="modal-rol-sistema" data-combo class="form-select admin-select">
+                        <option value="1">Usuario común</option>
+                        <option value="2">Moderador institucional</option>
+                        <option value="3">Moderador municipal</option>
+                        <option value="4">Moderador provincial</option>
+                        <option value="5">Moderador nacional</option>
+                        <option value="6">Administrador</option>
+                    </select>
+                    <p class="modal-hint" id="modal-rol-hint"></p>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">
+                        <i class="bi bi-flask"></i> Permisos de laboratorio
+                    </div>
+                    <div class="lab-add-row">
+                        <select id="modal-lab-select" data-combo class="form-select admin-select" style="flex:1">
+                            <option value="">— Seleccione laboratorio —</option>
+                        </select>
+                        <button class="btn-add-lab" id="btn-add-lab" title="Agregar laboratorio" aria-label="Agregar laboratorio"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                    <div id="lab-perms-list"></div>
+                    <p class="empty-lab-msg d-none" id="empty-lab-msg">Sin permisos de laboratorio asignados.</p>
+                </div>
+
+            
+                <div class="modal-section" id="sec-acceso-firma">
+                    <div class="modal-section-title"><i class="bi bi-shield-lock"></i> Acceso y firma</div>
+
+                    <div class="admin-row">
+                        <div class="admin-row-info">
+                            <span class="admin-row-label">PIN de acceso</span>
+                            <span class="admin-row-hint">Restablézcalo si el usuario no puede entrar.</span>
+                        </div>
+                        <button type="button" class="btn-row-action" id="btn-reset-pin"
+                                title="Restablecer PIN" aria-label="Restablecer PIN">
+                            <i class="bi bi-key"></i>
+                        </button>
+                    </div>
+
+                    <div class="admin-row">
+                        <div class="admin-row-info">
+                            <span class="admin-row-label">Firma digital</span>
+                            <span class="admin-row-hint" id="firma-estado">Sin firma registrada.</span>
+                        </div>
+                        <div class="admin-row-actions">
+                            <img id="firma-preview" class="firma-mini" alt="Firma actual" hidden>
+                            <button type="button" class="btn-row-action danger" id="btn-del-firma"
+                                    title="Borrar firma" aria-label="Borrar firma" disabled>
+                                <i class="bi bi-eraser"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+</div>
+            <div class="offcanvas-footer admin-modal-footer">
+                <div>
+                    <button type="button" class="btn-toggle-active" id="btn-toggle-active"></button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas" title="Cancelar" aria-label="Cancelar"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                    <button type="button" class="btn-primary-custom" id="btn-save-user" title="Guardar" aria-label="Guardar"><i class="bi bi-check-lg"></i><span class="btn-txt">Guardar</span></button>
+                </div>
+            </div>
+</div>
+
+<div class="modal fade" id="modal-approve" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content admin-modal">
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title">Revisar solicitud de registro</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="approve-user-card" class="approve-user-card"></div>
+                <div class="mt-3">
+                    <label class="admin-label">Rol de sistema inicial</label>
+                    <select id="approve-rol-sistema" class="form-select admin-select">
+                        <option value="1">Usuario común</option>
+                        <option value="2">Moderador institucional</option>
+                        <option value="3">Moderador municipal</option>
+                        <option value="4">Moderador provincial</option>
+                        <option value="5">Moderador nacional</option>
+                        <option value="6">Administrador</option>
+                    </select>
+                </div>
+                <div class="mt-3 d-none" id="reject-reason-wrap">
+                    <label class="admin-label">Motivo del rechazo (opcional)</label>
+                    <textarea id="approve-reject-reason" class="form-control" rows="2"
+                              placeholder="Ej: Registro profesional no verificado…"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-danger-custom" id="btn-reject-user">
+                    <i class="bi bi-x-circle"></i><span class="btn-txt">Rechazar</span>
+                </button>
+                <button type="button" class="btn-success-custom" id="btn-approve-user">
+                    <i class="bi bi-check-circle"></i><span class="btn-txt">Aprobar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-end admin-geo-offcanvas" tabindex="-1" id="modal-access" aria-labelledby="modal-access-title">
+    
+            <div class="modal-header admin-modal-header">
+                <h5 class="modal-title" id="modal-access-title"><i class="bi bi-key"></i> Solicitud de acceso</h5>
+                <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="access-request-card" class="approve-user-card"></div>
+                <div class="row g-3 mt-1">
+                    <div class="col-6">
+                        <label class="admin-label">Fecha inicio</label>
+                        <input type="date" id="access-fecha-inicio" class="form-control">
+                    </div>
+                    <div class="col-6">
+                        <label class="admin-label">Fecha fin</label>
+                        <input type="date" id="access-fecha-fin" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Nivel aprobado</label>
+                        <select id="access-nivel" data-combo class="form-select admin-select">
+                            <option value="institucional">Institucional</option>
+                            <option value="municipal">Municipal</option>
+                            <option value="provincial">Provincial</option>
+                            <option value="nacional">Nacional</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="admin-label">Alcance aprobado</label>
+                        <textarea id="access-alcance" class="form-control" rows="2"
+                                  placeholder="Especifique el alcance exacto…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer admin-modal-footer">
+                <button type="button" class="btn-danger-custom" id="btn-reject-access">
+                    <i class="bi bi-x-circle"></i><span class="btn-txt">Rechazar</span>
+                </button>
+                <button type="button" class="btn-success-custom" id="btn-approve-access">
+                    <i class="bi bi-calendar-check"></i><span class="btn-txt">Aprobar acceso</span>
+                </button>
+            </div>
+        </div>
 
 <div id="admin-toast" class="admin-toast d-none">
     <i class="bi" id="toast-icon"></i>

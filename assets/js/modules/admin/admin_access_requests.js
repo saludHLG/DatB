@@ -18,7 +18,7 @@ function openAccessModal(id) {
     $a('access-fecha-fin').value = fin.toISOString().split('T')[0];
     $a('access-nivel').value = 'provincial';
     $a('access-alcance').value = a.alcance_solicitado;
-    new bootstrap.Modal($a('modal-access')).show();
+    if(typeof upgradeCombos==='function')upgradeCombos($a('modal-access'));new bootstrap.Offcanvas($a('modal-access')).show();
 }
 
 function approveAccess() {
@@ -34,7 +34,7 @@ function approveAccess() {
     });
     saveAccesos(accesos);
     if (typeof sbUpsertRow === 'function') sbUpsertRow('accesos_temporales', accesos[idx]);
-    bootstrap.Modal.getInstance($a('modal-access'))?.hide();
+    bootstrap.Offcanvas.getInstance($a('modal-access'))?.hide();
     toast('Acceso temporal aprobado.', 'success');
     renderAll();
 }
@@ -50,7 +50,7 @@ function rejectAccess() {
             estado:'rechazada', revisado_en:accesos[idx].revisado_en
         });
     }
-    bootstrap.Modal.getInstance($a('modal-access'))?.hide();
+    bootstrap.Offcanvas.getInstance($a('modal-access'))?.hide();
     toast('Solicitud rechazada.', 'error');
     renderAll();
 }

@@ -1,0 +1,104 @@
+/* ------------------------------------------------------------------
+   Usuarios y Accesos temporales
+   Filtros en dos filas en movil, tabla desplazable y acciones como
+   iconos. Heredan el resto del estilo de admin.css.
+   ------------------------------------------------------------------ */
+
+/* Filtros: misma rejilla que Localizacion. */
+#tab-users .filters-bar {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    margin-bottom: .75rem;
+    min-width: 0;
+}
+
+#tab-users .filters-bar .filter-search-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+}
+
+#tab-users .filters-bar .combo,
+#tab-users .filters-bar .filter-select {
+    flex: 0 0 auto;
+}
+
+/* La tabla desplaza dentro de su tarjeta; nunca empuja la pagina. */
+#tab-users .table-card,
+#tab-access .table-card {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+/* Acciones de fila: iconos alineados y sin saltos. */
+#tab-users .table-actions {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    flex-wrap: nowrap;
+}
+
+/* La columna de laboratorio puede llevar mucho texto: se trunca. */
+#tab-users .admin-table td:nth-child(6) {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    /* El buscador ocupa la fila completa; los filtros, la siguiente. */
+    #tab-users .filters-bar .filter-search-wrap {
+        flex: 1 1 100%;
+        order: 0;
+    }
+
+    #tab-users .filters-bar .combo,
+    #tab-users .filters-bar .filter-select {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        order: 1;
+    }
+
+    /* Los tres filtros en una fila cuando caben; si no, se reparten. */
+    #tab-users .filters-bar .combo {
+        min-width: 6.5rem;
+    }
+
+    #tab-users .admin-table {
+        min-width: 38rem;
+    }
+
+    #tab-users .admin-table td:nth-child(6) {
+        max-width: 6rem;
+    }
+}
+
+@media (min-width: 641px) {
+    #tab-users .filters-bar .combo {
+        flex: 0 0 11rem;
+    }
+}
+
+/* Cabecera del formulario de acceso temporal. */
+#modal-access .approve-user-card {
+    margin-bottom: .75rem;
+}
+
+#modal-access .modal-body .row {
+    --bs-gutter-x: .5rem;
+    --bs-gutter-y: .6rem;
+}
+
+/* En pantallas estrechas las fechas van en una columna. */
+@media (max-width: 520px) {
+    #modal-access .modal-body .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
