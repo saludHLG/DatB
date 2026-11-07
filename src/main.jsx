@@ -2,13 +2,11 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { createClient } from '@supabase/supabase-js'
 import App from './App.jsx'
-import '../assets/css/base/tokens.css'
 import './react.css'
 import '../assets/css/base/style.css'
 import '../assets/css/base/modules.css'
 import '../assets/css/epidemiologia/epidemiologia.css'
 import '../assets/css/admin/admin.css'
-import '../assets/css/base/complementos.css'
 
 // Configuración Supabase. Se puede sobreescribir con variables de entorno
 // (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY); si no, se usan estos valores.

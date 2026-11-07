@@ -1,404 +1,75 @@
-/* ===== DatB · shell de la aplicación React ===== */
-/* Barra superior compacta, navegación inferior en móvil y contenido
-   a ancho completo sin marcos. */
-
-#root {
-  min-height: 100dvh;
-}
-
-.react-loading {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  color: var(--text-3);
-  font-size: var(--fs-sm);
-}
-
-/* ----- Acceso ----- */
-.react-auth {
-  min-height: 100dvh;
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-/* En móvil el panel lateral de marca no aporta y ocupa pantalla. */
-.react-side {
-  display: none;
-  padding: var(--s6);
-  background: var(--accent-strong);
-  color: #fff;
-  align-items: center;
-}
-
-.react-side h1 {
-  font-family: var(--font);
-  font-weight: 700;
-  font-size: var(--fs-2xl);
-  line-height: 1.15;
-  margin: 0 0 var(--s2);
-}
-
-.react-side p {
-  margin: 0;
-  color: rgb(255 255 255 / 82%);
-  font-size: var(--fs-sm);
-}
-
-.react-brand {
-  font-weight: 800;
-  font-size: 1.4rem;
-  letter-spacing: -0.02em;
-}
-
-.react-main {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: var(--s5) var(--s4);
-}
-
-/* Sin tarjeta: formulario sobre el fondo, ancho completo. */
-.react-card {
-  width: 100%;
-  max-width: 26rem;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-}
-
-.react-card h2 {
-  font-weight: 700;
-  font-size: var(--fs-xl);
-  margin: 0 0 var(--s1);
-}
-
-.react-muted {
-  color: var(--text-3);
-  margin: 0 0 var(--s5);
-  font-size: var(--fs-sm);
-}
-
-.react-form {
-  display: grid;
-  gap: var(--s4);
-}
-
-.react-form label {
-  display: grid;
-  gap: var(--s1);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.react-form input,
-.react-form select {
-  width: 100%;
-  min-height: var(--tap);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 0.6rem 0.7rem;
-  font: 400 var(--fs-md) var(--font);
-  color: var(--text);
-  background: var(--surface);
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.react-form input:focus,
-.react-form select:focus {
-  border-color: var(--accent);
-  box-shadow: var(--focus);
-  outline: none;
-}
-
-.react-pin {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--s2);
-  max-width: 22rem;
-}
-
-.react-pin input {
-  text-align: center;
-  font: 700 var(--fs-lg) var(--font-mono);
-  padding: 0.5rem;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  -webkit-text-security: none !important;
-}
-
-.react-error {
-  padding: var(--s3);
-  border-radius: var(--r-md);
-  background: var(--danger-weak);
-  color: var(--danger);
-  font-size: var(--fs-sm);
-  margin-bottom: var(--s4);
-}
-
-.react-success {
-  padding: var(--s3);
-  border-radius: var(--r-md);
-  background: var(--ok-weak);
-  color: var(--ok);
-  font-size: var(--fs-sm);
-}
-
-.react-submit {
-  width: 100%;
-  min-height: var(--tap);
-  border: 0;
-  border-radius: var(--r-md);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-  font-size: var(--fs-md);
-}
-
-.react-submit:disabled {
-  opacity: 0.55;
-}
-
-.react-actions {
-  display: flex;
-  gap: var(--s2);
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.react-link {
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font-weight: 600;
-  padding: var(--s2);
-  margin: calc(var(--s2) * -1);
-}
-
-/* ----- Shell ----- */
-.react-shell {
-  display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
-}
-
-.react-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-  height: var(--topbar-h);
-  padding: 0 var(--s4);
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-}
-
-.react-topbar-title {
-  font-weight: 600;
-  font-size: var(--fs-md);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.react-user {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  min-width: 0;
-  font-size: var(--fs-xs);
-  color: var(--text-2);
-}
-
-.react-user > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 12rem;
-}
-
-.react-avatar {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--r-full);
-  display: grid;
-  place-items: center;
-  background: var(--accent-weak);
-  color: var(--accent-strong);
-  font-weight: 700;
-  font-size: var(--fs-xs);
-}
-
-.react-layout {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-/* Móvil: navegación como barra inferior fija. */
-.react-sidebar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: var(--s1);
-  padding: var(--s1) var(--s2);
-  padding-bottom: max(var(--s1), env(safe-area-inset-bottom));
-  background: var(--surface);
-  border-top: 1px solid var(--line);
-}
-
-.react-sidebar > .react-brand {
-  display: none;
-}
-
-.react-nav {
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.react-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.react-nav button {
-  flex: 1 0 auto;
-  min-width: var(--tap);
-  height: var(--tap);
-  display: grid;
-  place-items: center;
-  gap: 1px;
-  padding: 0 var(--s2);
-  border: 0;
-  border-radius: var(--r-md);
-  background: transparent;
-  color: var(--text-2);
-  font-size: 1.15rem;
-}
-
-.react-nav button.active {
-  background: var(--accent-weak);
-  color: var(--accent-strong);
-}
-
-.react-nav-label {
-  display: none;
-}
-
-.react-logout {
-  flex: none;
-  width: var(--tap);
-  height: var(--tap);
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: var(--r-md);
-  background: transparent;
-  color: var(--text-3);
-  font-size: 1.2rem;
-}
-
-.react-logout:active {
-  background: var(--surface-2);
-}
-
-.react-logout-label {
-  display: none;
-}
-
-.react-content {
-  flex: 1;
-  min-width: 0;
-  padding: var(--s4);
-  padding-bottom: calc(var(--tap) + var(--s6));
-}
-
-.react-module-host {
-  width: 100%;
-}
-
-/* ----- Escritorio ----- */
-@media (min-width: 900px) {
-  .react-auth {
-    grid-template-columns: 22rem minmax(0, 1fr);
+#root{min-height:100vh}.react-loading{min-height:100vh;display:grid;place-items:center;font-family:'DM Sans',sans-serif;color:#334155}.react-auth{min-height:100vh;display:grid;grid-template-columns:540px minmax(0,1fr);background:#f8fafc}.react-side{position:relative;overflow:hidden;padding:4rem;background:#0f172a;color:#fff;display:flex;align-items:center}.react-side-inner{max-width:560px;position:relative;z-index:1}.react-brand{font:800 2.2rem 'Syne',sans-serif;letter-spacing:-.04em}.react-side h1{font:700 3.25rem 'Syne',sans-serif;line-height:1.03;margin:3rem 0 1rem}.react-side p{font:400 1.05rem/1.7 'DM Sans',sans-serif;color:#cbd5e1;max-width:38rem}.react-main{display:flex;align-items:center;justify-content:center;padding:2rem}.react-card{width:min(620px,100%);background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:clamp(1.5rem,4vw,3rem);box-shadow:0 20px 60px rgba(15,23,42,.08)}.react-card h2{font:700 2rem 'Syne',sans-serif;color:#0f172a;margin:0 0 .5rem}.react-muted{color:#64748b;margin:0 0 2rem}.react-form{display:grid;gap:1rem}.react-form label{display:grid;gap:.4rem;font:500 .85rem 'DM Sans',sans-serif;color:#334155}.react-form input,.react-form select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:.8rem .9rem;font:400 .95rem 'DM Sans',sans-serif;background:#fff}.react-form input:focus,.react-form select:focus{outline:2px solid rgba(14,165,233,.22);border-color:#0ea5e9}.react-pin{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}.react-pin input{text-align:center;font:700 1.4rem 'IBM Plex Mono',monospace}.react-error{padding:.8rem 1rem;border-radius:10px;background:#fef2f2;color:#b91c1c;font:.9rem 'DM Sans',sans-serif}.react-success{padding:.8rem 1rem;border-radius:10px;background:#f0fdf4;color:#166534;font:.9rem 'DM Sans',sans-serif}.react-actions{display:flex;gap:.75rem;align-items:center;justify-content:space-between;margin-top:.5rem}.react-link{border:0;background:transparent;color:#0369a1;cursor:pointer;font-weight:600}.react-submit{border:0;border-radius:10px;background:#0f172a;color:#fff;padding:.85rem 1.25rem;cursor:pointer;font-weight:700}.react-submit:disabled{opacity:.55;cursor:not-allowed}.react-shell{min-height:100vh;background:#f8fafc}.react-topbar{height:64px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;position:sticky;top:0;z-index:20}.react-topbar-title{font:700 1.05rem 'Syne',sans-serif;color:#0f172a}.react-user{display:flex;align-items:center;gap:.65rem;font:.9rem 'DM Sans',sans-serif}.react-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#0f172a;color:#fff;font-weight:700}.react-layout{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 64px)}.react-sidebar{background:#0f172a;color:#cbd5e1;padding:1rem;display:flex;flex-direction:column}.react-nav{display:grid;gap:.35rem;margin-top:1rem}.react-nav button{border:0;background:transparent;color:#cbd5e1;text-align:left;padding:.75rem .85rem;border-radius:9px;cursor:pointer;font:500 .9rem 'DM Sans',sans-serif}.react-nav button:hover,.react-nav button.active{background:#1e293b;color:#fff}.react-logout{margin-top:auto;border:1px solid #334155;background:transparent;color:#cbd5e1;border-radius:9px;padding:.7rem;cursor:pointer}.react-content{padding:1.5rem;min-width:0}.react-module-host{min-height:calc(100vh - 120px)}@media(max-width:960px){
+  .react-auth{grid-template-columns:1fr}
+  .react-side{display:none}
+  .react-layout{grid-template-columns:1fr}
+  .react-content{padding-bottom:5.25rem}
+  .react-sidebar{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:30;
+    min-height:56px;
+    padding:.35rem .5rem;
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:.35rem;
+    border-top:1px solid #1e293b;
+    box-shadow:0 -8px 24px rgba(15,23,42,.18);
   }
-
-  .react-side {
-    display: flex;
+  .react-sidebar>.react-brand{display:none}
+  .react-nav{
+    display:flex;
+    align-items:center;
+    gap:.3rem;
+    overflow-x:auto;
+    overflow-y:hidden;
+    margin:0;
+    flex:1;
+    min-width:0;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
   }
-
-  .react-main {
-    align-items: center;
-    padding: var(--s6);
+  .react-nav::-webkit-scrollbar{display:none}
+  .react-nav button{
+    flex:0 0 44px;
+    width:44px;
+    height:44px;
+    display:grid;
+    place-items:center;
+    padding:0;
+    border-radius:10px;
+    font-size:1.2rem;
   }
-
-  .react-sidebar {
-    position: static;
-    flex-direction: column;
-    align-items: stretch;
-    width: 14rem;
-    padding: var(--s4) var(--s3);
-    border-top: 0;
-    border-right: 1px solid var(--line);
+  .react-nav-label{display:none}
+  .react-nav button.active{background:#1e293b;color:#fff}
+  .react-nav button:hover{background:#172033}
+  .react-logout{
+    flex:0 0 46px;
+    width:46px;
+    height:46px;
+    margin:0 0 0 .15rem;
+    padding:0;
+    border:0;
+    border-left:1px solid #334155;
+    border-radius:0;
+    background:transparent;
+    color:#cbd5e1;
+    display:grid;
+    place-items:center;
+    font-size:1.35rem;
   }
+  .react-logout:hover{background:transparent;color:#fff}
+  .react-logout-label{display:none}
+}
+/* PIN visible en el acceso: los dígitos se muestran durante la escritura. */
+.react-pin input { color:#0f172a !important; -webkit-text-fill-color:#0f172a !important; -webkit-text-security:none !important; caret-color:#0f172a; }
 
-  .react-sidebar > .react-brand {
-    display: block;
-    padding: 0 var(--s2) var(--s4);
-  }
-
-  .react-nav {
-    flex-direction: column;
-    overflow: visible;
-    gap: 2px;
-  }
-
-  .react-nav button {
-    justify-content: flex-start;
-    grid-auto-flow: column;
-    grid-template-columns: 1.4rem 1fr;
-    font-size: 0.95rem;
-    padding: 0 var(--s3);
-  }
-
-  .react-nav-label {
-    display: inline;
-    font-size: var(--fs-sm);
-    font-weight: 500;
-  }
-
-  .react-logout {
-    width: 100%;
-    grid-auto-flow: column;
-    grid-template-columns: 1.4rem 1fr;
-    justify-items: start;
-    margin-top: auto;
-  }
-
-  .react-logout-label {
-    display: inline;
-    font-size: var(--fs-sm);
-  }
-
-  .react-content {
-    padding: var(--s5) var(--s6);
-  }
+/* PIN de acceso: dígitos visibles y legibles */
+.react-pin input{
+  color:#0f172a !important;
+  -webkit-text-fill-color:#0f172a !important;
+  caret-color:#0f172a;
+  opacity:1;
 }
