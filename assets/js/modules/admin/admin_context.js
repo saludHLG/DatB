@@ -15,12 +15,12 @@ window.ROL_SIS_NAMES = window.ROL_SIS_NAMES || {
     4:'Mod. provincial', 5:'Mod. nacional', 6:'Administrador'
 };
 window.ROL_SIS_HINTS = window.ROL_SIS_HINTS || {
-    1:'Puede indicar exámenes dentro de su institución.',
-    2:'Modera datos de su institución adscrita.',
-    3:'Modera datos del municipio adscrito.',
-    4:'Modera datos de su provincia.',
-    5:'Modera datos a nivel nacional.',
-    6:'Acceso total. Gestión de usuarios y configuración.'
+    1:'Indica exámenes',
+    2:'Modera su institución',
+    3:'Modera su municipio',
+    4:'Modera su provincia',
+    5:'Modera todo el país',
+    6:'Acceso total'
 };
 
 window.adminToast = window.adminToast || function toast(msg, type='success') {

@@ -369,7 +369,64 @@
     .admin-modal-footer > div {
         margin-left: auto;
         flex-wrap: wrap;
-        justify-content: flex-end;
+        justify-content: flex-end;
+    /* Pie del editor: todo en una fila, botones compactos */
+    .admin-modal-footer {
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: .35rem;
+        padding: .55rem .7rem;
+        padding-bottom: max(.55rem, env(safe-area-inset-bottom));
+    }
+    .admin-modal-footer > div {
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+    .admin-modal-footer > div:last-child { margin-left: auto; }
+    .admin-modal-footer .btn-toggle-active,
+    .admin-modal-footer .btn-secondary-custom,
+    .admin-modal-footer .btn-primary-custom,
+    .admin-modal-footer .btn-danger-custom,
+    .admin-modal-footer .btn-success-custom {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .3rem;
+        min-height: 2.6rem;
+        padding: 0 .6rem;
+        font-size: .8rem;
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+    /* En pantallas muy estrechas la etiqueta deja paso al icono */
+    .admin-modal-footer .btn-txt { display: none; }
+
+    /* Alta de laboratorio: selector y boton en una fila */
+    .lab-add-row {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+        flex-wrap: nowrap;
+    }
+    .lab-add-row .admin-select { flex: 1; min-width: 0; min-height: 2.6rem; }
+    .btn-add-lab {
+        flex: 0 0 auto;
+        width: 2.6rem;
+        height: 2.6rem;
+        padding: 0;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    /* El texto de ayuda del rol se muestra solo al enfocar */
+    .modal-hint {
+        font-size: .72rem;
+        margin: .15rem 0 0;
+        line-height: 1.2;
+    }
     }
 }
 
@@ -477,6 +534,9 @@
 .empty-lab-msg { font-size: .8rem; color: var(--a-muted); text-align: center; padding: .5rem; }
 
 .admin-modal-footer { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-top: 1.5px solid var(--a-border); background: #f8fbff; gap: .5rem; }
+.admin-modal-footer .btn-txt { display: inline; }
+.admin-modal-footer > div { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; min-width: 0; }
+.admin-modal-footer > div:last-child { margin-left: auto; }
 
 .approve-user-card { background: #f8fbff; border: 1.5px solid var(--a-border); border-radius: 10px; padding: 1rem 1.25rem; font-size: .85rem; }
 .approve-user-card .uc-row { display: flex; gap: .5rem; padding: .2rem 0; border-bottom: 1px solid var(--a-border); }

@@ -159,13 +159,12 @@
 
                 <div class="modal-section">
                     <div class="modal-section-title"><i class="bi bi-person"></i> Datos personales
-                        <span class="modal-section-sub">El CI no puede modificarse</span>
                     </div>
                     <div class="row g-3">
                         <div class="col-sm-6">
                             <label class="admin-label">Nombre de usuario <span class="required">*</span></label>
                             <input type="text" id="modal-nombre-usuario" class="form-control ctrl-mono" minlength="5" maxlength="24" pattern="[a-z0-9]{5,24}" autocomplete="username">
-                            <div class="form-text">5–24 caracteres: minúsculas y dígitos.</div>
+
                         </div>
                         <div class="col-sm-6">
                             <label class="admin-label">Nombres <span class="required">*</span></label>
@@ -211,7 +210,6 @@
 
                 <div class="modal-section">
                     <div class="modal-section-title"><i class="bi bi-shield-half"></i> Rol de sistema
-                        <span class="modal-section-sub">Solo el administrador puede modificarlo</span>
                     </div>
                     <select id="modal-rol-sistema" class="form-select admin-select">
                         <option value="1">Usuario común</option>
@@ -227,13 +225,12 @@
                 <div class="modal-section">
                     <div class="modal-section-title">
                         <i class="bi bi-flask"></i> Permisos de laboratorio
-                        <span class="modal-section-sub">Independiente del rol de sistema</span>
                     </div>
                     <div class="lab-add-row">
                         <select id="modal-lab-select" class="form-select admin-select" style="flex:1">
                             <option value="">— Seleccione laboratorio —</option>
                         </select>
-                        <button class="btn-add-lab" id="btn-add-lab"><i class="bi bi-plus-lg"></i> Agregar</button>
+                        <button class="btn-add-lab" id="btn-add-lab" title="Agregar laboratorio" aria-label="Agregar laboratorio"><i class="bi bi-plus-lg"></i></button>
                     </div>
                     <div id="lab-perms-list"></div>
                     <p class="empty-lab-msg d-none" id="empty-lab-msg">Sin permisos de laboratorio asignados.</p>
@@ -245,10 +242,8 @@
                     <button type="button" class="btn-toggle-active" id="btn-toggle-active"></button>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas">Cancelar</button>
-                    <button type="button" class="btn-primary-custom" id="btn-save-user">
-                        <i class="bi bi-check-lg"></i> Guardar
-                    </button>
+                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas" title="Cancelar" aria-label="Cancelar"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                    <button type="button" class="btn-primary-custom" id="btn-save-user" title="Guardar" aria-label="Guardar"><i class="bi bi-check-lg"></i><span class="btn-txt">Guardar</span></button>
                 </div>
             </div>
 </div>

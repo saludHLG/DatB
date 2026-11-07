@@ -14,7 +14,11 @@ function openEditModal(uid) {
     $a('modal-rol-sistema').value = String(u.rol_sistema_id || 1);
     $a('modal-rol-hint').textContent = ROL_SIS_HINTS[u.rol_sistema_id] || '';
     const btn = $a('btn-toggle-active');
-    btn.innerHTML = u.activo ? '<i class="bi bi-slash-circle"></i> Desactivar cuenta' : '<i class="bi bi-arrow-clockwise"></i> Reactivar cuenta';
+    btn.innerHTML = u.activo
+        ? '<i class="bi bi-slash-circle"></i><span class="btn-txt">Desactivar</span>'
+        : '<i class="bi bi-arrow-clockwise"></i><span class="btn-txt">Reactivar</span>';
+    btn.title = u.activo ? 'Desactivar cuenta' : 'Reactivar cuenta';
+    btn.setAttribute('aria-label', btn.title);
     btn.className = 'btn-toggle-active' + (u.activo ? ' is-deactivate' : '');
     $a('modal-nombre-usuario').value = u.nombre_usuario || '';
     $a('modal-nombres').value = u.nombres || '';
