@@ -63,7 +63,7 @@
         }, 15000);
     };
 
-    const invokeAuth = async (body, functionName = AUTH_FUNCTION) {
+    const invokeAuth = async (body, functionName = AUTH_FUNCTION) => {
         const sb = getSb();
         if (!sb) return { error: 'Sin conexión a Supabase.' };
         const { data, error } = await sb.functions.invoke(functionName, { body });
@@ -184,15 +184,14 @@
     window.sbGetSession = async function () {
         const sb = getSb();
         if (!sb) return null;
-        if (isIdleExpired()) {
-            stopIdleWatchdog();
-            await sb.auth.signOut();
-            clearActivity();
-            window._activeUserId = null;
-            window._currentUser = null;
-            window._adminUser = null;
-            return null;
-        }
+        /*
+         * IMPORTANTE: no cerrar la sesion por inactividad aqui.
+         * Este metodo se llama al restaurar la sesion tras recargar (F5).
+         * Si se hiciera signOut() cuando last_activity es antiguo, una
+         * recarga de una sesion VALIDA de Supabase expulsaria al usuario.
+         * El cierre por inactividad lo aplica el watchdog (setInterval)
+         * solo mientras la pestana esta abierta y con actividad real.
+         */
         const { data: authData, error } = await sb.auth.getUser();
         if (error || !authData?.user) { window._currentUser = null; return null; }
         const usuarioId = authData.user.user_metadata?.usuario_id;

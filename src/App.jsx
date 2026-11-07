@@ -150,15 +150,16 @@ export default function App(){
    ;(async()=>{
      try{
        await loadLegacyScripts(['assets/js/core/config.js','assets/js/core/supabase_client.js','assets/js/core/auth_bridge.js'])
-       if(typeof window.sbGetSession==='function' && !datbSessionExpired()){
+       // Restaurar la sesion de Supabase. Un F5 NO debe invalidar una
+       // sesion valida solo porque el usuario estuvo ausente: el cierre
+       // por inactividad lo gestiona el watchdog mientras la pestana
+       // esta abierta. Se marca actividad solo si se restaura.
+       if(typeof window.sbGetSession==='function'){
          const restored=await window.sbGetSession()
          if(alive && restored){
            markDatbActivity()
            setUser(restored)
          }
-       }else if(datbSessionExpired()){
-         await window.sbLogout?.()
-         clearDatbActivity()
        }
      }catch(e){
        // Un fallo al cargar los scripts legacy NO debe expulsar al usuario
