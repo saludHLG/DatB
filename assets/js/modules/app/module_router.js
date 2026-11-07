@@ -36,11 +36,11 @@ function renderModulo(id, user) {
         if (typeof _initEpidemiologia === 'function') {
             _initEpidemiologia(el);
         } else {
-            el.innerHTML = '<div class="modulo-header"><h2 class="modulo-title">Datos epidemiológicos</h2><p class="modulo-sub">Módulo no disponible — verifique que epidemiologia.js esté cargado.</p></div>';
+            el.innerHTML = '<div class="modulo-header"><h2 class="modulo-title">Datos epidemiológicos</h2><p class="modulo-sub">Este apartado no se pudo cargar. Vuelva a intentarlo más tarde.</p></div>';
         }
     } else if (id === 'laboratorio') {
         renderLaboratorio(user, el);
     } else {
-        el.innerHTML = `<div class="modulo-header"><h2 class="modulo-title">${labels[id] || id}</h2><p class="modulo-sub">Módulo en desarrollo — disponible en fases posteriores.</p></div><div class="modulo-placeholder"><i class="bi bi-tools"></i><p>En construcción.</p></div>`;
+        el.innerHTML = `<div class="modulo-header"><h2 class="modulo-title">${labels[id] || id}</h2><p class="modulo-sub">Este apartado estará disponible próximamente.</p></div><div class="modulo-placeholder"><i class="bi bi-hourglass-split"></i><p>Próximamente.</p></div>`;
     }
 }

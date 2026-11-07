@@ -69,7 +69,6 @@ function _cardPendiente(ind, emitirIds) {
     <div class="lab-card lab-pend-card" id="pcard-${uid}"
          data-id="${ind.id}" data-ex-id="${ind._examen_id}">
 
-        <!-- ── Cabecera ── -->
         <div class="lab-card-main" style="flex:1;min-width:0">
             <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
                 <div style="min-width:0">
@@ -85,11 +84,9 @@ function _cardPendiente(ind, emitirIds) {
             </div>
         </div>
 
-        <!-- ── Zona de acción inline ── -->
         ${puedeRecepcionar ? `
         <div class="lab-pend-actions" id="pactions-${uid}">
 
-            <!-- Botones principales -->
             <div class="d-flex gap-2 flex-wrap" id="pbtn-${uid}">
                 <button class="btn-pend-accept" data-uid="${uid}"
                         title="Aceptar muestra">
@@ -101,7 +98,6 @@ function _cardPendiente(ind, emitirIds) {
                 </button>
             </div>
 
-            <!-- Bloque de rechazo (oculto inicialmente) -->
             <div class="pend-reject-block d-none" id="preject-${uid}">
                 <textarea class="form-control pend-motivo-input" id="pmotivo-${uid}"
                           rows="2" placeholder="Motivo de rechazo (obligatorio)…"></textarea>
@@ -116,7 +112,6 @@ function _cardPendiente(ind, emitirIds) {
                 </div>
             </div>
 
-            <!-- Feedback de resultado -->
             <div class="pend-result-msg d-none" id="presult-${uid}"></div>
         </div>
         ` : `

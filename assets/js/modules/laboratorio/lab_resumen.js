@@ -41,7 +41,6 @@ function _lr_buildShell(user, content) {
     const labs = permLabIds.map(id => allLabs.find(l => l.id === id)).filter(Boolean);
 
     content.innerHTML = `
-    <!-- ── Filtros ──────────────────────────────────────── -->
     <div class="card border-0 shadow-sm mb-4" style="border-radius:12px">
         <div class="card-body py-3">
             <div class="d-flex gap-3 align-items-end flex-wrap">
@@ -160,7 +159,6 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
 
     el.innerHTML = `
 
-        <!-- ── Resumen (pills) ──────────────────────────────── -->
         <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-2 mb-4">
             ${_lr_pill('Total indicado',  total,               '#0b1e3d', 'bi-collection')}
             ${_lr_pill('Pendientes',      d.counts.pendiente,  '#f0a500', 'bi-hourglass-split')}
@@ -169,7 +167,6 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
             ${_lr_pill('Completadas',     d.counts.completada, '#00b87a', 'bi-check-circle')}
         </div>
 
-        <!-- ── Exámenes por estado | Resultados por examen ─── -->
         <div class="row g-3 mb-3">
             <div class="col-12 col-lg-8">
                 <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
@@ -190,7 +187,6 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
             </div>
         </div>
 
-        <!-- ── Tipos de muestra | Microorganismos ───────────── -->
         <div class="row g-3 mb-3">
             <div class="col-12 col-md-6">
                 <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
@@ -220,7 +216,6 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
             </div>
         </div>
 
-        <!-- ── Pirámide poblacional | Grupos de vulnerabilidad ─ -->
         <div class="row g-3 mb-3">
             <div class="col-12 col-md-6">
                 <div class="card border-0 shadow-sm h-100" style="border-radius:12px">
@@ -247,7 +242,6 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
             </div>
         </div>
 
-        <!-- ── Resistencia antimicrobiana (ancho completo) ───── -->
         <div class="row g-3">
             <div class="col-12">
                 <div class="card border-0 shadow-sm" style="border-radius:12px">

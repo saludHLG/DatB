@@ -687,7 +687,6 @@ function _htmlPaso2() {
                     <input type="hidden" id="pac-mun"><div class="invalid-feedback" id="err-pac-mun"></div>
                 </div>
 
-                <!-- ── Área de salud (NUEVO — opcional) ─────────────────── -->
                 <div class="col-12">
                     <label for="pac-area-salud-input" class="form-label">
                         Área de salud
@@ -705,7 +704,6 @@ function _htmlPaso2() {
                         Si no la conoce, puede omitir este campo.
                     </div>
                 </div>
-                <!-- ── fin Área de salud ─────────────────────────────────── -->
 
             </div>
             <div class="mt-4">
