@@ -1,0 +1,249 @@
+/* ------------------------------------------------------------------
+   Combobox de busqueda
+   Sustituye a los <select data-combo>: al escribir se filtran las
+   opciones y la mas parecida queda primero.
+   ------------------------------------------------------------------ */
+.combo-native {
+    display: none !important;
+}
+
+.combo {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    border: 1.5px solid var(--a-border);
+    border-radius: 8px;
+    background: var(--a-surface);
+}
+
+.combo:focus-within {
+    border-color: var(--a-cyan);
+    box-shadow: 0 0 0 3px rgba(0, 198, 184, .12);
+}
+
+.combo.is-disabled {
+    background: #f5f8fc;
+    opacity: .65;
+    pointer-events: none;
+}
+
+.combo-input {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.35rem;
+    padding: .35rem .5rem .35rem .7rem;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: .86rem;
+    color: var(--a-navy);
+    outline: none;
+    text-overflow: ellipsis;
+}
+
+.combo-input::placeholder {
+    color: var(--a-muted);
+    font-size: .82rem;
+}
+
+.combo-toggle {
+    flex: 0 0 auto;
+    width: 2rem;
+    border: 0;
+    background: transparent;
+    color: var(--a-muted);
+    font-size: .7rem;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+.combo-toggle i {
+    transition: transform .15s;
+}
+
+.combo.is-open .combo-toggle i {
+    transform: rotate(180deg);
+}
+
+.combo-list {
+    position: absolute;
+    z-index: 1200;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    max-height: 13rem;
+    overflow-y: auto;
+    background: var(--a-surface);
+    border: 1px solid var(--a-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(11, 30, 61, .16);
+    overscroll-behavior: contain;
+}
+
+.combo-list[hidden] {
+    display: none;
+}
+
+.combo-opt {
+    padding: .5rem .7rem;
+    font-size: .84rem;
+    color: var(--a-navy);
+    cursor: pointer;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.combo-opt.is-active,
+.combo-opt:hover {
+    background: #eef6fd;
+}
+
+.combo-opt.is-selected {
+    color: var(--a-cyan);
+    font-weight: 600;
+}
+
+.combo-opt.is-placeholder {
+    color: var(--a-muted);
+    font-style: italic;
+}
+
+.combo-empty {
+    padding: .55rem .7rem;
+    font-size: .8rem;
+    color: var(--a-muted);
+    font-style: italic;
+}
+
+/* ------------------------------------------------------------------
+   Compactacion real en pantallas estrechas.
+   Botones: icono por defecto; la etiqueta solo aparece si hay sitio.
+   ------------------------------------------------------------------ */
+@media (max-width: 520px) {
+    .admin-modal-footer {
+        flex-wrap: nowrap;
+        gap: .3rem;
+        padding: .45rem .55rem;
+        padding-bottom: max(.45rem, env(safe-area-inset-bottom));
+    }
+
+    .admin-modal-footer > div {
+        display: flex;
+        align-items: center;
+        gap: .3rem;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    .admin-modal-footer > div:last-child {
+        margin-left: auto;
+    }
+
+    /* 36px: compacto y aun pulsable con el pulgar */
+    .admin-modal-footer .btn-toggle-active,
+    .admin-modal-footer .btn-secondary-custom,
+    .admin-modal-footer .btn-primary-custom,
+    .admin-modal-footer .btn-danger-custom,
+    .admin-modal-footer .btn-success-custom,
+    .admin-modal-footer .btn-sm-custom {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        min-width: 2.25rem;
+        min-height: 2.25rem;
+        padding: 0 .45rem;
+        font-size: .95rem;
+        line-height: 1;
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+
+    .admin-modal-footer .btn-txt {
+        display: none;
+    }
+
+    .lab-add-row {
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+        flex-wrap: nowrap;
+        margin-bottom: .5rem;
+    }
+
+    .lab-add-row .combo {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .btn-add-lab,
+    .btn-add-loc {
+        flex: 0 0 auto;
+        width: 2.25rem;
+        height: 2.25rem;
+        min-height: 2.25rem;
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+        font-size: .95rem;
+    }
+
+    .btn-add-lab .btn-txt,
+    .btn-add-loc .btn-txt {
+        display: none;
+    }
+
+    .loc-subtab {
+        padding: .35rem .55rem;
+        font-size: .78rem;
+        gap: 0;
+    }
+
+    .loc-subtab .btn-txt {
+        display: none;
+    }
+
+    .filter-input,
+    .filter-select {
+        min-height: 2.25rem;
+        font-size: .84rem;
+    }
+
+    .combo-input {
+        min-height: 2.25rem;
+        font-size: .84rem;
+    }
+
+    .btn-table-action {
+        width: 2.1rem;
+        height: 2.1rem;
+        font-size: .9rem;
+    }
+
+    .table-actions {
+        gap: .3rem;
+        flex-wrap: nowrap;
+    }
+
+    .admin-modal-header {
+        padding: .6rem .7rem;
+    }
+
+    .modal-avatar {
+        width: 2.2rem;
+        height: 2.2rem;
+        font-size: .9rem;
+    }
+
+    .modal-section {
+        margin-bottom: .9rem;
+    }
+
+    .admin-label {
+        font-size: .72rem;
+        margin-bottom: .25rem;
+    }
+}

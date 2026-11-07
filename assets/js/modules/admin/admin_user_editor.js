@@ -40,6 +40,7 @@ function openEditModal(uid) {
     _editPerms = getPerms().filter(p => p.usuario_id === uid && p.activo).map(p => ({...p}));
     populateLabSelect(u.provincia_id);
     renderLabList();
+    if (typeof upgradeCombos === 'function') upgradeCombos($a('modal-edit-user'));
     bootstrap.Offcanvas.getOrCreateInstance($a('modal-edit-user')).show();
 }
 

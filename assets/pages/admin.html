@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="combo.css">
 </head>
 <body class="admin-body">
 
@@ -176,7 +177,7 @@
                         </div>
                         <div class="col-sm-6">
                             <label class="admin-label">Rol profesional</label>
-                            <select id="modal-rol-prof-edit" class="form-select admin-select">
+                            <select id="modal-rol-prof-edit" data-combo class="form-select admin-select">
                                 <option value="1">Médico/a</option>
                                 <option value="2">Enfermero/a</option>
                                 <option value="3">Licenciado/a de Lab.</option>
@@ -189,19 +190,19 @@
                         </div>
                         <div class="col-sm-6">
                             <label class="admin-label">Provincia</label>
-                            <select id="modal-prov-edit" class="form-select admin-select">
+                            <select id="modal-prov-edit" data-combo class="form-select admin-select">
                                 <option value="">— Seleccione —</option>
                             </select>
                         </div>
                         <div class="col-sm-6">
                             <label class="admin-label">Municipio</label>
-                            <select id="modal-mun-edit" class="form-select admin-select" disabled>
+                            <select id="modal-mun-edit" data-combo class="form-select admin-select" disabled>
                                 <option value="">— Seleccione —</option>
                             </select>
                         </div>
                         <div class="col-12">
                             <label class="admin-label">Centro de salud</label>
-                            <select id="modal-centro-edit" class="form-select admin-select" disabled>
+                            <select id="modal-centro-edit" data-combo class="form-select admin-select" disabled>
                                 <option value="">— Seleccione municipio primero —</option>
                             </select>
                         </div>
@@ -211,7 +212,7 @@
                 <div class="modal-section">
                     <div class="modal-section-title"><i class="bi bi-shield-half"></i> Rol de sistema
                     </div>
-                    <select id="modal-rol-sistema" class="form-select admin-select">
+                    <select id="modal-rol-sistema" data-combo class="form-select admin-select">
                         <option value="1">Usuario común</option>
                         <option value="2">Moderador institucional</option>
                         <option value="3">Moderador municipal</option>
@@ -227,7 +228,7 @@
                         <i class="bi bi-flask"></i> Permisos de laboratorio
                     </div>
                     <div class="lab-add-row">
-                        <select id="modal-lab-select" class="form-select admin-select" style="flex:1">
+                        <select id="modal-lab-select" data-combo class="form-select admin-select" style="flex:1">
                             <option value="">— Seleccione laboratorio —</option>
                         </select>
                         <button class="btn-add-lab" id="btn-add-lab" title="Agregar laboratorio" aria-label="Agregar laboratorio"><i class="bi bi-plus-lg"></i></button>
@@ -276,10 +277,10 @@
             </div>
             <div class="modal-footer admin-modal-footer">
                 <button type="button" class="btn-danger-custom" id="btn-reject-user">
-                    <i class="bi bi-x-circle"></i> Rechazar
+                    <i class="bi bi-x-circle"></i><span class="btn-txt">Rechazar</span>
                 </button>
                 <button type="button" class="btn-success-custom" id="btn-approve-user">
-                    <i class="bi bi-check-circle"></i> Aprobar
+                    <i class="bi bi-check-circle"></i><span class="btn-txt">Aprobar</span>
                 </button>
             </div>
         </div>
@@ -322,10 +323,10 @@
             </div>
             <div class="modal-footer admin-modal-footer">
                 <button type="button" class="btn-danger-custom" id="btn-reject-access">
-                    <i class="bi bi-x-circle"></i> Rechazar
+                    <i class="bi bi-x-circle"></i><span class="btn-txt">Rechazar</span>
                 </button>
                 <button type="button" class="btn-success-custom" id="btn-approve-access">
-                    <i class="bi bi-calendar-check"></i> Aprobar acceso
+                    <i class="bi bi-calendar-check"></i><span class="btn-txt">Aprobar acceso</span>
                 </button>
             </div>
         </div>
@@ -342,7 +343,7 @@
             <div id="loc-provincias" class="loc-panel">
                 <div class="loc-panel-header">
                     <span class="loc-count" id="count-provincias"></span>
-                    <button class="btn-add-loc" id="btn-new-provincia"><i class="bi bi-plus-lg"></i> Nueva provincia</button>
+                    <button class="btn-add-loc" id="btn-new-provincia"><i class="bi bi-plus-lg"></i><span class="btn-txt">Nueva provincia</span></button>
                 </div>
                 <div class="table-card">
                     <table class="admin-table">
@@ -361,7 +362,7 @@
                         <option value="">Todas las provincias</option>
                     </select>
                     <span class="loc-count" id="count-municipios"></span>
-                    <button class="btn-add-loc" id="btn-new-municipio"><i class="bi bi-plus-lg"></i> Nuevo municipio</button>
+                    <button class="btn-add-loc" id="btn-new-municipio"><i class="bi bi-plus-lg"></i><span class="btn-txt">Nuevo municipio</span></button>
                 </div>
                 <div class="table-card">
                     <table class="admin-table">
@@ -383,7 +384,7 @@
                         <option value="">Todos los municipios</option>
                     </select>
                     <span class="loc-count" id="count-centros"></span>
-                    <button class="btn-add-loc" id="btn-new-centro"><i class="bi bi-plus-lg"></i> Nuevo centro</button>
+                    <button class="btn-add-loc" id="btn-new-centro"><i class="bi bi-plus-lg"></i><span class="btn-txt">Nuevo centro</span></button>
                 </div>
                 <div class="table-card">
                     <table class="admin-table">
@@ -409,7 +410,7 @@
                         <option value="nacional">Nacional</option>
                     </select>
                     <span class="loc-count" id="count-laboratorios"></span>
-                    <button class="btn-add-loc" id="btn-new-lab"><i class="bi bi-plus-lg"></i> Nuevo laboratorio</button>
+                    <button class="btn-add-loc" id="btn-new-lab"><i class="bi bi-plus-lg"></i><span class="btn-txt">Nuevo laboratorio</span></button>
                 </div>
                 <div class="table-card">
                     <table class="admin-table">
@@ -429,7 +430,7 @@
                         <p class="table-card-sub">Factores de riesgo que pueden asignarse a un paciente en la indicación.</p>
                     </div>
                     <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-gv">
-                        <i class="bi bi-plus-circle"></i> Agregar
+                        <i class="bi bi-plus-circle"></i><span class="btn-txt">Agregar</span>
                     </button>
                 </div>
                 <div id="gv-admin-list" class="cat-list"></div>
@@ -442,7 +443,7 @@
                         <p class="table-card-sub">Muestras biológicas disponibles para las indicaciones de laboratorio.</p>
                     </div>
                     <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-tm">
-                        <i class="bi bi-plus-circle"></i> Agregar
+                        <i class="bi bi-plus-circle"></i><span class="btn-txt">Agregar</span>
                     </button>
                 </div>
                 <div id="tm-admin-list" class="cat-list"></div>
@@ -455,7 +456,7 @@
                         <p class="table-card-sub">Identificaciones disponibles en resultados de cultivo. Las entradas marcadas como <em>Sistema</em> no pueden eliminarse.</p>
                     </div>
                     <button class="btn-primary-custom btn-sm-custom" id="btn-nuevo-micro">
-                        <i class="bi bi-plus-circle"></i> Agregar
+                        <i class="bi bi-plus-circle"></i><span class="btn-txt">Agregar</span>
                     </button>
                 </div>
                 <div id="micro-admin-list" class="cat-list"></div>
@@ -488,8 +489,8 @@
                 <div id="prov-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn-primary-custom" id="btn-save-provincia"><i class="bi bi-floppy"></i> Guardar</button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-primary-custom" id="btn-save-provincia"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
     </div>
@@ -519,8 +520,8 @@
                 <div id="mun-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn-primary-custom" id="btn-save-municipio"><i class="bi bi-floppy"></i> Guardar</button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-primary-custom" id="btn-save-municipio"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
     </div>
@@ -565,8 +566,8 @@
                 <div id="centro-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn-primary-custom" id="btn-save-centro"><i class="bi bi-floppy"></i> Guardar</button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-primary-custom" id="btn-save-centro"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
     </div>
@@ -647,8 +648,8 @@
                 <div id="lab-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn-primary-custom" id="btn-save-lab"><i class="bi bi-floppy"></i> Guardar</button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-primary-custom" id="btn-save-lab"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
     </div>
@@ -665,8 +666,8 @@
                 <p id="delete-confirm-msg" style="font-size:.88rem;color:#444;margin:0"></p>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn-danger-custom" id="btn-confirm-delete"><i class="bi bi-trash"></i> Eliminar</button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-danger-custom" id="btn-confirm-delete"><i class="bi bi-trash"></i><span class="btn-txt">Eliminar</span></button>
             </div>
         </div>
     </div>
@@ -702,8 +703,8 @@
                 <div id="cat-err" class="alert-custom alert-danger mt-3 d-none"></div>
             </div>
             <div class="modal-footer admin-modal-footer">
-                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn-primary-custom" id="btn-save-cat"><i class="bi bi-floppy"></i> Guardar</button>
+                <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+                <button type="button" class="btn-primary-custom" id="btn-save-cat"><i class="bi bi-floppy"></i><span class="btn-txt">Guardar</span></button>
             </div>
         </div>
     </div>
