@@ -5,6 +5,7 @@ document.write('<script src="assets/js/modules/admin/admin_access.js"><\/script>
 document.write('<script src="assets/js/modules/admin/admin_render.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_permissions.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_user_editor.js"><\/script>');
+document.write('<script src="assets/js/modules/admin/admin_user_acceso.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_user_approval.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_users.js"><\/script>');
 document.write('<script src="assets/js/modules/admin/admin_access_requests.js"><\/script>');

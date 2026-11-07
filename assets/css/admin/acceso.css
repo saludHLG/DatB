@@ -1,0 +1,160 @@
+/* ------------------------------------------------------------------
+   Acceso y firma (editor de usuario)
+   Filas compactas: etiqueta y ayuda a la izquierda, accion como icono a
+   la derecha. Sin marcos adicionales.
+   ------------------------------------------------------------------ */
+.admin-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    min-height: 2.7rem;
+    padding: .35rem 0;
+    border-bottom: 1px solid var(--a-border);
+}
+
+.admin-row:last-child {
+    border-bottom: 0;
+}
+
+.admin-row-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+}
+
+.admin-row-label {
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--a-navy);
+}
+
+.admin-row-hint {
+    font-size: .72rem;
+    color: var(--a-muted);
+    line-height: 1.25;
+}
+
+.admin-row-actions {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    flex: 0 0 auto;
+}
+
+.btn-row-action {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border: 1.5px solid var(--a-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--a-muted);
+    font-size: .95rem;
+    cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+}
+
+.btn-row-action:hover {
+    border-color: var(--a-navy);
+    color: var(--a-navy);
+    background: #f0f4fa;
+}
+
+.btn-row-action.danger:hover {
+    border-color: var(--a-danger);
+    color: var(--a-danger);
+    background: #ffeef1;
+}
+
+.btn-row-action:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.btn-row-action:disabled:hover {
+    border-color: var(--a-border);
+    color: var(--a-muted);
+    background: transparent;
+}
+
+/* Miniatura de la firma actual. */
+.firma-mini {
+    height: 2.25rem;
+    width: auto;
+    max-width: 6rem;
+    object-fit: contain;
+    border: 1px solid var(--a-border);
+    border-radius: 6px;
+    background: #fff;
+    padding: 1px;
+}
+
+.firma-mini[hidden] {
+    display: none;
+}
+
+/* Panel de restablecimiento de PIN. */
+.reset-target {
+    margin: 0 0 .85rem;
+    padding: .45rem .6rem;
+    border-radius: 8px;
+    background: #f8fbff;
+    border: 1px solid var(--a-border);
+    font-family: var(--font-mono);
+    font-size: .74rem;
+    color: var(--a-navy-mid);
+    overflow-wrap: anywhere;
+}
+
+#modal-reset-pin .pin-grid {
+    display: flex;
+    gap: .45rem;
+}
+
+#modal-reset-pin .pin-input {
+    width: 2.6rem;
+    height: 2.9rem;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    border: 1.5px solid var(--a-border);
+    border-radius: 8px;
+    background: var(--a-surface);
+    color: var(--a-navy);
+    padding: 0;
+}
+
+#modal-reset-pin .pin-input:focus {
+    border-color: var(--a-cyan);
+    box-shadow: 0 0 0 3px rgba(0, 198, 184, .12);
+    outline: none;
+}
+
+@media (max-width: 520px) {
+    .admin-row {
+        min-height: 2.5rem;
+    }
+
+    .admin-row-hint {
+        font-size: .68rem;
+    }
+
+    .firma-mini {
+        height: 2rem;
+        max-width: 4.5rem;
+    }
+
+    #modal-reset-pin .pin-input {
+        width: 2.25rem;
+        height: 2.5rem;
+        font-size: 1rem;
+    }
+
+    #modal-reset-pin .pin-grid {
+        gap: .35rem;
+    }
+}

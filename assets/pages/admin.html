@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="combo.css">
     <link rel="stylesheet" href="loc.css">
     <link rel="stylesheet" href="catalogos.css">
+    <link rel="stylesheet" href="acceso.css">
 </head>
 <body class="admin-body">
 
@@ -239,7 +240,36 @@
                     <p class="empty-lab-msg d-none" id="empty-lab-msg">Sin permisos de laboratorio asignados.</p>
                 </div>
 
-            </div>
+            
+                <div class="modal-section" id="sec-acceso-firma">
+                    <div class="modal-section-title"><i class="bi bi-shield-lock"></i> Acceso y firma</div>
+
+                    <div class="admin-row">
+                        <div class="admin-row-info">
+                            <span class="admin-row-label">PIN de acceso</span>
+                            <span class="admin-row-hint">Restablézcalo si el usuario no puede entrar.</span>
+                        </div>
+                        <button type="button" class="btn-row-action" id="btn-reset-pin"
+                                title="Restablecer PIN" aria-label="Restablecer PIN">
+                            <i class="bi bi-key"></i>
+                        </button>
+                    </div>
+
+                    <div class="admin-row">
+                        <div class="admin-row-info">
+                            <span class="admin-row-label">Firma digital</span>
+                            <span class="admin-row-hint" id="firma-estado">Sin firma registrada.</span>
+                        </div>
+                        <div class="admin-row-actions">
+                            <img id="firma-preview" class="firma-mini" alt="Firma actual" hidden>
+                            <button type="button" class="btn-row-action danger" id="btn-del-firma"
+                                    title="Borrar firma" aria-label="Borrar firma" disabled>
+                                <i class="bi bi-eraser"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+</div>
             <div class="offcanvas-footer admin-modal-footer">
                 <div>
                     <button type="button" class="btn-toggle-active" id="btn-toggle-active"></button>
@@ -694,6 +724,36 @@
         </div>
     
 
+
+
+<div class="offcanvas offcanvas-end admin-geo-offcanvas" tabindex="-1" id="modal-reset-pin" aria-labelledby="modal-reset-pin-title">
+    <div class="modal-header admin-modal-header">
+        <h5 class="modal-title" id="modal-reset-pin-title"><i class="bi bi-key"></i> Restablecer PIN</h5>
+        <button type="button" class="modal-close-btn" data-bs-dismiss="offcanvas" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+        <p class="reset-target" id="reset-pin-target"></p>
+        <label class="admin-label">Nuevo PIN <span class="required">*</span></label>
+        <div class="pin-grid">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-1" autocomplete="off">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-2" autocomplete="off">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-3" autocomplete="off">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-4" autocomplete="off">
+        </div>
+        <label class="admin-label mt-3">Repetir PIN <span class="required">*</span></label>
+        <div class="pin-grid">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-5" autocomplete="off">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-6" autocomplete="off">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-7" autocomplete="off">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="rp-8" autocomplete="off">
+        </div>
+        <div id="rp-err" class="alert-custom alert-danger mt-3 d-none"></div>
+    </div>
+    <div class="modal-footer admin-modal-footer">
+        <button type="button" class="btn-secondary-custom" data-bs-dismiss="offcanvas" title="Cancelar" aria-label="Cancelar"><i class="bi bi-x-lg"></i><span class="btn-txt">Cancelar</span></button>
+        <button type="button" class="btn-primary-custom" id="btn-do-reset-pin" title="Restablecer" aria-label="Restablecer"><i class="bi bi-check-lg"></i><span class="btn-txt">Restablecer</span></button>
+    </div>
+</div>
 
 <div id="admin-toast" class="admin-toast d-none">
     <i class="bi" id="toast-icon"></i>

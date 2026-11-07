@@ -41,6 +41,7 @@ function openEditModal(uid) {
     populateLabSelect(u.provincia_id);
     renderLabList();
     if (typeof upgradeCombos === 'function') upgradeCombos($a('modal-edit-user'));
+    if (typeof adminRenderAccesoFirma === 'function') adminRenderAccesoFirma(u);
     bootstrap.Offcanvas.getOrCreateInstance($a('modal-edit-user')).show();
 }
 
