@@ -1,0 +1,33 @@
+# Nombre del proyecto: DatB (Sistema de Gestión de Muestras TB)
+project_id = "arbdhyeycvyskjgpjlmn"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "https://TU_USUARIO.github.io/datb"
+additional_redirect_urls = ["https://TU_USUARIO.github.io/datb"]
+jwt_expiry = 3600
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[storage]
+enabled = false

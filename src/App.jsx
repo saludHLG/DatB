@@ -2,8 +2,13 @@ import {useEffect,useMemo,useRef,useState} from 'react'
 import {loadLegacyScripts} from './legacy.js'
 import {createClient} from '@supabase/supabase-js'
 
-const REACT_SUPABASE_URL='https://arbdhyeycvyskjgpjlmn.supabase.co'
-const REACT_SUPABASE_ANON='sb_publishable_ROdMSOxJW_fCtvtyP3PHBg_DkQNnE2d'
+// Cliente compartido con el runtime legacy (supabase_client.js lo reutiliza
+// vía window.__datbReactSupabase). La clave se puede sobreescribir con
+// VITE_SUPABASE_ANON_KEY: debe ser la anon key JWT, no `sb_publishable_`.
+const REACT_SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL || 'https://arbdhyeycvyskjgpjlmn.supabase.co'
+const REACT_SUPABASE_ANON =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_ROdMSOxJW_fCtvtyP3PHBg_DkQNnE2d'
 window.__datbReactSupabase=window.__datbReactSupabase||createClient(
   REACT_SUPABASE_URL,
   REACT_SUPABASE_ANON,
