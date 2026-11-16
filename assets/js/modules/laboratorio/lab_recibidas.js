@@ -408,7 +408,17 @@ function _renderExamTable(exId, recepciones, inds, pacs, baci, cult, user, rootE
                 laboratorio_id: rec.laboratorio_id,
                 fecha_indicacion: rec.snap?.fecha_indicacion || rec.fecha_recepcion?.slice(0, 10),
             };
-            _abrirModalResultados(rec, proxy, user, rootEl, emitirIds, editarIds);
+            /* Los formularios de resultado pueden estar cargandose:
+               se espera a que esten listos en vez de fallar en silencio. */
+            const listo = window.__datbLabResultados || Promise.resolve(true);
+            listo.then(() => {
+                if (typeof _abrirModalResultados !== 'function') {
+                    console.error('Formularios de resultado no disponibles.');
+                    if (typeof toast === 'function') toast('No se pudieron cargar los formularios.', 'error');
+                    return;
+                }
+                _abrirModalResultados(rec, proxy, user, rootEl, emitirIds, editarIds);
+            });
         })
     );
 

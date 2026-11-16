@@ -1,0 +1,193 @@
+/* ===== DatB · pestañas de laboratorio con desplazamiento horizontal ===== */
+
+/* Las pestañas de estado (.lab-pill), las de examen (.lab-tab-btn) y las
+   de examen en modal (.lab-subtab-btn) usaban flex-wrap: al no caber
+   saltaban a otra fila y descolocaban la cabecera. Ahora son una sola
+   fila fija que se desplaza en horizontal. */
+
+/* --- Contenedor de las pestañas de estado --- */
+.lab-pills-wrapper {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .85rem;
+    min-width: 0;
+}
+
+.lab-pills-container,
+.lab-subpills-wrapper,
+.lab-tabs,
+.lab-subtabs {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: .1rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    border-bottom: 1px solid var(--border, #dbe4ee);
+}
+
+.lab-pills-container::-webkit-scrollbar,
+.lab-subpills-wrapper::-webkit-scrollbar,
+.lab-tabs::-webkit-scrollbar,
+.lab-subtabs::-webkit-scrollbar {
+    display: none;
+}
+
+/* --- Pestaña de estado (.lab-pill) --- */
+.lab-pill {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .5rem .7rem;
+    margin-bottom: -1px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    font-family: var(--font-body);
+    font-size: .84rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    scroll-snap-align: start;
+    transition: color .15s, border-color .15s, background .15s;
+}
+
+.lab-pill:hover {
+    color: var(--text, #1e293b);
+    background: #f4f7fb;
+}
+
+.lab-pill.active {
+    background: transparent;
+    color: var(--accent, #0369a1);
+    font-weight: 600;
+    border-bottom-color: var(--accent, #0369a1);
+}
+
+.lab-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 .3rem;
+    border-radius: 999px;
+    background: #e5eaf1;
+    color: #475569;
+    font-size: .66rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+.lab-pill.active .lab-pill-badge {
+    background: var(--accent-muted, #e0f2fe);
+    color: var(--accent, #0369a1);
+}
+
+/* --- Pestañas de examen (.lab-tab-btn, .lab-subtab-btn) --- */
+.lab-tab-btn,
+.lab-subtab-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .45rem .6rem;
+    margin-bottom: -1px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    font-family: var(--font-body);
+    font-size: .8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    scroll-snap-align: start;
+}
+
+.lab-tab-btn:hover,
+.lab-subtab-btn:hover {
+    color: var(--text, #1e293b);
+    background: #f4f7fb;
+}
+
+.lab-tab-btn.active,
+.lab-subtab-btn.active {
+    background: transparent;
+    color: var(--accent, #0369a1);
+    font-weight: 600;
+    border-bottom-color: var(--accent, #0369a1);
+}
+
+/* --- Botón de actualizar: fijo, no se desplaza con las pestañas --- */
+.lab-refresh-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    min-height: 2.1rem;
+    padding: 0 .6rem;
+    border: 1.5px solid var(--border, #dbe4ee);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-muted, #64748b);
+    font-size: .78rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.lab-refresh-btn:hover {
+    border-color: var(--accent, #0369a1);
+    color: var(--accent, #0369a1);
+}
+
+/* En pantallas estrechas el texto del botón desaparece. */
+@media (max-width: 640px) {
+    .lab-refresh-btn {
+        width: 2.1rem;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .lab-refresh-btn span {
+        display: none;
+    }
+
+    .lab-pill        { font-size: .8rem;  padding: .45rem .55rem; }
+    .lab-tab-btn,
+    .lab-subtab-btn  { font-size: .76rem; padding: .4rem .5rem; }
+}
+
+/* --- El codigo del examen no se muestra en la pestana --- */
+.lab-tab-btn .exam-tag,
+.lab-subtab-btn .exam-tag,
+.lab-tab-btn code,
+.lab-subtab-btn code {
+    display: none;
+}
+
+/* La pestana muestra el nombre completo del examen. */
+.lab-tab-btn,
+.lab-subtab-btn {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+    .lab-tab-btn,
+    .lab-subtab-btn {
+        max-width: 11rem;
+    }
+}
