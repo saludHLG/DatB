@@ -11,6 +11,10 @@ const LEGACY_ASSET_BUILD = '20261007-04'
  * Aquí se ancla siempre al mismo origen + BASE_URL, de forma estable
  * ante recargas (F5) y cambios de ruta.
  */
+/* Expuesta para que los scripts legacy construyan sus propias rutas
+   contra la misma base, sin depender de la ruta del documento. */
+window.__DATB_BASE_URL = import.meta.env.BASE_URL;
+
 function appBase() {
   const base = import.meta.env.BASE_URL.endsWith('/')
     ? import.meta.env.BASE_URL

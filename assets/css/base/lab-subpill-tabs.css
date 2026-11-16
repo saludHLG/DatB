@@ -1,0 +1,104 @@
+/* ------------------------------------------------------------------
+   Los exámenes del area de Laboratorio (.lab-subpill) deben verse
+   exactamente como las pestañas de estado (.lab-pill): subrayado en la
+   activa, sin borde completo ni esquinas redondeadas.
+
+   modules.css define .lab-subpill con:
+       border: 1.5px solid; border-radius: 8px;
+   que es lo que le da aspecto de pill. Aqui se iguala al estilo de
+   .lab-pill y se garantiza con la especificidad de #lab-tab-content.
+   ------------------------------------------------------------------ */
+
+#lab-tab-content .lab-subpill,
+.lab-subpills-wrapper .lab-subpill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .5rem .7rem;
+    margin-bottom: -1px;
+    font-size: .84rem;
+    font-weight: 500;
+    color: var(--text-muted, #6b7280);
+    background: transparent;
+    border-top: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: color .15s, border-color .15s, background .15s;
+}
+
+#lab-tab-content .lab-subpill:hover,
+.lab-subpills-wrapper .lab-subpill:hover {
+    color: var(--text, #1e293b);
+    background: #f4f7fb;
+    border-bottom-color: #cbd5e1 !important;
+}
+
+#lab-tab-content .lab-subpill.active,
+.lab-subpills-wrapper .lab-subpill.active {
+    color: var(--accent, #0369a1);
+    background: transparent;
+    font-weight: 600;
+    border-top-color: transparent !important;
+    border-left-color: transparent !important;
+    border-right-color: transparent !important;
+    border-bottom: 2px solid var(--accent, #0369a1) !important;
+    border-radius: 0 !important;
+}
+
+/* El codigo del examen no se muestra: solo el nombre. */
+#lab-tab-content .lab-subpill .exam-tag,
+.lab-subpills-wrapper .lab-subpill .exam-tag {
+    display: none;
+}
+
+/* La insignia "Prox." se mantiene, discreta. */
+#lab-tab-content .lab-subpill .lab-subpill-badge,
+.lab-subpills-wrapper .lab-subpill .lab-subpill-badge {
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 999px;
+    padding: .05em .4em;
+    font-size: .62rem;
+    font-weight: 700;
+}
+
+/* La fila de exámenes: una sola línea con desplazamiento horizontal. */
+#lab-tab-content .lab-subpills-wrapper,
+.lab-subpills-wrapper {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: .1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    border-bottom: 1px solid var(--border, #dbe4ee);
+    margin-bottom: .85rem;
+    padding-bottom: 0;
+}
+
+#lab-tab-content .lab-subpills-wrapper::-webkit-scrollbar,
+.lab-subpills-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+#lab-tab-content .lab-subpill {
+    scroll-snap-align: start;
+}
+
+@media (max-width: 520px) {
+    #lab-tab-content .lab-subpill {
+        font-size: .78rem;
+        padding: .45rem .55rem;
+        max-width: 9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
