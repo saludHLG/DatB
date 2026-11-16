@@ -191,3 +191,45 @@
         max-width: 11rem;
     }
 }
+/* ------------------------------------------------------------------
+   Refuerzo frente a modules.css
+   modules.css define .lab-pills-container con flex-wrap: wrap dentro de
+   @media (max-width: 576px) y se carga antes, pero al estar en una media
+   query gana sobre la regla base. Aqui se repite con mas especificidad
+   para garantizar la fila unica en cualquier ancho.
+   ------------------------------------------------------------------ */
+#lab-tab-content .lab-pills-container,
+#lab-tab-content .lab-tabs,
+#lab-tab-content .lab-subtabs,
+#lab-tab-content .lab-subpills-wrapper {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding-bottom: 0;
+    border-bottom: 1px solid var(--border, #dbe4ee);
+}
+
+#lab-tab-content .lab-pill,
+#lab-tab-content .lab-tab-btn,
+#lab-tab-content .lab-subtab-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+/* En el modal los tabs no estan dentro de #lab-tab-content. */
+#lab-modal-tabs.lab-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+#lab-modal-tabs .lab-tab-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
