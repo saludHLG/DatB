@@ -1,0 +1,106 @@
+/* ----- Combobox de React (registro) ----- */
+.rcombobox {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.rcombobox:focus-within {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, .15);
+}
+
+.rcombobox.is-disabled {
+    background: #f1f5f9;
+    opacity: .7;
+}
+
+.rcombobox-input {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: .4rem .6rem;
+    border: 0;
+    background: transparent;
+    font: 400 .88rem 'DM Sans', sans-serif;
+    color: #1e293b;
+    outline: none;
+    text-overflow: ellipsis;
+}
+
+.rcombobox-input::placeholder {
+    color: #94a3b8;
+}
+
+.rcombobox-toggle {
+    flex: 0 0 auto;
+    width: 2rem;
+    border: 0;
+    background: transparent;
+    color: #94a3b8;
+    font-size: .7rem;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+.rcombobox.is-open .rcombobox-toggle i {
+    transform: rotate(180deg);
+}
+
+.rcombobox-toggle i {
+    transition: transform .15s;
+}
+
+.rcombobox-list {
+    position: absolute;
+    z-index: 1200;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    max-height: 14rem;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
+    overscroll-behavior: contain;
+}
+
+.rcombobox-opt {
+    padding: .5rem .7rem;
+    font-size: .86rem;
+    color: #1e293b;
+    cursor: pointer;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.rcombobox-opt.is-active,
+.rcombobox-opt:hover {
+    background: #eff6ff;
+}
+
+.rcombobox-opt.is-selected {
+    color: #0369a1;
+    font-weight: 600;
+}
+
+.rcombobox-empty {
+    padding: .55rem .7rem;
+    font-size: .8rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+@media (max-width: 380px) {
+    .rcombobox-input {
+        min-height: 2.35rem;
+        font-size: .84rem;
+    }
+}

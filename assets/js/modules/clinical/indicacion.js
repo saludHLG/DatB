@@ -769,7 +769,7 @@ function _initPaso2() {
         _rellenarFormPaciente(pac); _restFields(true);
         const edad = _calcEdad(pac.fecha_nacimiento);
         const munObj = getGeoMuns().find(m => m.id === pac.municipio_id);
-        banner.innerHTML = `<div class="found-card"><i class="bi bi-person-check text-success me-2"></i><strong>${pac.apellidos}, ${pac.nombres}</strong> &nbsp;·&nbsp; ${edad} a. &nbsp;·&nbsp; ${pac.sexo === 'M' ? 'Masc.' : 'Fem.'} &nbsp;·&nbsp; ${munObj?.nombre || '—'}<span class="badge bg-success ms-2">Paciente existente</span><button class="btn-link ms-3 text-danger" id="btn-cambiar-pac" style="font-size:.8rem;border:none;background:none;padding:0"><i class="bi bi-x-circle"></i> Cambiar</button></div>`;
+        banner.innerHTML = `<div class="found-card"><i class="bi bi-person-check text-success me-2"></i><strong>${pac.apellidos}, ${pac.nombres}</strong> &nbsp;·&nbsp; ${edad} a. &nbsp;·&nbsp; ${pac.sexo === 'M' ? 'Masc.' : 'Fem.'} &nbsp;·&nbsp; ${munObj?.nombre || '—'}<button class="btn-link ms-3 text-danger" id="btn-cambiar-pac" style="font-size:.8rem;border:none;background:none;padding:0"><i class="bi bi-x-circle"></i> Cambiar</button></div>`;
         banner.classList.remove('d-none');
         document.getElementById('btn-cambiar-pac').addEventListener('click', () => { ciInput.removeAttribute('readonly'); ciInput.value = ''; ciInput.focus(); _resetForm(); _restFields(false); });
         ciInput.setAttribute('readonly',''); dropdown.classList.add('d-none'); dropdown.innerHTML = '';
@@ -799,15 +799,15 @@ function _mostrarHintEdad(fechaNac) {
     const hintEl = document.getElementById('gv-edad-hint'); if (!hintEl) return;
     if (edad < 5) {
         hintEl.className = 'alert-custom alert-warning mb-2';
-        hintEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Edad calculada: <strong>${edad} año(s)</strong>. Se sugiere marcar <em>Niños ≤ 5 años</em>.`;
+        hintEl.innerHTML = '';
         const chk = document.getElementById('gv-12'); if (chk) chk.checked = true;
     } else if (edad >= 60) {
         hintEl.className = 'alert-custom alert-warning mb-2';
-        hintEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Edad calculada: <strong>${edad} años</strong>. Se sugiere marcar <em>Adulto ≥ 60 años</em>.`;
+        hintEl.innerHTML = '';
         const chk = document.getElementById('gv-22'); if (chk) chk.checked = true;
     } else {
         hintEl.className = 'alert-custom alert-info mb-2';
-        hintEl.innerHTML = `<i class="bi bi-info-circle me-1"></i>Edad calculada: <strong>${edad} años</strong>.`;
+        hintEl.innerHTML = '';
     }
     hintEl.classList.remove('d-none');
 }
@@ -1046,8 +1046,11 @@ function _htmlPaso4() {
     const sexoStr= pac?.sexo === 'M' ? 'Masculino' : 'Femenino';
     const allGV  = _getGVCat().concat(GRUPOS_VULNERABLES_CAT);
     const gvNom  = [...new Set(pac?.grupos_ids || [])].map(gid => allGV.find(g => g.id === gid)?.nombre || '?');
-    const examTags = _st.examenes_ids.map(eid => `<span class="exam-tag">${EXAMENES_TB_CAT.find(e => e.id === eid)?.codigo || '?'}</span>`).join('');
-    const nuevoLabel = _st.esNuevo ? '<span class="badge bg-info ms-2">Nuevo registro</span>' : '<span class="badge bg-secondary ms-2">Paciente existente</span>';
+    const examTags = _st.examenes_ids
+        .map(eid => EXAMENES_TB_CAT.find(e => e.id === eid)?.nombre)
+        .filter(Boolean)
+        .join('<span class="sep"> · </span>');
+    const nuevoLabel = '';
 
     // Área de salud en el resumen (si fue seleccionada)
     const areaNombre = _st.area_salud_id
@@ -1063,7 +1066,7 @@ function _htmlPaso4() {
                 <div class="resumen-item"><div class="ri-label">Laboratorio</div><div class="ri-val">${lab?.nombre || '—'}</div></div>
                 <div class="resumen-item"><div class="ri-label">Tipo de muestra</div><div class="ri-val">${muestra?.nombre || '—'}</div></div>
                 ${areaNombre ? `<div class="resumen-item"><div class="ri-label">Área de salud</div><div class="ri-val"><i class="bi bi-geo-alt-fill me-1" style="color:var(--accent,#0369a1)"></i>${areaNombre}</div></div>` : ''}
-                <div class="resumen-item"><div class="ri-label">Exámenes indicados</div><div class="ri-val">${examTags}</div></div>
+                <div class="resumen-item"><div class="ri-label">Exámenes indicados</div><div class="ri-val resumen-exams">${examTags}</div></div>
                 <div class="resumen-item"><div class="ri-label">Fecha</div><div class="ri-val">${_formatDate(_st.fecha_indicacion)}</div></div>
                 ${_st.observaciones ? `<div class="resumen-item resumen-full"><div class="ri-label">Observaciones</div><div class="ri-val">${_st.observaciones}</div></div>` : ''}
             </div>

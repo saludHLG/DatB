@@ -1,0 +1,112 @@
+/* ===== DatB · legibilidad del asistente de indicación ===== */
+
+/* body usa color blanco (style.css) porque el diseño original era oscuro.
+   Al pasar el área de trabajo a fondo claro, todo texto que no define su
+   propio color queda blanco sobre blanco: es lo que pasaba con las
+   casillas de grupos de vulnerabilidad y con el banner del paciente.
+   Aquí se fija el color de texto de todo el contenido del área. */
+
+.react-content,
+.react-content .app-content-inner,
+.react-content .paso-inner,
+.react-content #gv-grid {
+    color: var(--text, #1e293b);
+}
+
+/* ----- Banner de paciente encontrado ----- */
+.found-card {
+    color: #166534;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: .55rem .75rem;
+    font-size: .85rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    line-height: 1.4;
+}
+
+.found-card strong {
+    color: #14532d;
+    font-weight: 600;
+}
+
+.found-card .btn-link {
+    color: #b91c1c !important;
+    text-decoration: none;
+}
+
+/* ----- Casillas de grupos de vulnerabilidad ----- */
+#gv-grid {
+    display: grid;
+    gap: .15rem .75rem;
+}
+
+#gv-grid .form-check {
+    display: flex;
+    align-items: flex-start;
+    gap: .45rem;
+    min-height: 1.75rem;
+    margin: 0;
+    padding: .1rem 0;
+}
+
+#gv-grid .form-check-input {
+    flex: 0 0 auto;
+    margin: 0;
+    margin-top: .15rem;
+    accent-color: var(--accent, #0369a1);
+    cursor: pointer;
+}
+
+#gv-grid .form-check-label {
+    color: #1e293b;
+    font-size: .83rem;
+    line-height: 1.35;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* La edad calculada pasa a una linea discreta bajo el campo de nacimiento,
+   en lugar de un aviso que ocupa una fila entera. */
+#gv-edad-hint {
+    display: none !important;
+}
+
+.pac-edad-inline {
+    font-size: .72rem;
+    color: #64748b;
+    margin-top: .15rem;
+}
+
+/* ----- Resumen de la indicación: exámenes como texto ----- */
+.exam-tag {
+    display: inline;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: .82rem;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.resumen-exams {
+    font-size: .82rem;
+    line-height: 1.5;
+    color: #1e293b;
+    overflow-wrap: anywhere;
+}
+
+.resumen-exams .sep {
+    color: #94a3b8;
+}
+
+/* El badge "Paciente existente" sobra en el resumen: se retira. */
+.resumen-item .badge,
+.resumen-item .bg-info,
+.resumen-item .bg-secondary {
+    display: none !important;
+}
