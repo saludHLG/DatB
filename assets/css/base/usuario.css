@@ -1,0 +1,96 @@
+/* ===== DatB · área de usuario (correcciones de contraste y layout) ===== */
+
+/* ------------------------------------------------------------------
+   1. Fondo del área de contenido
+   style.css define body { background: var(--navy) }, y el contenedor
+   React no tenía fondo propio, así que el marino se transparentaba bajo
+   tarjetas blancas: un contraste muy duro. Aquí se fija un fondo claro
+   para toda la zona de trabajo.
+   ------------------------------------------------------------------ */
+.react-content {
+    background: #f0f4fa;
+}
+
+.react-module-host {
+    min-width: 0;
+}
+
+/* El contenedor legacy también hereda claro, para que no vuelva a
+   aparecer el marino dentro de los módulos. */
+.react-content .app-content,
+.react-content .main-area,
+.react-content #app-content-inner {
+    background: transparent;
+}
+
+/* ------------------------------------------------------------------
+   2. Barra lateral fija en escritorio
+   Antes crecía con el contenido y había que bajar toda la página para
+   llegar a "Cerrar sesión". Ahora ocupa la altura de la ventana y solo
+   desplaza su propio contenido.
+   ------------------------------------------------------------------ */
+@media (min-width: 900px) {
+    .react-layout {
+        height: calc(100dvh - 52px);
+        overflow: hidden;
+    }
+
+    .react-sidebar {
+        position: sticky;
+        top: 0;
+        height: calc(100dvh - 52px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .react-content {
+        height: calc(100dvh - 52px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .react-logout {
+        margin-top: auto;
+    }
+}
+
+/* ------------------------------------------------------------------
+   3. Tarjetas del área de usuario
+   Fondo blanco sobre gris muy claro, con borde fino en lugar de sombra
+   marcada. Reduce el contraste y da un aspecto más sobrio.
+   ------------------------------------------------------------------ */
+.react-content .card {
+    border: 1px solid #dbe4ee !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    background: #ffffff;
+}
+
+.react-content .card-body {
+    padding: .9rem 1rem;
+}
+
+/* Títulos de tarjeta del área */
+.hu-card-title,
+.hl-card-title,
+.lr-card-title {
+    font-size: .92rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* Las métricas pasan a fondo claro con borde, sin sombra. */
+.stat-pill {
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    box-shadow: none;
+    background: #ffffff;
+}
+
+/* ------------------------------------------------------------------
+   4. Glosario de resistencia: fuera
+   ------------------------------------------------------------------ */
+.hu-amr-glossary,
+.amr-glossary {
+    display: none !important;
+}

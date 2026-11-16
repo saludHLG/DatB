@@ -254,15 +254,7 @@ function _lr_renderPanel(el, labIds, dateFrom, dateTo) {
                     <div class="card-body">
                         <p class="lr-card-title mb-1">Resistencia a los medicamentos para la tuberculosis</p>
                         <div id="lr-amr-wrap" class="mb-3"></div>
-                        <div style="font-size:.75rem;color:#8fa3bf;line-height:1.7">
-                            <p class="mb-1">★ Resistencia a rifampicina: ensayo Xpert MTB/RIF (Ultra). Demás marcadores: Xpert MTB/XDR.</p>
-                            <p class="mb-1"><strong>Monorresistencia:</strong> Resistencia a un solo medicamento anti-TB de primera línea.</p>
-                            <p class="mb-1"><strong>Polirresistencia:</strong> Resistencia a más de un fármaco anti-TB de primera línea (excluyendo la combinación simultánea rifampicina–isoniazida).</p>
-                            <p class="mb-1"><strong>Multidrogorresistencia (MDR):</strong> Resistencia al menos a rifampicina e isoniazida.</p>
-                            <p class="mb-1"><strong>Resistencia a Rifampicina (RR):</strong> Detectada por métodos fenotípicos o genotípicos, con o sin resistencia a otros medicamentos anti-TB.</p>
-                            <p class="mb-1"><strong>Pre-extensamente resistente (Pre-XDR):</strong> Cepas MDR o RR con resistencia adicional a cualquier fluorquinolona.</p>
-                            <p class="mb-0"><strong>Extensamente resistente (XDR):</strong> Cepas MDR o RR con resistencia a fluorquinolonas y al menos un medicamento adicional del grupo A.</p>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
