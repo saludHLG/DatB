@@ -1,0 +1,248 @@
+/* ------------------------------------------------------------------
+   Indicaciones: estilos del asistente
+   Sustituye los bloques que se apoyaban en clases borradas (step-note,
+   exam-cod destacado) y ajusta la firma y las tarjetas de examen.
+   Usa la paleta del area de usuario, no la del panel de administracion.
+   ------------------------------------------------------------------ */
+
+/* ----- Tarjetas de examen ----- */
+.exam-card {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    min-height: 2.6rem;
+    padding: .45rem .7rem;
+    border: 1.5px solid var(--border, #dbe4ee);
+    border-radius: 8px;
+    background: var(--surface, #fff);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+
+.exam-card:hover {
+    border-color: var(--accent, #0369a1);
+}
+
+.exam-card:has(.exam-chk:checked) {
+    border-color: var(--accent, #0369a1);
+    background: var(--accent-muted, #e0f2fe);
+}
+
+/* Nombre del examen: el protagonista. */
+.exam-nombre {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: clamp(.82rem, .79rem + .2vw, .9rem);
+    font-weight: 600;
+    color: var(--text, #1e293b);
+    line-height: 1.25;
+}
+
+/* El codigo pierde protagonismo: solo un detalle discreto. */
+.exam-cod {
+    flex: 0 0 auto;
+    font-family: var(--font-mono, monospace);
+    font-size: .62rem;
+    font-weight: 500;
+    letter-spacing: .02em;
+    color: var(--text-muted, #6b7280);
+    opacity: .7;
+}
+
+.exam-label {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    cursor: pointer;
+    flex-direction: row;
+}
+
+/* ----- Firma ----- */
+.firma-usada {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    padding: .5rem .6rem;
+    border: 1.5px solid var(--border, #dbe4ee);
+    border-radius: 8px;
+    background: var(--surface, #fff);
+}
+
+.firma-preview-img {
+    height: 2.4rem;
+    width: auto;
+    max-width: 9rem;
+    object-fit: contain;
+}
+
+.firma-usada .btn-link-sm {
+    margin-left: auto;
+}
+
+.firma-wrapper {
+    border: 1.5px solid var(--border, #dbe4ee);
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.firma-wrapper canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;
+}
+
+.firma-tools {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: .45rem;
+}
+
+/* ----- Resumen final: compacto ----- */
+.ind-resumen {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #dbe4ee);
+    border-radius: 10px;
+    padding: .8rem;
+}
+
+.resumen-titulo {
+    font-size: .85rem;
+    font-weight: 700;
+    margin: 0 0 .6rem;
+    color: var(--text, #1e293b);
+}
+
+.resumen-grid {
+    display: grid;
+    gap: .5rem;
+}
+
+.resumen-item {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.ri-label {
+    font-size: .64rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted, #6b7280);
+}
+
+.ri-val {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--text, #1e293b);
+    overflow-wrap: anywhere;
+}
+
+.ri-sub {
+    font-size: .7rem;
+    color: var(--text-muted, #6b7280);
+}
+
+.ri-gv {
+    font-size: .7rem;
+    color: #b45309;
+    margin-top: .15rem;
+}
+
+@media (min-width: 720px) {
+    .resumen-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 1rem;
+    }
+
+    .resumen-full {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ----- Pasos del asistente ----- */
+.steps-bar {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    margin-bottom: .85rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.steps-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .2rem .45rem;
+    border-radius: 6px;
+    font-size: .72rem;
+    color: var(--text-muted, #6b7280);
+    white-space: nowrap;
+}
+
+.step.active {
+    background: var(--accent-muted, #e0f2fe);
+    color: var(--accent, #0369a1);
+    font-weight: 600;
+}
+
+.step-num {
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background: #e2e8f0;
+    font-size: .64rem;
+    font-weight: 700;
+}
+
+.step.active .step-num {
+    background: var(--accent, #0369a1);
+    color: #fff;
+}
+
+.step-line {
+    flex: 1;
+    min-width: .5rem;
+    height: 1px;
+    background: var(--border, #dbe4ee);
+}
+
+.step-label {
+    display: none;
+}
+
+@media (min-width: 560px) {
+    .step-label {
+        display: inline;
+    }
+}
+
+.paso-inner {
+    display: grid;
+    gap: .6rem;
+}
+
+.paso-actions {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: .5rem;
+}
+
+.paso-actions .btn-primary-custom {
+    margin-left: auto;
+}

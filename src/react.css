@@ -13,7 +13,7 @@
   place-items: center;
   font-family: var(--font-body, 'DM Sans', sans-serif);
   font-size: clamp(.82rem, .78rem + .2vw, .9rem);
-  color: var(--a-muted, #8fa3bf);
+  color: #64748b;
 }
 
 /* ----- Acceso ----- */
@@ -28,7 +28,7 @@
 .react-side {
   display: none;
   padding: 2.5rem;
-  background: var(--a-navy, #0b1e3d);
+  background: #0f172a;
   color: #fff;
   align-items: center;
 }
@@ -71,7 +71,7 @@
   width: 100%;
   max-width: 26rem;
   background: #fff;
-  border: 1px solid var(--a-border, #dce8f5);
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(11, 30, 61, .06);
@@ -81,12 +81,12 @@
   font-family: 'Syne', sans-serif;
   font-weight: 700;
   font-size: clamp(1.1rem, 1rem + .6vw, 1.45rem);
-  color: var(--a-navy, #0b1e3d);
+  color: #0f172a;
   margin: 0 0 .35rem;
 }
 
 .react-muted {
-  color: var(--a-muted, #8fa3bf);
+  color: #64748b;
   font-size: clamp(.78rem, .75rem + .2vw, .88rem);
   line-height: 1.45;
   margin: 0 0 1.1rem;
@@ -104,7 +104,7 @@
   font-weight: 600;
   letter-spacing: .03em;
   text-transform: uppercase;
-  color: var(--a-navy-mid, #122952);
+  color: #334155;
 }
 
 .react-form input,
@@ -112,19 +112,19 @@
   width: 100%;
   box-sizing: border-box;
   min-height: 2.5rem;
-  border: 1.5px solid var(--a-border, #dce8f5);
+  border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   padding: .4rem .6rem;
   font-family: 'DM Sans', sans-serif;
   font-size: clamp(.84rem, .8rem + .25vw, .92rem);
-  color: var(--a-navy, #0b1e3d);
+  color: #0f172a;
   background: #fff;
 }
 
 .react-form input:focus,
 .react-form select:focus {
-  border-color: var(--a-cyan, #00c6b8);
-  box-shadow: 0 0 0 3px rgba(0, 198, 184, .12);
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, .18);
   outline: none;
 }
 
@@ -145,7 +145,7 @@
   font-family: 'IBM Plex Mono', monospace;
   font-weight: 700;
   font-size: clamp(1.05rem, .95rem + .6vw, 1.35rem);
-  border: 1.5px solid var(--a-border, #dce8f5);
+  border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   color: #0b1e3d !important;
   -webkit-text-fill-color: #0b1e3d !important;
@@ -154,8 +154,8 @@
 }
 
 .react-pin input:focus {
-  border-color: var(--a-cyan, #00c6b8);
-  box-shadow: 0 0 0 3px rgba(0, 198, 184, .12);
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, .18);
   outline: none;
 }
 
@@ -186,7 +186,7 @@
   min-height: 2.6rem;
   border: 0;
   border-radius: 8px;
-  background: var(--a-navy, #0b1e3d);
+  background: #0f172a;
   color: #fff;
   font-family: 'DM Sans', sans-serif;
   font-size: clamp(.86rem, .82rem + .25vw, .95rem);

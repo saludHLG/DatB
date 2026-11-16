@@ -5,6 +5,8 @@ import App from './App.jsx'
 import './react.css'
 import '../assets/css/base/style.css'
 import '../assets/css/base/modules.css'
+import '../assets/css/base/indicaciones.css'
+import '../assets/css/admin/combo.css'
 import '../assets/css/epidemiologia/epidemiologia.css'
 import '../assets/css/admin/admin.css'
 

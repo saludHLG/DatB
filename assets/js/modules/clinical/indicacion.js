@@ -134,45 +134,31 @@ function _getUserProvinciaId(user) {
 }
 
 /* ── Área de salud — helper de módulo ─────────────────────────────────────
-   Actualiza el datalist y habilita/deshabilita el campo de área de salud
+   Actualiza el selector de área de salud y su estado
    en Paso 2 según el municipio seleccionado del paciente.
    Definida a nivel de módulo para poder ser reutilizada desde
    _rellenarFormPaciente y _initPaso2.
    ───────────────────────────────────────────────────────────────────────── */
 function _indActualizarAreaSalud(municipio_id) {
-    const areaInp = document.getElementById('pac-area-salud-input');
-    const areaDl  = document.getElementById('dl-area-salud');
-    const areaHid = document.getElementById('pac-area-salud');
-    if (!areaInp || !areaDl || !areaHid) return;
+    const sel = document.getElementById('pac-area-salud');
+    if (!sel) return;
 
-    // Limpiar selección actual al cambiar municipio
-    areaInp.value = '';
-    areaHid.value = '';
+    sel.innerHTML = '<option value="">' + (municipio_id ? '— Opcional —' : '— Seleccione municipio primero —') + '</option>';
 
     if (!municipio_id) {
-        areaInp.disabled    = true;
-        areaInp.placeholder = '— Seleccione municipio primero —';
-        areaDl.innerHTML    = '';
+        sel.disabled = true;
         return;
     }
 
     const areas = getGeoCentros().filter(
         c => c.municipio_id === Number(municipio_id) && c.tipo === 'área de salud'
     );
-    areaDl.innerHTML = areas.map(a => `<option value="${a.nombre}"></option>`).join('');
+    areas.forEach(a => sel.appendChild(new Option(a.nombre, a.id)));
+    sel.disabled = false;
 
-    if (areas.length) {
-        areaInp.disabled    = false;
-        areaInp.placeholder = '— Buscar área de salud —';
-    } else {
-        areaInp.disabled    = true;
-        areaInp.placeholder = '— Sin áreas registradas para este municipio —';
-    }
+    if (typeof upgradeCombos === 'function') upgradeCombos(sel.parentElement || document);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   VISTA PRINCIPAL
-   ══════════════════════════════════════════════════════════════ */
 function renderIndicaciones(user, el) {
     const todas = _getIndicaciones()
         .filter(i =>
@@ -211,7 +197,7 @@ function renderIndicaciones(user, el) {
         <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
             <div>
                 <h2 class="modulo-title">Indicaciones de examen</h2>
-                <p class="modulo-sub">Gestione las indicaciones de laboratorio para TB.</p>
+                
             </div>
             ${puedeCrear ? `<button class="btn-primary-custom" id="btn-nueva-ind">
                 <i class="bi bi-plus-circle"></i> Nueva indicación
@@ -493,7 +479,7 @@ function _renderNuevaIndicacion(user, el) {
             <button class="btn-back-mod" id="btn-volver-lista"><i class="bi bi-arrow-left"></i></button>
             <div>
                 <h2 class="modulo-title">Nueva indicación</h2>
-                <p class="modulo-sub">Complete los cuatro pasos para registrar la solicitud.</p>
+                
             </div>
         </div>
     </div>
@@ -537,7 +523,7 @@ function _htmlPaso1() {
     const esMedico = u.rol_profesional_id === 1;
     if (esMedico) {
         return `<div class="paso-inner">
-            <div class="step-note"><i class="bi bi-info-circle-fill"></i> La indicación quedará registrada a su nombre como médico responsable.</div>
+            
             <div class="row g-3 mt-1">
                 <div class="col-12 col-md-6"><label class="form-label">Nombres</label><input class="form-control" value="${u.nombres}" readonly></div>
                 <div class="col-12 col-md-6"><label class="form-label">Apellidos</label><input class="form-control" value="${u.apellidos}" readonly></div>
@@ -548,7 +534,7 @@ function _htmlPaso1() {
         </div>`;
     }
     return `<div class="paso-inner">
-        <div class="step-note"><i class="bi bi-info-circle-fill"></i> Como enfermero/a, debe indicar el médico que autoriza y se responsabiliza de la solicitud.</div>
+        
         <div class="mb-3 mt-2">
             <label class="form-label fw-semibold">Tipo de referencia médica</label>
             <div class="d-flex flex-wrap gap-4">
@@ -669,48 +655,39 @@ function _htmlPaso2() {
                 <div class="col-12 col-md-6"><label for="pac-nombres" class="form-label">Nombres <span class="required">*</span></label><input type="text" id="pac-nombres" class="form-control" placeholder="Ej: Ana María"><div class="invalid-feedback" id="err-pac-nombres"></div></div>
                 <div class="col-12 col-md-6"><label for="pac-apellidos" class="form-label">Apellidos <span class="required">*</span></label><input type="text" id="pac-apellidos" class="form-control" placeholder="Ej: López Torres"><div class="invalid-feedback" id="err-pac-apellidos"></div></div>
                 <div class="col-12 col-md-4">
-                    <label for="pac-sexo-input" class="form-label">Sexo biológico <span class="required">*</span></label>
-                    <input type="text" id="pac-sexo-input" class="form-control" list="dl-sexo" placeholder="— Seleccione —" autocomplete="off">
-                    <datalist id="dl-sexo"><option value="Masculino"></option><option value="Femenino"></option></datalist>
-                    <input type="hidden" id="pac-sexo"><div class="invalid-feedback" id="err-pac-sexo"></div>
+                    <label for="pac-sexo" class="form-label">Sexo biológico <span class="required">*</span></label>
+                    <select id="pac-sexo" class="form-select" data-combo>
+                        <option value="">— Seleccione —</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
                 </div>
                 <div class="col-12 col-md-4">
-                    <label for="pac-prov-input" class="form-label">Provincia <span class="required">*</span></label>
-                    <input type="text" id="pac-prov-input" class="form-control" list="dl-prov" placeholder="— Seleccione —" autocomplete="off">
-                    <datalist id="dl-prov">${provOpts}</datalist>
-                    <input type="hidden" id="pac-prov"><div class="invalid-feedback" id="err-pac-prov"></div>
+                    <label for="pac-prov" class="form-label">Provincia <span class="required">*</span></label>
+                    <select id="pac-prov" class="form-select" data-combo>
+                        <option value="">— Seleccione —</option>
+                        ${getGeoProvs().map(p => `<option value="${p.id}">${p.nombre}</option>`).join('')}
+                    </select>
                 </div>
                 <div class="col-12 col-md-4">
-                    <label for="pac-mun-input" class="form-label">Municipio <span class="required">*</span></label>
-                    <input type="text" id="pac-mun-input" class="form-control" list="dl-mun" placeholder="— Seleccione provincia —" autocomplete="off" disabled>
-                    <datalist id="dl-mun"></datalist>
-                    <input type="hidden" id="pac-mun"><div class="invalid-feedback" id="err-pac-mun"></div>
-                </div>
-
-                <!-- ── Área de salud (NUEVO — opcional) ─────────────────── -->
+                    <label for="pac-mun" class="form-label">Municipio <span class="required">*</span></label>
+                    <select id="pac-mun" class="form-select" data-combo disabled>
+                        <option value="">— Seleccione provincia —</option>
+                    </select>
+                </div>
                 <div class="col-12">
-                    <label for="pac-area-salud-input" class="form-label">
-                        Área de salud
-                        <span style="font-size:.78rem;font-weight:400;color:var(--text-muted,#6b7280)"> — opcional</span>
+                    <label for="pac-area-salud" class="form-label">
+                        Área de salud
                     </label>
-                    <input type="text" id="pac-area-salud-input" class="form-control"
-                           list="dl-area-salud"
-                           placeholder="— Seleccione municipio primero —"
-                           autocomplete="off"
-                           disabled>
-                    <datalist id="dl-area-salud"></datalist>
-                    <input type="hidden" id="pac-area-salud">
-                    <div class="form-text" style="font-size:.78rem;color:var(--text-muted,#6b7280);margin-top:.3rem">
-                        <i class="bi bi-info-circle me-1"></i>Área de salud donde se realiza el seguimiento del paciente.
-                        Si no la conoce, puede omitir este campo.
-                    </div>
-                </div>
-                <!-- ── fin Área de salud ─────────────────────────────────── -->
+                    <select id="pac-area-salud" class="form-select" data-combo disabled>
+                        <option value="">— Seleccione municipio primero —</option>
+                    </select>
+                </div>
 
             </div>
             <div class="mt-4">
                 <label class="form-label fw-semibold">Grupos de vulnerabilidad</label>
-                <p class="form-text mt-0 mb-2">Seleccione todos los aplicables al paciente.</p>
+                
                 <div id="gv-edad-hint" class="d-none mb-2"></div>
                 <div class="row g-2" id="gv-grid">${gvHtml}</div>
             </div>
@@ -730,82 +707,54 @@ function _initPaso2() {
     const dropdown = document.getElementById('pac-ci-dropdown');
     const banner   = document.getElementById('pac-found-banner');
 
-    const sexoInp = document.getElementById('pac-sexo-input'), sexoHid = document.getElementById('pac-sexo');
-    sexoInp.addEventListener('input', () => { const v = sexoInp.value.toLowerCase().trim(); sexoHid.value = v === 'masculino' ? 'M' : v === 'femenino' ? 'F' : ''; });
-    sexoInp.addEventListener('change', () => { if (!sexoHid.value) sexoInp.value = ''; });
+    const sexoSel = document.getElementById('pac-sexo');
+    const provSel = document.getElementById('pac-prov');
+    const munSel  = document.getElementById('pac-mun');
+    const areaSel = document.getElementById('pac-area-salud');
 
-    const provInp = document.getElementById('pac-prov-input'), provHid = document.getElementById('pac-prov');
-    const munInp  = document.getElementById('pac-mun-input'),  munHid  = document.getElementById('pac-mun');
-    const munDl   = document.getElementById('dl-mun');
-    const areaInp = document.getElementById('pac-area-salud-input');
-    const areaHid = document.getElementById('pac-area-salud');
-
-    provInp.addEventListener('input', () => {
-        const p = getGeoProvs().find(x => x.nombre.toLowerCase() === provInp.value.toLowerCase().trim());
-        provHid.value = p ? p.id : '';
-    });
-    provInp.addEventListener('change', () => {
-        if (!provHid.value) {
-            provInp.value = '';
-            munInp.disabled = true; munInp.value = ''; munInp.placeholder = '— Seleccione provincia —'; munHid.value = ''; munDl.innerHTML = '';
-            // Limpiar área de salud también
-            _indActualizarAreaSalud(null);
-        } else {
-            munInp.disabled = false; munInp.value = ''; munHid.value = ''; munInp.placeholder = '— Seleccione —';
-            munDl.innerHTML = getGeoMuns().filter(m => m.provincia_id === Number(provHid.value)).map(m => `<option value="${m.nombre}"></option>`).join('');
-            _indActualizarAreaSalud(null);
-        }
-    });
-
-    munInp.addEventListener('input', () => {
-        const pId = Number(provHid.value);
-        const m = getGeoMuns().find(x => x.provincia_id === pId && x.nombre.toLowerCase() === munInp.value.toLowerCase().trim());
-        munHid.value = m ? m.id : '';
-    });
-    munInp.addEventListener('change', () => {
-        if (!munHid.value) munInp.value = '';
-        // Cascada: actualizar área de salud según municipio seleccionado
-        _indActualizarAreaSalud(munHid.value || null);
-    });
-
-    // ── Bindings del campo Área de salud ─────────────────────────────────────
-    if (areaInp && areaHid) {
-        areaInp.addEventListener('change', function () {
-            const munId  = Number(munHid.value);
-            const nombre = this.value.trim();
-            if (!nombre || !munId) { areaHid.value = ''; return; }
-            const match = getGeoCentros().find(
-                c => c.municipio_id === munId && c.tipo === 'área de salud' &&
-                     c.nombre.toLowerCase() === nombre.toLowerCase()
-            );
-            if (match) {
-                areaHid.value = match.id;
-            } else {
-                // No coincide con ningún área registrada → limpiar
-                areaHid.value = '';
-                this.value    = '';
+    /* Al cambiar de provincia se reconstruye la lista de municipios. */
+    provSel?.addEventListener('change', () => {
+        const pid = Number(provSel.value) || null;
+        if (munSel) {
+            munSel.innerHTML = '<option value="">' + (pid ? '— Seleccione —' : '— Seleccione provincia —') + '</option>';
+            if (pid) {
+                getGeoMuns().filter(m => m.provincia_id === pid)
+                    .forEach(m => munSel.appendChild(new Option(m.nombre, m.id)));
             }
-        });
-        areaInp.addEventListener('input', function () {
-            if (!this.value.trim()) areaHid.value = '';
-        });
-    }
-    // ─────────────────────────────────────────────────────────────────────────
+            munSel.disabled = !pid;
+            munSel.value = '';
+        }
+        _indActualizarAreaSalud(null);
+    });
+
+    /* Al cambiar de municipio se reconstruye el area de salud. */
+    munSel?.addEventListener('change', () => {
+        _indActualizarAreaSalud(Number(munSel.value) || null);
+    });
+
+    /* Convierte los tres en combobox de busqueda. */
+    if (typeof upgradeCombos === 'function') upgradeCombos(document.querySelector('.paso-inner') || document);
 
     function _restFields(locked) {
         ['pac-fnac','pac-nombres','pac-apellidos'].forEach(id => { const el = document.getElementById(id); if (el) locked ? el.setAttribute('readonly','') : el.removeAttribute('readonly'); });
-        ['pac-sexo-input','pac-prov-input','pac-mun-input'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = locked || (id === 'pac-mun-input' && !document.getElementById('pac-prov').value); });
-        const aInp = document.getElementById('pac-area-salud-input');
-        if (aInp) aInp.disabled = locked;
+        ['pac-sexo','pac-prov'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = locked; });
+        const _prov = document.getElementById('pac-prov');
+        const _mun  = document.getElementById('pac-mun');
+        const _area = document.getElementById('pac-area-salud');
+        if (_mun)  _mun.disabled  = locked || !_prov?.value;
+        if (_area) _area.disabled = locked || !_mun?.value;
         document.querySelectorAll('.gv-chk').forEach(c => c.disabled = locked);
     }
 
     function _resetForm() {
         ['pac-fnac','pac-nombres','pac-apellidos'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-        document.getElementById('pac-sexo').value = ''; document.getElementById('pac-sexo-input').value = '';
-        document.getElementById('pac-prov').value = ''; document.getElementById('pac-prov-input').value = '';
-        munInp.value = ''; munInp.placeholder = '— Seleccione provincia —'; munInp.disabled = true;
-        munHid.value = ''; munDl.innerHTML = '';
+        ['pac-sexo','pac-prov','pac-mun','pac-area-salud'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        const _munR  = document.getElementById('pac-mun');
+        const _areaR = document.getElementById('pac-area-salud');
+        if (_munR)  _munR.disabled = true;
+        if (_areaR) _areaR.disabled = true;
         // Limpiar área de salud
         _indActualizarAreaSalud(null);
         document.querySelectorAll('.gv-chk').forEach(c => { c.checked = false; c.disabled = false; });
@@ -868,31 +817,34 @@ function _rellenarFormPaciente(pac) {
     document.getElementById('pac-nombres').value   = pac.nombres  || '';
     document.getElementById('pac-apellidos').value = pac.apellidos || '';
     document.getElementById('pac-fnac').value      = pac.fecha_nacimiento || '';
-    if (pac.sexo) { document.getElementById('pac-sexo').value = pac.sexo; document.getElementById('pac-sexo-input').value = pac.sexo === 'M' ? 'Masculino' : 'Femenino'; }
+    if (pac.sexo) { const s = document.getElementById('pac-sexo'); if (s) s.value = pac.sexo; }
     if (pac.municipio_id) {
         const mun = getGeoMuns().find(m => m.id === pac.municipio_id);
         if (mun) {
             const prov = getGeoProvs().find(p => p.id === mun.provincia_id);
-            document.getElementById('pac-prov').value     = mun.provincia_id;
-            document.getElementById('pac-prov-input').value = prov ? prov.nombre : '';
-            const selInp = document.getElementById('pac-mun-input'), selHid = document.getElementById('pac-mun'), dlMun = document.getElementById('dl-mun');
-            selHid.value = pac.municipio_id; selInp.value = mun.nombre; selInp.disabled = false;
-            dlMun.innerHTML = getGeoMuns().filter(m => m.provincia_id === mun.provincia_id).map(m => `<option value="${m.nombre}"></option>`).join('');
+            const pSel = document.getElementById('pac-prov');
+            const mSel = document.getElementById('pac-mun');
+            if (pSel) pSel.value = String(mun.provincia_id);
+            if (mSel) {
+                mSel.innerHTML = '<option value="">— Seleccione —</option>' +
+                    getGeoMuns().filter(m => m.provincia_id === mun.provincia_id)
+                        .map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
+                mSel.value = String(pac.municipio_id);
+                mSel.disabled = false;
+            }
         }
 
-        // ── Área de salud: poblar datalist y preseleccionar si existe en el paciente ──
+        // ── Área de salud: preseleccionar si el paciente ya la tiene ──
         _indActualizarAreaSalud(pac.municipio_id);
         if (pac.area_salud_id) {
             const areaMatch = getGeoCentros().find(
                 c => c.id === Number(pac.area_salud_id) && c.tipo === 'área de salud'
             );
             if (areaMatch) {
-                const areaInp = document.getElementById('pac-area-salud-input');
-                const areaHid = document.getElementById('pac-area-salud');
-                if (areaInp && areaHid) {
-                    areaInp.value   = areaMatch.nombre;
-                    areaHid.value   = areaMatch.id;
-                    areaInp.disabled = false;
+                const aSel = document.getElementById('pac-area-salud');
+                if (aSel) {
+                    aSel.value = String(areaMatch.id);
+                    aSel.disabled = false;
                 }
             }
         }
@@ -908,9 +860,9 @@ function _validarPaso2() {
         [document.getElementById('pac-nombres').value.trim(),   'pac-nombres',    'err-pac-nombres',   'Requerido'],
         [document.getElementById('pac-apellidos').value.trim(), 'pac-apellidos',  'err-pac-apellidos', 'Requerido'],
         [document.getElementById('pac-fnac').value,             'pac-fnac',       'err-pac-fnac',      'Requerido'],
-        [document.getElementById('pac-sexo').value,             'pac-sexo-input', 'err-pac-sexo',      'Requerido'],
-        [document.getElementById('pac-prov').value,             'pac-prov-input', 'err-pac-prov',      'Requerido'],
-        [document.getElementById('pac-mun').value,              'pac-mun-input',  'err-pac-mun',       'Requerido'],
+        [document.getElementById('pac-sexo').value,             'pac-sexo', 'err-pac-sexo',      'Requerido'],
+        [document.getElementById('pac-prov').value,             'pac-prov', 'err-pac-prov',      'Requerido'],
+        [document.getElementById('pac-mun').value,              'pac-mun',  'err-pac-mun',       'Requerido'],
     ];
     let ok = true;
     campos.forEach(([val, inputId, errId, msg]) => {
@@ -925,7 +877,6 @@ function _validarPaso2() {
 
     // Área de salud: campo opcional, no bloquea la validación
     const areaHid  = document.getElementById('pac-area-salud');
-    const areaInp  = document.getElementById('pac-area-salud-input');
     const area_salud_id = (areaHid?.value) ? Number(areaHid.value) : null;
     _st.area_salud_id   = area_salud_id;
 
@@ -956,18 +907,19 @@ function _htmlPaso3() {
     return `<div class="paso-inner">
         <div class="row g-3">
             <div class="col-12 col-md-6">
-                <label for="ind-lab-input" class="form-label">Laboratorio receptor <span class="required">*</span></label>
-                <input type="text" id="ind-lab-input" class="form-control" list="dl-lab" placeholder="— Seleccione —" autocomplete="off">
-                <datalist id="dl-lab">${labsHtml}</datalist>
-                <input type="hidden" id="ind-lab">
-                <div class="form-text">Laboratorios de la provincia <em>${prov}</em>.</div>
+                <label for="ind-lab" class="form-label">Laboratorio receptor <span class="required">*</span></label>
+                <select id="ind-lab" class="form-select" data-combo>
+                    <option value="">— Seleccione laboratorio —</option>
+                    ${labs.map(l => `<option value="${l.id}">${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}</option>`).join('')}
+                </select>
                 <div class="invalid-feedback" id="err-ind-lab"></div>
             </div>
             <div class="col-12 col-md-6">
-                <label for="ind-muestra-input" class="form-label">Tipo de muestra <span class="required">*</span></label>
-                <input type="text" id="ind-muestra-input" class="form-control" list="dl-muestra" placeholder="— Seleccione —" autocomplete="off">
-                <datalist id="dl-muestra">${muestrasHtml}</datalist>
-                <input type="hidden" id="ind-muestra">
+                <label for="ind-muestra" class="form-label">Tipo de muestra <span class="required">*</span></label>
+                <select id="ind-muestra" class="form-select" data-combo>
+                    <option value="">— Seleccione tipo —</option>
+                    ${_getTMCat().filter(m => m.activo !== false).map(m => `<option value="${m.id}">${m.nombre}</option>`).join('')}
+                </select>
                 <div class="invalid-feedback" id="err-ind-muestra"></div>
             </div>
             <div class="col-12">
@@ -1039,37 +991,23 @@ function _initPaso3() {
             </div>`).join('');
     }
 
-    const labInp = document.getElementById('ind-lab-input'), labHid = document.getElementById('ind-lab');
+        const labSel = document.getElementById('ind-lab');
+    const mSel   = document.getElementById('ind-muestra');
 
-    const _resolveLabId = () => {
-        const v = labInp.value.toLowerCase().trim();
-        const l = labs.find(x => {
-            const nom = `${x.nombre}${x.nivel_referencia ? ' — ' + x.nivel_referencia : ''}`.toLowerCase();
-            return nom === v;
-        });
-        return l ? l.id : '';
-    };
+    /* Convierte los dos selects en combobox de busqueda. */
+    if (typeof upgradeCombos === 'function') upgradeCombos(document.getElementById('examenes-grid-wrapper')?.closest('.paso-inner') || document);
 
-    labInp.addEventListener('input', () => {
-        const id = _resolveLabId();
-        labHid.value = id;
-        _actualizarExamenesGrid(id, true);
-    });
-    labInp.addEventListener('change', () => { if (!labHid.value) labInp.value = ''; });
-
-    const mInp = document.getElementById('ind-muestra-input'), mHid = document.getElementById('ind-muestra');
-    mInp.addEventListener('input', () => { const v = mInp.value.toLowerCase().trim(); const m = tmCat.find(x => x.nombre.toLowerCase() === v); mHid.value = m ? m.id : ''; });
-    mInp.addEventListener('change', () => { if (!mHid.value) mInp.value = ''; });
-
-    if (_st.laboratorio_id) {
-        const l = labs.find(x => x.id === Number(_st.laboratorio_id));
-        if (l) {
-            labInp.value = `${l.nombre}${l.nivel_referencia ? ' — ' + l.nivel_referencia : ''}`;
-            labHid.value = l.id;
-            _actualizarExamenesGrid(l.id, false);
-        }
+    function _actualizarExamenesPorLab() {
+        _actualizarExamenesGrid(labSel ? Number(labSel.value) || null : null, true);
     }
-    if (_st.tipo_muestra_id) { const m = tmCat.find(x => x.id === Number(_st.tipo_muestra_id)); if (m) { mInp.value = m.nombre; mHid.value = m.id; } }
+    labSel?.addEventListener('change', _actualizarExamenesPorLab);
+
+    /* Restaurar seleccion previa al volver de otro paso. */
+    if (_st.laboratorio_id) {
+        if (labSel) labSel.value = String(_st.laboratorio_id);
+        _actualizarExamenesGrid(Number(_st.laboratorio_id), false);
+    }
+    if (_st.tipo_muestra_id && mSel) mSel.value = String(_st.tipo_muestra_id);
     if (_st.observaciones) document.getElementById('ind-obs').value = _st.observaciones;
 }
 
@@ -1078,10 +1016,10 @@ function _validarPaso3() {
     const muestra= document.getElementById('ind-muestra').value;
     const exams  = [...document.querySelectorAll('.exam-chk:checked')].map(c => parseInt(c.value));
     let ok = true;
-    const labEl = document.getElementById('ind-lab-input'), errLab = document.getElementById('err-ind-lab');
+    const labEl = document.getElementById('ind-lab'), errLab = document.getElementById('err-ind-lab');
     if (!lab)    { labEl.classList.add('is-invalid'); errLab.textContent = 'Seleccione un laboratorio válido.'; errLab.classList.add('show'); ok = false; }
     else         { labEl.classList.remove('is-invalid'); errLab.classList.remove('show'); }
-    const munEl = document.getElementById('ind-muestra-input'), errMun = document.getElementById('err-ind-muestra');
+    const munEl = document.getElementById('ind-muestra'), errMun = document.getElementById('err-ind-muestra');
     if (!muestra){ munEl.classList.add('is-invalid'); errMun.textContent = 'Seleccione un tipo de muestra válido.'; errMun.classList.add('show'); ok = false; }
     else         { munEl.classList.remove('is-invalid'); errMun.classList.remove('show'); }
     const errExEl = document.getElementById('err-ind-examenes');
@@ -1146,25 +1084,52 @@ function _initPaso4() {
 }
 
 function _renderFirmaBlock() {
-    const wrapper    = document.getElementById('firma-block-wrapper'); if (!wrapper) return;
+    const wrapper = document.getElementById('firma-block-wrapper'); if (!wrapper) return;
     if (!window._store.firmas) window._store.firmas = {};
-    const savedFirma = window._store.firmas[`sr_firma_${_st.user.id}`] || null;
+
+    /* La firma guardada puede venir del usuario logueado o del store. */
+    const savedFirma =
+        (window._store.usuarios || []).find(u => u.id === _st.user.id)?.firma_perfil ||
+        _st.user.firma_perfil ||
+        window._store.firmas[`sr_firma_${_st.user.id}`] ||
+        null;
+
     if (savedFirma) {
         _st.firma = savedFirma; _sigHasContent = true;
-        wrapper.innerHTML = `<label class="form-label fw-semibold"><i class="bi bi-pen"></i> Firma de quien indica</label>
-            <div class="firma-perfil-preview"><img id="firma-preview-img" src="${savedFirma}" alt="Firma del perfil" class="firma-preview-img"><p class="form-text mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i>Se usará la firma registrada en su perfil.</p><button type="button" class="btn-link-sm" id="btn-usar-otra-firma"><i class="bi bi-pencil-square me-1"></i>Usar una firma diferente para esta indicación</button></div>
-            <div id="firma-canvas-wrap" class="d-none mt-3"><div class="firma-wrapper"><canvas id="firma-canvas" width="520" height="160" aria-label="Área de firma digital"></canvas></div><div class="mt-2 d-flex align-items-center gap-3"><button type="button" class="btn-secondary-custom btn-sm" id="btn-clear-firma"><i class="bi bi-eraser"></i> Limpiar</button><button type="button" class="btn-link-sm text-muted" id="btn-cancelar-otra-firma"><i class="bi bi-x-circle me-1"></i>Cancelar — usar firma del perfil</button></div></div>
-            <div class="invalid-feedback d-block mt-1" id="err-firma"></div>`;
-        document.getElementById('btn-usar-otra-firma').addEventListener('click', () => { document.getElementById('firma-canvas-wrap').classList.remove('d-none'); document.getElementById('btn-usar-otra-firma').classList.add('d-none'); _st.firma = null; _sigHasContent = false; _initSignaturePad('firma-canvas'); });
-        document.getElementById('btn-cancelar-otra-firma').addEventListener('click', () => { document.getElementById('firma-canvas-wrap').classList.add('d-none'); document.getElementById('btn-usar-otra-firma').classList.remove('d-none'); _clearFirma(); _st.firma = savedFirma; _sigHasContent = true; });
+        wrapper.innerHTML =
+            '<div class="firma-usada">' +
+                '<img id="firma-preview-img" src="' + savedFirma + '" alt="Firma registrada" class="firma-preview-img">' +
+                '<button type="button" class="btn-link-sm" id="btn-usar-otra-firma">Usar otra firma</button>' +
+            '</div>' +
+            '<div id="firma-canvas-wrap" class="d-none">' +
+                '<div class="firma-wrapper"><canvas id="firma-canvas" width="520" height="140" aria-label="Área de firma"></canvas></div>' +
+                '<div class="firma-tools">' +
+                    '<button type="button" class="btn-secondary-custom btn-sm" id="btn-clear-firma"><i class="bi bi-eraser"></i> Limpiar</button>' +
+                    '<button type="button" class="btn-link-sm" id="btn-cancelar-otra-firma">Usar la del perfil</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="invalid-feedback" id="err-firma"></div>';
+
+        document.getElementById('btn-usar-otra-firma').addEventListener('click', () => {
+            document.getElementById('firma-canvas-wrap').classList.remove('d-none');
+            document.getElementById('btn-usar-otra-firma').dataset.hidden = '1';
+            _st.firma = null; _sigHasContent = false;
+            _initSignaturePad('firma-canvas');
+        });
+        document.getElementById('btn-cancelar-otra-firma').addEventListener('click', () => {
+            document.getElementById('firma-canvas-wrap').classList.add('d-none');
+            delete document.getElementById('btn-usar-otra-firma').dataset.hidden;
+            _clearFirma();
+            _st.firma = savedFirma; _sigHasContent = true;
+        });
     } else {
         _st.firma = null; _sigHasContent = false;
-        wrapper.innerHTML = `<label class="form-label fw-semibold"><i class="bi bi-pen"></i> Firma de quien indica</label>
-            <div class="step-note mb-2"><i class="bi bi-info-circle-fill"></i>No tiene firma registrada en su perfil. Puede guardar una permanente en <strong>Mi perfil → Firma digital</strong>.</div>
-            <p class="form-text mt-0">Trace su firma en el recuadro para esta indicación.</p>
-            <div class="firma-wrapper"><canvas id="firma-canvas" width="520" height="160" aria-label="Área de firma digital"></canvas></div>
-            <div class="mt-2 d-flex align-items-center gap-3"><button type="button" class="btn-secondary-custom btn-sm" id="btn-clear-firma"><i class="bi bi-eraser"></i> Limpiar</button></div>
-            <div class="invalid-feedback d-block mt-1" id="err-firma"></div>`;
+        wrapper.innerHTML =
+            '<div class="firma-wrapper"><canvas id="firma-canvas" width="520" height="140" aria-label="Área de firma"></canvas></div>' +
+            '<div class="firma-tools">' +
+                '<button type="button" class="btn-secondary-custom btn-sm" id="btn-clear-firma"><i class="bi bi-eraser"></i> Limpiar</button>' +
+            '</div>' +
+            '<div class="invalid-feedback" id="err-firma"></div>';
         document.getElementById('btn-clear-firma').addEventListener('click', _clearFirma);
         _initSignaturePad('firma-canvas');
     }
@@ -1349,9 +1314,9 @@ function _initPaso3Edit() {
         const lab = document.getElementById('ind-lab').value, muestra = document.getElementById('ind-muestra').value;
         const exams = [...document.querySelectorAll('.exam-chk:checked')].map(c => parseInt(c.value));
         let ok = true;
-        const labEl = document.getElementById('ind-lab-input'), errLab = document.getElementById('err-ind-lab');
+        const labEl = document.getElementById('ind-lab'), errLab = document.getElementById('err-ind-lab');
         if (!lab)    { labEl.classList.add('is-invalid'); errLab.textContent = 'Seleccione un laboratorio.'; errLab.classList.add('show'); ok = false; } else { labEl.classList.remove('is-invalid'); errLab.classList.remove('show'); }
-        const munEl = document.getElementById('ind-muestra-input'), errMun = document.getElementById('err-ind-muestra');
+        const munEl = document.getElementById('ind-muestra'), errMun = document.getElementById('err-ind-muestra');
         if (!muestra){ munEl.classList.add('is-invalid'); errMun.textContent = 'Seleccione tipo de muestra.'; errMun.classList.add('show'); ok = false; } else { munEl.classList.remove('is-invalid'); errMun.classList.remove('show'); }
         const errExEl = document.getElementById('err-ind-examenes');
         if (exams.length === 0) { errExEl.textContent = 'Seleccione al menos un examen.'; errExEl.style.display = 'block'; ok = false; } else errExEl.style.display = 'none';
